@@ -26,7 +26,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldTitle,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import {
@@ -39,6 +46,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -195,6 +203,27 @@ export function TeamDetail({ teamId }: { teamId: string }) {
                       Replace code
                     </Button>
                   </FieldDescription>
+                </Field>
+                <Field orientation="horizontal">
+                  <FieldContent>
+                    <FieldTitle>Require two-factor</FieldTitle>
+                    <FieldDescription>
+                      Members must set up two-factor authentication to use Ghostwire.
+                    </FieldDescription>
+                  </FieldContent>
+                  <Switch
+                    checked={team.twoFactorRequired}
+                    onCheckedChange={twoFactorRequired =>
+                      run(
+                        () => updateTeam.mutateAsync({ twoFactorRequired }),
+                        twoFactorRequired
+                          ? 'Members now need two-factor'
+                          : 'Two-factor is no longer required',
+                      )
+                    }
+                    disabled={updateTeam.isPending}
+                    aria-label="Require two-factor for members"
+                  />
                 </Field>
               </FieldGroup>
             </CardContent>

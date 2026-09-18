@@ -15,6 +15,7 @@ export interface Team {
   id: string;
   name: string;
   accessCode: string | null;
+  twoFactorRequired: boolean;
   createdAt: string;
   members: TeamMember[];
   _count: { websites: number; members: number };
@@ -72,7 +73,7 @@ export const useJoinTeam = () =>
   useTeamMutation((accessCode: string) => api.post('/teams/join', { accessCode }));
 
 export const useUpdateTeam = (teamId: string) =>
-  useTeamMutation((data: { name?: string; accessCode?: string }) =>
+  useTeamMutation((data: { name?: string; accessCode?: string; twoFactorRequired?: boolean }) =>
     api.post<Team>(`/teams/${teamId}`, data),
   );
 

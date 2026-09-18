@@ -30,6 +30,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
     email: z.email().optional(),
     password: z.string().min(8).max(255).optional(),
     role: userRoleParam.optional(),
+    /** Admin only: make this user set up two-factor authentication. */
+    twoFactorRequired: z.boolean().optional(),
   });
 
   const { auth, body, error } = await parseRequest(request, schema);
@@ -44,7 +46,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
     return unauthorized();
   }
 
-  const { username, name, email, password, role } = body;
+  const { username, name, email, password, role, twoFactorRequired } = body;
 
   const user = await getUser(userId);
 
@@ -70,6 +72,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
   // Only admin can change these fields
   if (role && auth.user.isAdmin) {
     data.role = role;
+  }
+
+  if (twoFactorRequired !== undefined && auth.user.isAdmin) {
+    data.twoFactorRequired = twoFactorRequired;
   }
 
   if (username && auth.user.isAdmin) {

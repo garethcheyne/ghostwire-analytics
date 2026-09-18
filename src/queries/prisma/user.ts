@@ -3,6 +3,7 @@ import { ROLES } from '@/lib/constants';
 import prisma from '@/lib/prisma';
 import { sanitizeSortFilters } from '@/lib/sort';
 import type { PageResult, QueryFilters, Role } from '@/lib/types';
+import { deleteWebsite } from './website';
 
 /*
  * Users live in Better Auth's `user` table. Passwords are in `account` (hashed by Better Auth),
@@ -133,11 +134,12 @@ export async function updateUser(
   });
 }
 
+/**
+ * Deletes a user with everything they own: their websites (and all website data), the teams
+ * they own (and those teams' websites, links, pixels and boards), and their auth records.
+ */
 export async function deleteUser(userId: string) {
   const { client, transaction } = prisma;
-
-  const websites = await client.website.findMany({ where: { userId } });
-  const websiteIds = websites.map(a => a.id);
 
   // Teams the user owns are deleted with them.
   const teams = await client.organization.findMany({
@@ -154,6 +156,14 @@ export async function deleteUser(userId: string) {
 
   const ownedFilter = { OR: [{ userId }, { teamId: { in: teamIds } }] };
 
+  // Websites go through the same cleanup as deleting a website, so replays, heatmaps, errors,
+  // segments and so on are removed too (and websites of deleted teams aren't left orphaned).
+  const websites = await client.website.findMany({ where: ownedFilter, select: { id: true } });
+
+  for (const website of websites) {
+    await deleteWebsite(website.id);
+  }
+
   const [links, pixels, boards] = await Promise.all([
     client.link.findMany({ where: ownedFilter, select: { id: true } }),
     client.pixel.findMany({ where: ownedFilter, select: { id: true } }),
@@ -162,23 +172,16 @@ export async function deleteUser(userId: string) {
   const entityIds = [...links.map(l => l.id), ...pixels.map(p => p.id), ...boards.map(b => b.id)];
 
   return transaction([
-    client.eventData.deleteMany({ where: { websiteId: { in: websiteIds } } }),
-    client.sessionData.deleteMany({ where: { websiteId: { in: websiteIds } } }),
-    client.websiteEvent.deleteMany({ where: { websiteId: { in: websiteIds } } }),
-    client.session.deleteMany({ where: { websiteId: { in: websiteIds } } }),
     client.member.deleteMany({
       where: { OR: [{ organizationId: { in: teamIds } }, { userId }] },
     }),
     client.invitation.deleteMany({ where: { organizationId: { in: teamIds } } }),
     client.organization.deleteMany({ where: { id: { in: teamIds } } }),
-    client.report.deleteMany({
-      where: { OR: [{ websiteId: { in: websiteIds } }, { userId }] },
-    }),
+    client.report.deleteMany({ where: { userId } }),
     client.share.deleteMany({ where: { entityId: { in: entityIds } } }),
     client.link.deleteMany({ where: ownedFilter }),
     client.pixel.deleteMany({ where: ownedFilter }),
     client.board.deleteMany({ where: ownedFilter }),
-    client.website.deleteMany({ where: { id: { in: websiteIds } } }),
     // Auth rows: sessions, credentials, 2FA and API keys.
     client.authSession.deleteMany({ where: { userId } }),
     client.account.deleteMany({ where: { userId } }),

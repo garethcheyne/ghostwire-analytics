@@ -29,6 +29,7 @@ export function ProfileSettings() {
 
   const { user } = session;
   const username = (user as { username?: string }).username ?? '';
+  const isAdmin = (user as { role?: string }).role === 'admin';
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,7 +40,7 @@ export function ProfileSettings() {
     try {
       await api.post(`/users/${user.id}`, {
         name: String(form.get('name')).trim(),
-        username: String(form.get('username')).trim(),
+        ...(isAdmin && { username: String(form.get('username')).trim() }),
         email: String(form.get('email')).trim(),
       });
       await refetch();
@@ -76,7 +77,11 @@ export function ProfileSettings() {
                   maxLength={255}
                   required
                   autoComplete="username"
+                  disabled={!isAdmin}
                 />
+                {!isAdmin && (
+                  <FieldDescription>Ask an administrator to change your username.</FieldDescription>
+                )}
               </Field>
               <Field data-invalid={!!error || undefined}>
                 <FieldLabel htmlFor="profile-email">Email</FieldLabel>

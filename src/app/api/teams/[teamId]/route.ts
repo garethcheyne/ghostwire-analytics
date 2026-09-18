@@ -30,6 +30,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ tea
   const schema = z.object({
     name: z.string().max(50).optional(),
     accessCode: z.string().max(50).optional(),
+    /** Members must set up two-factor authentication. */
+    twoFactorRequired: z.boolean().optional(),
   });
 
   const { auth, body, error } = await parseRequest(request, schema);
