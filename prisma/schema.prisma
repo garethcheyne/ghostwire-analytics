@@ -672,3 +672,57 @@ model ErrorEvent {
   @@index([sessionId])
   @@map("error_event")
 }
+
+/// Where alerts go: email, Slack, Discord or a generic webhook. Owned by a user or a team.
+model NotificationChannel {
+  id        String    @id() @map("channel_id") @db.Uuid
+  userId    String?   @map("user_id") @db.Uuid
+  teamId    String?   @map("team_id") @db.Uuid
+  name      String    @db.VarChar(100)
+  /// email | slack | discord | webhook
+  type      String    @db.VarChar(20)
+  /// { url, secret? } for webhooks; { emails: string[] } for email.
+  config    Json
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([teamId])
+  @@map("notification_channel")
+}
+
+/// One rule per alert type per website.
+model AlertRule {
+  id              String    @id() @map("alert_rule_id") @db.Uuid
+  websiteId       String    @map("website_id") @db.Uuid
+  /// error.new | error.regression | error.spike | traffic.drop
+  type            String    @db.VarChar(30)
+  enabled         Boolean   @default(true)
+  channelIds      String[]  @map("channel_ids") @db.Uuid
+  /// Thresholds, e.g. { count, minutes } for spikes, { percent, minimum } for traffic drops.
+  parameters      Json?
+  lastTriggeredAt DateTime? @map("last_triggered_at") @db.Timestamptz(6)
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([websiteId, type])
+  @@map("alert_rule")
+}
+
+/// Alerts that were sent (or failed to send), per channel.
+model AlertLog {
+  id        String   @id() @map("alert_log_id") @db.Uuid
+  websiteId String   @map("website_id") @db.Uuid
+  ruleId    String   @map("alert_rule_id") @db.Uuid
+  channelId String?  @map("channel_id") @db.Uuid
+  type      String   @db.VarChar(30)
+  title     String   @db.VarChar(500)
+  /// sent | failed
+  status    String   @db.VarChar(20)
+  error     String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([websiteId, createdAt])
+  @@index([ruleId, createdAt])
+  @@map("alert_log")
+}

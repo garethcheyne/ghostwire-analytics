@@ -71,6 +71,7 @@ export async function saveError(args: SaveErrorArgs) {
   const frames = args.frames?.length ? args.frames : parseStack(args.stack, args.platform);
   const fingerprint = getFingerprint(type, message, frames);
 
+  const culprit = cut(getCulprit(frames), 500);
   const [group] = await writeRawQuery(
     `
     insert into error_group (
@@ -87,7 +88,8 @@ export async function saveError(args: SaveErrorArgs) {
       regressed_at = case when error_group.status = 'resolved' then now() else error_group.regressed_at end,
       status = case when error_group.status = 'resolved' then 'open' else error_group.status end,
       updated_at = now()
-    returning error_group_id as "id"
+    returning error_group_id as "id", (xmax = 0) as "isNew",
+      (error_group.regressed_at = now()) as "regressed"
     `,
     {
       id: uuid(),
@@ -97,7 +99,7 @@ export async function saveError(args: SaveErrorArgs) {
       platform: args.platform,
       type,
       message,
-      culprit: cut(getCulprit(frames), 500),
+      culprit,
       createdAt,
     },
     FUNCTION_NAME,
@@ -143,5 +145,13 @@ export async function saveError(args: SaveErrorArgs) {
     FUNCTION_NAME,
   );
 
-  return { groupId: group.id as string, fingerprint };
+  return {
+    groupId: group.id as string,
+    fingerprint,
+    isNew: !!group.isNew,
+    regressed: !!group.regressed,
+    type,
+    message,
+    culprit,
+  };
 }

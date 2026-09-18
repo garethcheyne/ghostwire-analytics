@@ -12,5 +12,9 @@ export async function register() {
     // Deletes old replay/heatmap/error data, only when a retention period is configured.
     const { startRetentionSchedule } = await import('@/lib/retention');
     startRetentionSchedule();
+
+    // Error spike and traffic drop alerts, every 5 minutes.
+    const { startAlertSchedule } = await import('@/lib/alerts');
+    startAlertSchedule();
   }
 }

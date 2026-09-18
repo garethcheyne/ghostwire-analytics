@@ -3,6 +3,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentWebsite } from '../website-context';
+import { AlertSettings } from './alert-settings';
 import { DataSettings } from './data-settings';
 import { GeneralSettings } from './general-settings';
 import { ErrorSettings } from './error-settings';
@@ -15,6 +16,7 @@ const TABS = [
   { id: 'tracking', label: 'Tracking code', content: TrackingCode },
   { id: 'recording', label: 'Replays & heatmaps', content: RecordingSettings },
   { id: 'errors', label: 'Errors', content: ErrorSettings },
+  { id: 'alerts', label: 'Alerts', content: AlertSettings },
   { id: 'sharing', label: 'Sharing', content: SharingSettings },
   { id: 'data', label: 'Data', content: DataSettings },
 ] as const;

@@ -247,6 +247,14 @@ export async function deleteWebsite(websiteId: string) {
         where: { websiteId },
       });
 
+      await tx.alertRule.deleteMany({
+        where: { websiteId },
+      });
+
+      await tx.alertLog.deleteMany({
+        where: { websiteId },
+      });
+
       await tx.segment.deleteMany({
         where: { websiteId },
       });

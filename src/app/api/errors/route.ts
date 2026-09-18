@@ -8,6 +8,7 @@ import { createRateLimiter } from '@/lib/rate-limit';
 import { parseRequest } from '@/lib/request';
 import { forbidden, tooManyRequests, unauthorized } from '@/lib/response';
 import { saveError } from '@/queries/sql/errors/saveError';
+import { afterResponse, notifyErrorSaved } from '@/lib/alerts';
 
 /*
  * Error ingest for server-side clients (@ghostwire/node, Python, .NET, or plain HTTP).
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
   const userAgent = body.request?.userAgent;
   const { hostname, urlPath } = splitUrl(body.request?.url);
 
-  const { groupId } = await saveError({
+  const saved = await saveError({
     websiteId: website.id,
     source: 'server',
     platform: body.platform,
@@ -157,5 +158,16 @@ export async function POST(request: Request) {
     createdAt: body.timestamp ? new Date(body.timestamp) : undefined,
   });
 
-  return Response.json({ ok: true, groupId }, { status: 202 });
+  afterResponse(() =>
+    notifyErrorSaved({
+      ...saved,
+      websiteId: website.id,
+      source: 'server',
+      urlPath,
+      release: body.release,
+      environment: body.environment,
+    }),
+  );
+
+  return Response.json({ ok: true, groupId: saved.groupId }, { status: 202 });
 }

@@ -1,4 +1,5 @@
 import {
+  Bell,
   Bug,
   AlignEndHorizontal,
   ChartPie,
@@ -123,6 +124,7 @@ export const settingsNav: NavGroup[] = [
       { title: 'Profile', href: '/settings/profile', icon: UserCircle },
       { title: 'Teams', href: '/settings/teams', icon: Users },
       { title: 'Security', href: '/settings/security', icon: ShieldCheck },
+      { title: 'Notifications', href: '/settings/notifications', icon: Bell },
       { title: 'API keys', href: '/settings/api-keys', icon: KeyRound },
     ],
   },

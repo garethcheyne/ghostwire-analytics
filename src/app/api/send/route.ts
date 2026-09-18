@@ -21,6 +21,7 @@ import {
   updateSession,
 } from '@/queries/sql';
 import { saveError } from '@/queries/sql/errors/saveError';
+import { afterResponse, notifyErrorSaved } from '@/lib/alerts';
 
 interface Cache {
   websiteId: string;
@@ -144,7 +145,7 @@ async function collectBrowserError({
   }
 
   // Best-effort: a failed error write must not break the tracker's response.
-  await saveError({
+  const saved = await saveError({
     ...rest,
     websiteId,
     sessionId,
@@ -162,6 +163,10 @@ async function collectBrowserError({
       extra: error.context,
     },
   }).catch(e => console.error('Failed to save error:', e));
+
+  if (saved) {
+    afterResponse(() => notifyErrorSaved({ ...saved, websiteId, source: 'browser', urlPath }));
+  }
 }
 
 export async function POST(request: Request) {

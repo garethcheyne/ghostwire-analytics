@@ -21,6 +21,8 @@ import {
 import { saveError } from '@/queries/sql/errors/saveError';
 import { POST } from './route';
 
+vi.mock('@/lib/alerts', () => ({ afterResponse: vi.fn(), notifyErrorSaved: vi.fn() }));
+
 vi.mock('@/lib/detect', () => ({
   getClientInfo: vi.fn(),
   hasBlockedIp: vi.fn(),
@@ -920,7 +922,15 @@ describe('error collection', () => {
   };
 
   beforeEach(() => {
-    saveErrorMock.mockResolvedValue({ groupId: 'g', fingerprint: 'f' });
+    saveErrorMock.mockResolvedValue({
+      groupId: 'g',
+      fingerprint: 'f',
+      isNew: false,
+      regressed: false,
+      type: 'TypeError',
+      message: 'boom',
+      culprit: null,
+    });
   });
 
   test('saves a browser error with its session, visit and page when enabled', async () => {
