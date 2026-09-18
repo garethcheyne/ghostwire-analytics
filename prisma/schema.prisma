@@ -259,6 +259,12 @@ model Website {
   recorderEnabled Boolean @default(false) @map("recorder_enabled")
   replayConfig    Json?   @map("replay_config")
 
+  // Error reporting: accepted only while enabled. Server clients authenticate with an ingest
+  // key, stored as a SHA-256 hash; the hint (last characters) identifies it in settings.
+  errorsEnabled Boolean @default(false) @map("errors_enabled")
+  errorKeyHash  String? @map("error_key_hash") @db.VarChar(64)
+  errorKeyHint  String? @map("error_key_hint") @db.VarChar(12)
+
   user                User?                @relation("user", fields: [userId], references: [id])
   createUser          User?                @relation("createUser", fields: [createdBy], references: [id])
   team                Organization?        @relation(fields: [teamId], references: [id])
@@ -271,6 +277,8 @@ model Website {
   sessionReplays      SessionReplay[]
   sessionReplaysSaved SessionReplaySaved[]
   heatmapEvents       HeatmapEvent[]
+  errorGroups         ErrorGroup[]
+  errorEvents         ErrorEvent[]
 
   @@index([userId])
   @@index([teamId])
@@ -598,4 +606,69 @@ model AppSetting {
   value String
 
   @@map("app_setting")
+}
+
+// Errors reported by the tracker (browser) or server clients, grouped by fingerprint.
+model ErrorGroup {
+  id          String    @id() @map("error_group_id") @db.Uuid
+  websiteId   String    @map("website_id") @db.Uuid
+  fingerprint String    @db.VarChar(64)
+  source      String    @db.VarChar(20)
+  platform    String    @db.VarChar(20)
+  type        String    @db.VarChar(200)
+  message     String    @db.VarChar(1000)
+  /// Top in-app stack frame, e.g. "checkout.js in submitOrder".
+  culprit     String?   @db.VarChar(500)
+  /// open | resolved | ignored
+  status      String    @default("open") @db.VarChar(20)
+  count       Int       @default(0)
+  firstSeen   DateTime  @map("first_seen") @db.Timestamptz(6)
+  lastSeen    DateTime  @map("last_seen") @db.Timestamptz(6)
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz(6)
+  /// Set when a resolved error happens again.
+  regressedAt DateTime? @map("regressed_at") @db.Timestamptz(6)
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website Website      @relation(fields: [websiteId], references: [id])
+  events  ErrorEvent[]
+
+  @@unique([websiteId, fingerprint])
+  @@index([websiteId, lastSeen])
+  @@map("error_group")
+}
+
+model ErrorEvent {
+  id          String   @id() @map("error_event_id") @db.Uuid
+  websiteId   String   @map("website_id") @db.Uuid
+  groupId     String   @map("error_group_id") @db.Uuid
+  sessionId   String?  @map("session_id") @db.Uuid
+  visitId     String?  @map("visit_id") @db.Uuid
+  distinctId  String?  @map("distinct_id") @db.VarChar(50)
+  source      String   @db.VarChar(20)
+  platform    String   @db.VarChar(20)
+  type        String   @db.VarChar(200)
+  message     String   @db.VarChar(1000)
+  stack       String?  @db.Text
+  /// Parsed frames: { file, function, line, column, inApp }[]
+  frames      Json?
+  hostname    String?  @db.VarChar(100)
+  urlPath     String?  @map("url_path") @db.VarChar(500)
+  browser     String?  @db.VarChar(20)
+  os          String?  @db.VarChar(20)
+  device      String?  @db.VarChar(20)
+  environment String?  @db.VarChar(50)
+  release     String?  @db.VarChar(100)
+  /// Breadcrumbs, tags, extra data and (server) request details.
+  context     Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  website Website    @relation(fields: [websiteId], references: [id])
+  group   ErrorGroup @relation(fields: [groupId], references: [id])
+
+  @@index([websiteId, createdAt])
+  @@index([groupId, createdAt])
+  @@index([websiteId, distinctId])
+  @@index([sessionId])
+  @@map("error_event")
 }

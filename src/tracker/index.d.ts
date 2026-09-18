@@ -162,6 +162,14 @@ export type GhostwireTracker = {
       },
     ): Promise<void>;
   };
+  /**
+   * Report an error you caught yourself. Needs error reporting switched on for the website.
+   *
+   * @example ```
+   * try { await pay(); } catch (e) { ghostwire.error(e, { orderId }); }
+   * ```
+   */
+  error: (error: unknown, context?: EventData) => Promise<void>;
   getSession: () => {
     cache: string | undefined;
     website: string | null;

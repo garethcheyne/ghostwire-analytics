@@ -18,6 +18,7 @@ import {
   saveSessionLink,
   updateSession,
 } from '@/queries/sql';
+import { saveError } from '@/queries/sql/errors/saveError';
 import { POST } from './route';
 
 vi.mock('@/lib/detect', () => ({
@@ -41,6 +42,10 @@ vi.mock('@/queries/sql', () => ({
   updateSession: vi.fn(),
 }));
 
+vi.mock('@/queries/sql/errors/saveError', () => ({
+  saveError: vi.fn(),
+}));
+
 vi.mock('isbot', () => ({
   isbot: vi.fn(),
 }));
@@ -55,6 +60,7 @@ const saveEventMock = vi.mocked(saveEvent);
 const saveSessionDataMock = vi.mocked(saveSessionData);
 const saveSessionLinkMock = vi.mocked(saveSessionLink);
 const updateSessionMock = vi.mocked(updateSession);
+const saveErrorMock = vi.mocked(saveError);
 
 const WEBSITE_ID = '11111111-1111-4111-8111-111111111111';
 const LINK_ID = '22222222-2222-4222-8222-222222222222';
@@ -902,5 +908,67 @@ describe('error handling', () => {
       error: { code: 'server-error', status: 500 },
     });
     consoleLog.mockRestore();
+  });
+});
+
+describe('error collection', () => {
+  const report = {
+    type: 'TypeError',
+    message: "Cannot read properties of undefined (reading 'total')",
+    stack: 'TypeError: boom\n    at submitOrder (https://shop.example.com/checkout.js:120:15)',
+    breadcrumbs: [{ type: 'click', message: 'button#pay', timestamp: 1 }],
+  };
+
+  beforeEach(() => {
+    saveErrorMock.mockResolvedValue({ groupId: 'g', fingerprint: 'f' });
+  });
+
+  test('saves a browser error with its session, visit and page when enabled', async () => {
+    fetchWebsiteMock.mockResolvedValue({ id: WEBSITE_ID, errorsEnabled: true } as any);
+
+    const response = await callPOST({
+      type: 'error',
+      payload: {
+        website: WEBSITE_ID,
+        url: '/checkout?step=2',
+        hostname: 'shop.example.com',
+        id: 'user-42',
+        error: report,
+      },
+    });
+    const { sessionId, visitId } = (await response.json()) as Record<string, any>;
+
+    expect(saveErrorMock).toHaveBeenCalledTimes(1);
+    expect(saveErrorMock.mock.calls[0][0]).toMatchObject({
+      websiteId: WEBSITE_ID,
+      sessionId,
+      visitId,
+      distinctId: 'user-42',
+      source: 'browser',
+      platform: 'javascript',
+      type: 'TypeError',
+      urlPath: '/checkout',
+      hostname: 'shop.example.com',
+      context: { handled: false, breadcrumbs: report.breadcrumbs },
+    });
+  });
+
+  test('ignores errors while error reporting is switched off', async () => {
+    fetchWebsiteMock.mockResolvedValue({ id: WEBSITE_ID, errorsEnabled: false } as any);
+
+    await callPOST({ type: 'error', payload: { website: WEBSITE_ID, url: '/', error: report } });
+
+    expect(saveErrorMock).not.toHaveBeenCalled();
+  });
+
+  test('drops unactionable cross-origin script errors', async () => {
+    fetchWebsiteMock.mockResolvedValue({ id: WEBSITE_ID, errorsEnabled: true } as any);
+
+    await callPOST({
+      type: 'error',
+      payload: { website: WEBSITE_ID, url: '/', error: { message: 'Script error.' } },
+    });
+
+    expect(saveErrorMock).not.toHaveBeenCalled();
   });
 });

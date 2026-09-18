@@ -105,6 +105,7 @@ export const COLLECTION_TYPE = {
   identify: 'identify',
   performance: 'performance',
   record: 'record',
+  error: 'error',
 } as const;
 
 export const WEB_VITALS_THRESHOLDS = {

@@ -90,3 +90,70 @@ test('reports its size to the heatmap viewer that frames it', async () => {
     if (parent) Object.defineProperty(window, 'parent', parent);
   }
 });
+
+function loadTracker(attributes: Record<string, string>) {
+  const script = document.createElement('script');
+  script.src = 'https://analytics.example.com/script.js';
+  script.dataset.websiteId = 'website-id';
+  Object.entries(attributes).forEach(([key, value]) => script.setAttribute(`data-${key}`, value));
+
+  Object.defineProperties(document, {
+    currentScript: { configurable: true, value: script },
+    readyState: { configurable: true, value: 'complete' },
+  });
+
+  const fetchMock = vi.fn().mockResolvedValue({ status: 200, json: vi.fn().mockResolvedValue({}) });
+  vi.stubGlobal('fetch', fetchMock);
+
+  return fetchMock;
+}
+
+const sentOfType = (fetchMock: ReturnType<typeof vi.fn>, type: string) =>
+  fetchMock.mock.calls
+    .map(([, init]) => (init?.body ? JSON.parse(init.body) : null))
+    .filter(body => body?.type === type);
+
+// Error listeners stay on window after a test, so the test that enables capture runs last.
+test('without data-errors, only manual ghostwire.error() calls are sent', async () => {
+  const fetchMock = loadTracker({});
+  await import('./index');
+  await vi.waitFor(() => expect(sentOfType(fetchMock, 'event')).toHaveLength(1));
+
+  window.dispatchEvent(new ErrorEvent('error', { error: new Error('ignored') }));
+  await (window as any).ghostwire.error(new Error('payment failed'), { orderId: 7 });
+
+  const errors = sentOfType(fetchMock, 'error');
+  expect(errors).toHaveLength(1);
+  expect(errors[0].payload.error).toMatchObject({
+    message: 'payment failed',
+    handled: true,
+    context: { orderId: 7 },
+  });
+});
+
+test('with data-errors, reports uncaught errors with recent breadcrumbs', async () => {
+  const fetchMock = loadTracker({ errors: 'true' });
+  await import('./index');
+  await vi.waitFor(() => expect(sentOfType(fetchMock, 'event')).toHaveLength(1));
+
+  const button = document.createElement('button');
+  button.id = 'pay';
+  button.textContent = 'Pay now';
+  document.body.appendChild(button);
+  button.click();
+
+  const error = new TypeError('order is undefined');
+  window.dispatchEvent(new ErrorEvent('error', { error, message: error.message }));
+
+  await vi.waitFor(() => expect(sentOfType(fetchMock, 'error')).toHaveLength(1));
+  const [{ payload }] = sentOfType(fetchMock, 'error');
+
+  expect(payload.error).toMatchObject({
+    type: 'TypeError',
+    message: 'order is undefined',
+    handled: false,
+  });
+  expect(payload.error.breadcrumbs.map((b: any) => b.type)).toEqual(['navigation', 'click']);
+  expect(payload.error.breadcrumbs[1].message).toBe('button#pay "Pay now"');
+  button.remove();
+});

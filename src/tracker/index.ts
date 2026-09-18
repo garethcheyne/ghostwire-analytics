@@ -174,6 +174,14 @@ export type GhostwireTracker = {
      */
     (data: EventData & { id?: string }): Promise<void>;
   };
+  /**
+   * Report an error you caught yourself. Needs error reporting switched on for the website.
+   *
+   * @example ```
+   * try { await pay(); } catch (e) { ghostwire.error(e, { orderId }); }
+   * ```
+   */
+  error: (error: unknown, context?: EventData) => Promise<void>;
   getSession: () => {
     cache: string | undefined;
     website: string | null;
@@ -251,6 +259,7 @@ type MetricEntry = PerformanceEntry & {
   const credentials = (config('fetch-credentials') || 'omit') as RequestCredentials;
   const perf = config('performance') === _true;
   const autoPageview = config('auto-pageview') !== _false;
+  const captureErrors = config('errors') === _true;
 
   const domains = domain.split(',').map(n => n.trim());
   const host =
@@ -396,6 +405,13 @@ type MetricEntry = PerformanceEntry & {
     }
 
     if (!payload) return;
+
+    if (type === 'event') {
+      addBreadcrumb(
+        payload.name ? 'event' : 'navigation',
+        String(payload.name ?? payload.url ?? ''),
+      );
+    }
 
     try {
       const res = await fetch(endpoint, {
@@ -629,12 +645,102 @@ type MetricEntry = PerformanceEntry & {
     window.addEventListener('pagehide', sendPerformance);
   };
 
+  /* Errors */
+
+  type Breadcrumb = { type: string; message: string; timestamp: number };
+
+  const MAX_BREADCRUMBS = 20;
+  const MAX_ERRORS_PER_PAGE = 10;
+  const REPEAT_WINDOW = 5000;
+  const breadcrumbs: Breadcrumb[] = [];
+  const lastReported = new Map<string, number>();
+  let errorCount = 0;
+
+  function addBreadcrumb(type: string, message: string) {
+    breadcrumbs.push({ type, message: message.slice(0, 300), timestamp: Date.now() });
+    if (breadcrumbs.length > MAX_BREADCRUMBS) breadcrumbs.shift();
+  }
+
+  const describeElement = (el: Element) => {
+    const text = (el.textContent || '').trim().replace(/s+/g, ' ').slice(0, 40);
+    return `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${text ? ` "${text}"` : ''}`;
+  };
+
+  const reportError = (
+    error: unknown,
+    { handled = false, context }: { handled?: boolean; context?: EventData } = {},
+  ): Promise<void> => {
+    const err =
+      error instanceof Error
+        ? error
+        : new Error(typeof error === 'string' ? error : JSON.stringify(error) || String(error));
+    const message = err.message || String(error);
+    const key = `${err.name}:${message}:${(err.stack || '').slice(0, 200)}`;
+    const now = Date.now();
+
+    // Skip repeats of the same error in quick succession, and runaway loops.
+    if (errorCount >= MAX_ERRORS_PER_PAGE || now - (lastReported.get(key) ?? 0) < REPEAT_WINDOW) {
+      return Promise.resolve();
+    }
+    lastReported.set(key, now);
+    errorCount++;
+
+    return send(
+      {
+        ...getPayload(),
+        error: {
+          type: err.name || 'Error',
+          message,
+          stack: err.stack,
+          handled,
+          breadcrumbs: breadcrumbs.slice(),
+          context,
+        },
+      },
+      'error',
+    );
+  };
+
+  const initErrors = () => {
+    window.addEventListener('error', event => reportError(event.error ?? event.message));
+    window.addEventListener('unhandledrejection', event => reportError(event.reason));
+    document.addEventListener(
+      'click',
+      event =>
+        event.target instanceof Element && addBreadcrumb('click', describeElement(event.target)),
+      true,
+    );
+
+    // Failed requests become breadcrumbs (not errors). Query strings are dropped: they can hold tokens.
+    const originalFetch = window.fetch;
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
+      const [input, init] = args;
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const method = (
+        init?.method || (input instanceof Request ? input.method : 'GET')
+      ).toUpperCase();
+      const label = `${method} ${url.split('?')[0]}`;
+      const own = url.startsWith(endpoint);
+
+      try {
+        const response = await originalFetch(...args);
+        if (!own && response.status >= 400) addBreadcrumb('request', `${label} ${response.status}`);
+        return response;
+      } catch (e) {
+        if (!own) addBreadcrumb('request', `${label} failed`);
+        throw e;
+      }
+    };
+  };
+
   /* Start */
 
   if (!window.ghostwire) {
     window.ghostwire = {
       track,
       identify,
+      error: (error: unknown, context?: EventData) =>
+        reportError(error, { handled: true, context }),
       getSession: () => ({ cache, website }),
     } as GhostwireTracker;
   }
@@ -666,6 +772,11 @@ type MetricEntry = PerformanceEntry & {
     reportSize();
     window.addEventListener('load', reportSize);
     setTimeout(reportSize, 1500);
+  }
+
+  // Error capture starts right away (not on load), so errors while the page loads are caught.
+  if (captureErrors && !trackingDisabled()) {
+    initErrors();
   }
 
   if (autoTrack && !trackingDisabled()) {

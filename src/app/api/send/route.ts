@@ -6,12 +6,21 @@ import { getSalt, hash, secret, uuid } from '@/lib/crypto';
 import { getClientInfo, hasBlockedIp } from '@/lib/detect';
 import { truncateString } from '@/lib/format';
 import { createToken, parseToken } from '@/lib/jwt';
+import { isNoise, parseStack } from '@/lib/errors';
 import { fetchWebsite } from '@/lib/load';
+import { createRateLimiter } from '@/lib/rate-limit';
 import { parseRequest } from '@/lib/request';
 import { badRequest, forbidden, json, serverError } from '@/lib/response';
 import { anyObjectParam, urlOrPathParam } from '@/lib/schema';
 import { safeDecodeURI, safeDecodeURIComponent } from '@/lib/url';
-import { createSession, saveEvent, saveSessionData, saveSessionLink, updateSession } from '@/queries/sql';
+import {
+  createSession,
+  saveEvent,
+  saveSessionData,
+  saveSessionLink,
+  updateSession,
+} from '@/queries/sql';
+import { saveError } from '@/queries/sql/errors/saveError';
 
 interface Cache {
   websiteId: string;
@@ -30,7 +39,7 @@ const safeStringParam = () =>
   });
 
 const schema = z.object({
-  type: z.enum(['event', 'identify', 'performance']),
+  type: z.enum(['event', 'identify', 'performance', 'error']),
   payload: z
     .object({
       website: z.uuid().optional(),
@@ -57,6 +66,26 @@ const schema = z.object({
       cls: z.number().nonnegative().max(100).optional(),
       fcp: z.number().nonnegative().max(60000).optional(),
       ttfb: z.number().nonnegative().max(60000).optional(),
+      error: z
+        .object({
+          type: z.string().max(200).optional(),
+          message: z.string().max(2000),
+          stack: z.string().max(20000).optional(),
+          handled: z.boolean().optional(),
+          // The steps before the error: page views, clicks, events, failed requests.
+          breadcrumbs: z
+            .array(
+              z.object({
+                type: z.string().max(20),
+                message: z.string().max(300),
+                timestamp: z.number().optional(),
+              }),
+            )
+            .max(30)
+            .optional(),
+          context: anyObjectParam.optional(),
+        })
+        .optional(),
     })
     .refine(
       data => {
@@ -70,6 +99,67 @@ const schema = z.object({
       },
     ),
 });
+
+// Per-minute caps, so an error loop in one browser (or a broken release) can't flood storage.
+const allowErrorForWebsite = createRateLimiter({ limit: 600, windowMs: 60_000 });
+const allowErrorForSession = createRateLimiter({ limit: 20, windowMs: 60_000 });
+
+async function collectBrowserError({
+  websiteId,
+  sessionId,
+  url,
+  hostname,
+  error,
+  ...rest
+}: {
+  websiteId: string;
+  sessionId: string;
+  visitId: string;
+  distinctId?: string;
+  hostname?: string;
+  url?: string;
+  browser?: string;
+  os?: string;
+  device?: string;
+  error: NonNullable<z.infer<typeof schema>['payload']['error']>;
+  createdAt: Date;
+}) {
+  const website = await fetchWebsite(websiteId);
+
+  // Accepted only while error reporting is switched on for the website.
+  if (!website?.errorsEnabled) return;
+  if (!allowErrorForWebsite(websiteId) || !allowErrorForSession(sessionId)) return;
+
+  const frames = parseStack(error.stack, 'javascript');
+  if (isNoise(error.message, frames)) return;
+
+  let urlPath: string | undefined;
+  try {
+    urlPath = new URL(url || '/', `https://${hostname || 'localhost'}`).pathname;
+  } catch {
+    urlPath = undefined;
+  }
+
+  // Best-effort: a failed error write must not break the tracker's response.
+  await saveError({
+    ...rest,
+    websiteId,
+    sessionId,
+    source: 'browser',
+    platform: 'javascript',
+    type: error.type || 'Error',
+    message: error.message,
+    stack: error.stack,
+    frames,
+    hostname,
+    urlPath,
+    context: {
+      handled: error.handled ?? false,
+      breadcrumbs: error.breadcrumbs,
+      extra: error.context,
+    },
+  }).catch(e => console.error('Failed to save error:', e));
+}
 
 export async function POST(request: Request) {
   try {
@@ -101,6 +191,7 @@ export async function POST(request: Request) {
       cls,
       fcp,
       ttfb,
+      error: reportedError,
     } = payload;
 
     const sourceId = websiteId || pixelId || linkId;
@@ -379,6 +470,22 @@ export async function POST(request: Request) {
         cls,
         fcp,
         ttfb,
+        createdAt,
+      });
+    }
+
+    if (type === COLLECTION_TYPE.error && websiteId && reportedError) {
+      await collectBrowserError({
+        websiteId,
+        sessionId,
+        visitId,
+        distinctId,
+        hostname,
+        url,
+        browser,
+        os,
+        device,
+        error: reportedError,
         createdAt,
       });
     }
