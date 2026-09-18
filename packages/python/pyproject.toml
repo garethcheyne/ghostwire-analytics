@@ -21,7 +21,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/garethcheyne/ghostwire-analytics"
-Source = "https://github.com/garethcheyne/ghostwire-analytics/tree/master/packages/python"
+Source = "https://github.com/garethcheyne/ghostwire-analytics/tree/main/packages/python"
 
 [tool.setuptools.packages.find]
 where = ["src"]
