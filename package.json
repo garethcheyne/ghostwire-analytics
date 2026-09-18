@@ -55,6 +55,7 @@
     "react": "19.3.0",
     "react-day-picker": "^10.0.1",
     "react-dom": "19.3.0",
+    "react-simple-maps": "^5.0.5",
     "recharts": "^3.8.0",
     "rrweb": "^2.1.6",
     "serialize-error": "^13.0.1",

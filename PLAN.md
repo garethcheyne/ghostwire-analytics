@@ -34,9 +34,9 @@ working reference for features and server logic (`reference/umami/`, see AGENTS.
 - [x] Tracker script (`script.js`, global `ghostwire`, `data-ghostwire-event`) + collect endpoint, verified cross-origin
 - [x] GeoIP (MaxMind GeoLite2) build step, bundled into the Docker image
 - [x] Websites: list (search, sparklines), create, settings (details, tracking code, replays/heatmaps, sharing, reset, delete, transfer)
-- [ ] Website overview: stats bar, pageviews/visitors chart, metrics tables (pages, referrers, browsers,
-      OS, devices, countries, regions, cities, languages, screens, events, hostnames, channels), world map
-- [ ] Filters, date range picker, comparison
+- [x] Website overview: stats bar with change, traffic chart, metric tables (pages/entry/exit/titles,
+      referrers/channels, browsers/OS/devices, countries/regions/cities/languages, events), world map
+- [x] Date range picker (presets, custom, all time, prev/next) and click-to-filter with filter badges
 
 ## Phase 2 — Traffic
 
