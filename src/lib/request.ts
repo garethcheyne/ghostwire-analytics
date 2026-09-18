@@ -8,7 +8,7 @@ import {
   parseSessionPropertyFilters,
   parseUniversalEventPropertyFilters,
 } from '@/lib/params';
-import { badRequest, unauthorized } from '@/lib/response';
+import { badRequest, forbidden, unauthorized } from '@/lib/response';
 import type { QueryFilters } from '@/lib/types';
 import { getWebsiteSegment } from '@/queries/prisma';
 
@@ -52,6 +52,15 @@ export async function parseRequest(
 
     if (!auth) {
       error = () => unauthorized();
+    } else if (!auth.user && query) {
+      // Share links never reveal identified users (their IDs are usernames/emails).
+      if (query.type === 'distinctId') {
+        error = () => forbidden({ message: 'Not available on shared links.' });
+      }
+
+      for (const key of Object.keys(query)) {
+        if (/^distinctId\d*$/.test(key)) delete query[key];
+      }
     }
   }
 

@@ -28,7 +28,8 @@ export async function GET(
 
   const filters = await getQueryFilters(query, websiteId);
 
-  const data = await getWebsiteSessions(websiteId, filters);
+  // Share links can't search by identified user.
+  const data = await getWebsiteSessions(websiteId, filters, { searchDistinctId: !!auth.user });
 
   return json(data);
 }

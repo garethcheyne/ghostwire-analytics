@@ -21,6 +21,11 @@ export async function GET(
     return unauthorized();
   }
 
+  // Session properties hold identify() traits (email, name...): signed-in users only.
+  if (!auth.user) {
+    return json([]);
+  }
+
   const data = await getSessionData(websiteId, sessionId);
 
   return json(data);

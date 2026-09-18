@@ -51,6 +51,17 @@ export async function GET(
 
   const stitchedSessionCount = sessionIds.length;
 
+  // Identified users are private to signed-in users, not share links.
+  if (!auth.user) {
+    return json({
+      ...data,
+      distinctId: undefined,
+      canDelete,
+      distinctIds: [],
+      stitchedSessionCount,
+    });
+  }
+
   return json({
     ...data,
     canDelete,

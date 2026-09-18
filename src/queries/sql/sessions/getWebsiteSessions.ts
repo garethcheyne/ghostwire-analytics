@@ -1,16 +1,19 @@
-
 import { EVENT_TYPE } from '@/lib/constants';
 import prisma from '@/lib/prisma';
 import type { PageResult, QueryFilters, WebsiteSession } from '@/lib/types';
 
 const FUNCTION_NAME = 'getWebsiteSessions';
 export async function getWebsiteSessions(
-  ...args: [websiteId: string, filters: QueryFilters]
+  ...args: [websiteId: string, filters: QueryFilters, options?: { searchDistinctId?: boolean }]
 ): Promise<PageResult<WebsiteSession[]>> {
   return relationalQuery(...args);
 }
 
-async function relationalQuery(websiteId: string, filters: QueryFilters) {
+async function relationalQuery(
+  websiteId: string,
+  filters: QueryFilters,
+  { searchDistinctId = true }: { searchDistinctId?: boolean } = {},
+) {
   const { pagedRawQuery, parseFilters } = prisma;
   const { search } = filters;
   const { filterQuery, dateQuery, cohortQuery, queryParams } = parseFilters({
@@ -20,8 +23,8 @@ async function relationalQuery(websiteId: string, filters: QueryFilters) {
   });
 
   const searchQuery = search
-    ? `and (distinct_id ilike {{search}}
-           or city ilike {{search}}
+    ? `and (${searchDistinctId ? 'distinct_id ilike {{search}} or' : ''}
+           city ilike {{search}}
            or browser ilike {{search}}
            or os ilike {{search}}
            or device ilike {{search}})`
