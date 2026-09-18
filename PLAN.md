@@ -118,6 +118,8 @@ Folded into the client libraries rather than a separate `@ghostwire/next`:
 - [x] Single sign-on with any OpenID Connect provider
 - [x] Tracker injection through ghostwire-proxy (generated OpenResty snippet for a host's Advanced config)
 - [x] Shared rate limits (`RATE_LIMIT_STORE=postgres`) for more than one app container
+- [x] Installable app (PWA) with push notifications as an alert channel, per device
+- [x] One-command installer and uninstaller (`scripts/install.sh`, `scripts/uninstall.sh`)
 - [ ] Native "inject tracker" switch in ghostwire-proxy itself (a change in that repo)
 - [ ] Partitioning or rollups for `website_event`, once there are tens of millions of events
 

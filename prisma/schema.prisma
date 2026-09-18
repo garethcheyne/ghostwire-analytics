@@ -687,7 +687,7 @@ model NotificationChannel {
   userId    String?   @map("user_id") @db.Uuid
   teamId    String?   @map("team_id") @db.Uuid
   name      String    @db.VarChar(100)
-  /// email | slack | discord | webhook
+  /// email | slack | discord | telegram | webhook | push
   type      String    @db.VarChar(20)
   /// { url, secret? } for webhooks; { emails: string[] } for email.
   config    Json
@@ -833,4 +833,19 @@ model RateLimit {
   @@id([key, windowStart])
   @@index([windowStart])
   @@map("rate_limit")
+}
+
+/// A browser or installed app that accepts Web Push notifications for a user.
+model PushSubscription {
+  id         String    @id() @map("push_subscription_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  endpoint   String    @unique @db.VarChar(1000)
+  p256dh     String    @db.VarChar(200)
+  auth       String    @db.VarChar(100)
+  userAgent  String?   @map("user_agent") @db.VarChar(500)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@map("push_subscription")
 }

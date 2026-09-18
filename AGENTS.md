@@ -98,6 +98,13 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
   `error.new`/`error.regression` fire from the ingest routes via `afterResponse()` (Next `after`), using the
   `isNew`/`regressed` flags `saveError` returns; `error.spike`/`traffic.drop` run every 5 minutes. Rules are
   claimed through `last_triggered_at` so several containers don't double-send. Deliveries go to `alert_log`.
+- **PWA and push** (`src/app/manifest.ts`, `public/sw.js`, browser side `src/lib/pwa.ts`, server `src/lib/push.ts`):
+  installable app; the service worker caches only `/_next/static` and icons (not in dev: registered as
+  `sw.js?dev=1`), shows push notifications and opens their URL on click. Caching failures must never stop it
+  installing. Devices are `push_subscription` rows (one per endpoint); VAPID keys come from `VAPID_*` or are
+  generated into `app_setting` (`vapid_keys`). The `push` channel type reaches its owner's devices, or every team
+  member's for a team channel; expired endpoints (404/410) are deleted. Push needs https (or localhost), and on
+  iOS the app added to the Home Screen.
 - **Releases and source maps**: the tracker's `data-release` (and the client libraries' `release`) lands on
   `website_event.release`, `error_event.release` and `error_group.first_/last_/regressed_release`; `release` rows
   are recorded throttled (`src/lib/releases.ts`) or registered by deploys. Source maps (`source_map`, gzip, keyed

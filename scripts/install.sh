@@ -295,6 +295,7 @@ report() {
   echo "  Errors only       docker compose exec app sh -c 'grep -h level.:.error /app/logs/*.log | tail'"
   echo "  Traffic stats     docker compose exec app sh -c 'grep -h event.:.stats /app/logs/*.log | tail -3'"
   echo "  Restore a backup  docker compose exec -T db pg_restore -U ghostwire -d ghostwire_analytics --clean --if-exists < backups/<file>.dump"
+  echo "  Uninstall         sudo bash scripts/uninstall.sh   (removes everything; asks about the code)"
   echo ""
   echo "OPTIONAL SETTINGS (add to .env, then run the update)"
   echo "  Email alerts and reports   SMTP_URL, SMTP_FROM"

@@ -7,6 +7,7 @@ import {
   Pencil,
   Plus,
   Send,
+  Smartphone,
   Trash2,
   Webhook,
 } from 'lucide-react';
@@ -71,6 +72,7 @@ import {
 } from '@/hooks/queries/alerts';
 import { useActiveTeam } from '@/hooks/use-active-team';
 import { EmailReportCard } from './email-report-card';
+import { PushDeviceCard } from './push-device-card';
 
 export const CHANNEL_META: Record<
   ChannelType,
@@ -100,11 +102,17 @@ export const CHANNEL_META: Record<
     help: 'Receives a JSON POST: event, title, text, url, fields, data.',
   },
   email: { label: 'Email', icon: Mail, help: 'Up to 10 addresses, separated by commas.' },
+  push: {
+    label: 'Push notification',
+    icon: Smartphone,
+    help: 'Notifies the phones and browsers that turned on notifications under This device.',
+  },
 };
 
 function describe(channel: Channel) {
   if (channel.type === 'email') return channel.config.emails?.join(', ') ?? '';
   if (channel.type === 'telegram') return `Chat ${channel.config.chatId ?? ''}`;
+  if (channel.type === 'push') return channel.teamId ? "Team members' devices" : 'Your devices';
   try {
     return new URL(channel.config.url ?? '').host;
   } catch {
@@ -141,15 +149,17 @@ function ChannelDialog({
               .split(/[,\s]+/)
               .filter(Boolean),
           }
-        : type === 'telegram'
-          ? {
-              chatId: value('chatId'),
-              ...(value('secret') && { secret: value('secret') }),
-            }
-          : {
-              url: value('url'),
-              ...(type === 'webhook' && value('secret') && { secret: value('secret') }),
-            };
+        : type === 'push'
+          ? {}
+          : type === 'telegram'
+            ? {
+                chatId: value('chatId'),
+                ...(value('secret') && { secret: value('secret') }),
+              }
+            : {
+                url: value('url'),
+                ...(type === 'webhook' && value('secret') && { secret: value('secret') }),
+              };
 
     try {
       await save.mutateAsync({ id: channel?.id, name: value('name'), type, config });
@@ -200,7 +210,13 @@ function ChannelDialog({
                 maxLength={100}
                 defaultValue={channel?.name}
                 placeholder={
-                  type === 'email' ? 'Support team' : type === 'telegram' ? 'Ops chat' : '#alerts'
+                  type === 'email'
+                    ? 'Support team'
+                    : type === 'telegram'
+                      ? 'Ops chat'
+                      : type === 'push'
+                        ? 'My phone'
+                        : '#alerts'
                 }
               />
             </Field>
@@ -216,6 +232,12 @@ function ChannelDialog({
                 />
                 <FieldDescription>{meta.help}</FieldDescription>
               </Field>
+            ) : type === 'push' ? (
+              <FieldDescription>
+                {teamId
+                  ? 'Notifies every team member on the devices where they turned notifications on.'
+                  : meta.help}
+              </FieldDescription>
             ) : type === 'telegram' ? (
               <>
                 <Field>
@@ -417,7 +439,9 @@ function ChannelList({
                 <Bell />
               </EmptyMedia>
               <EmptyTitle>No channels yet</EmptyTitle>
-              <EmptyDescription>Add Slack, Discord, a webhook or email.</EmptyDescription>
+              <EmptyDescription>
+                Add push notifications, Slack, Discord, Telegram, a webhook or email.
+              </EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (
@@ -458,6 +482,7 @@ export function NotificationsSettings() {
           </AlertDescription>
         </Alert>
       )}
+      <PushDeviceCard />
       <ChannelList
         title="Your channels"
         description="Only you can use these, on any website you manage."

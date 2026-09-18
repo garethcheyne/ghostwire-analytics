@@ -36,3 +36,10 @@ describe('notification channels', () => {
     expect(JSON.stringify(channel)).not.toContain('AAHdq');
   });
 });
+
+describe('push channels', () => {
+  it('need no configuration', () => {
+    const parsed = channelSchema.safeParse({ type: 'push', name: 'My devices' });
+    expect(parsed.success && parsed.data.config).toEqual({});
+  });
+});

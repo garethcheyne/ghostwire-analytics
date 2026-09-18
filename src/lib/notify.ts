@@ -1,12 +1,20 @@
 /*
- * Delivers a notification to one channel: Slack, Discord, Telegram, a generic webhook or email.
+ * Delivers a notification to one channel: Slack, Discord, Telegram, a generic webhook, email, or
+ * push notifications to the owner's (or team's) devices.
  * Email needs SMTP_URL (e.g. smtp://user:pass@mail.example.com:587) and SMTP_FROM.
  */
 import { createHmac } from 'node:crypto';
 
-export type ChannelType = 'email' | 'slack' | 'discord' | 'telegram' | 'webhook';
+export type ChannelType = 'email' | 'slack' | 'discord' | 'telegram' | 'webhook' | 'push';
 
-export const CHANNEL_TYPES: ChannelType[] = ['email', 'slack', 'discord', 'telegram', 'webhook'];
+export const CHANNEL_TYPES: ChannelType[] = [
+  'email',
+  'slack',
+  'discord',
+  'telegram',
+  'webhook',
+  'push',
+];
 
 export interface ChannelConfig {
   url?: string;
@@ -22,6 +30,9 @@ export interface Channel {
   type: string;
   name: string;
   config: ChannelConfig;
+  /** Push channels reach this user's devices (personal channel) or the team's (team channel). */
+  userId?: string | null;
+  teamId?: string | null;
 }
 
 export interface Notification {
@@ -187,6 +198,11 @@ export async function sendNotification(channel: Channel, notification: Notificat
     }
     case 'email':
       return sendEmail(config.emails ?? [], notification.title, emailContent(notification));
+    case 'push': {
+      const { sendPushNotification } = await import('@/lib/push');
+      await sendPushNotification(channel, notification);
+      return;
+    }
     default:
       throw new Error(`Unknown channel type: ${channel.type}`);
   }

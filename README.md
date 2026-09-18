@@ -25,6 +25,17 @@ Run the same command again to update: it keeps your `.env` and backs up the data
 For automated installs, give the answers as `GW_*` variables and add `--yes` (see the top of
 [`scripts/install.sh`](scripts/install.sh)).
 
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/garethcheyne/ghostwire-analytics/main/scripts/uninstall.sh | sudo bash
+```
+
+It removes everything the install created: the containers, the database and log volumes (all
+analytics data), the images, backups, logs, reports and the `.env`. It offers to save a last
+database backup outside the install first, asks you to type DELETE, and at the end asks whether
+to delete the code in `/opt/ghostwire-analytics` too. `GW_DIR` points it at another folder.
+
 ### Run with Docker by hand
 
 ```bash
@@ -98,6 +109,11 @@ start (`config.auth_secret`, `config.auth_url`). `LOG_LEVEL=debug` adds more det
   ghostwire-proxy** into the proxy host's Advanced config.
 - **Email** (optional): `SMTP_URL` and `SMTP_FROM` turn on email alert channels and the weekly or
   monthly reports people choose under Settings → Notifications. `APP_URL` sets the links in them.
+- **App and push notifications**: on https, Ghostwire Analytics installs as an app (Install app
+  in Chrome, Edge and Android; Share → Add to Home Screen on iPhone and iPad). Under **Settings →
+  Notifications → This device**, turn on notifications on each phone or computer; that adds a
+  "My devices" push channel to pick in each website's alert settings. A team push channel reaches
+  every member's devices. Nothing to configure: the keys are generated on first use.
 - **Single sign-on** (optional): `OIDC_DISCOVERY_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and
   `OIDC_NAME` add a "Sign in with …" button for any OpenID Connect provider (Authentik, Keycloak,
   Entra ID). Existing users sign in when the provider's verified email matches theirs;

@@ -47,6 +47,12 @@ export const channelSchema = z.discriminatedUnion('type', [
         .regex(/^(-?\d{1,20}|@\w{5,32})$/, 'Use a numeric chat ID or @channelname.'),
     }),
   }),
+  z.object({
+    /** Push notifications to the owner's devices, or every team member's for a team channel. */
+    type: z.literal('push'),
+    name: z.string().trim().min(1).max(100),
+    config: z.object({}).default({}),
+  }),
 ]);
 
 /** Channel types whose secret is kept when an edit leaves it blank. */
