@@ -6,7 +6,9 @@ FROM ${NODE_IMAGE} AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# npm install (not ci): lockfiles written by npm < 11.19 omit optional wasm deps that newer npm
+# expects, which makes npm ci fail. install still uses the locked versions.
+RUN npm install --no-audit --no-fund
 
 FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
@@ -16,7 +18,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Only needed so prisma.config.ts loads during `prisma generate`; nothing connects at build time.
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 ENV BETTER_AUTH_SECRET=build-time-placeholder-not-used-at-runtime
-RUN npm run build
+# geo/ always exists so the COPY below works even with SKIP_BUILD_GEO set.
+ARG SKIP_BUILD_GEO
+ENV SKIP_BUILD_GEO=$SKIP_BUILD_GEO
+RUN mkdir -p geo && npm run build
 
 FROM ${NODE_IMAGE} AS runner
 ARG PRISMA_VERSION
@@ -36,6 +41,7 @@ WORKDIR /app
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/geo ./geo
 COPY --chown=nextjs:nodejs scripts/start-docker.sh ./start-docker.sh
 
 USER nextjs

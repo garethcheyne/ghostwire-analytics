@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
   basePath: process.env.BASE_PATH || '',
   env: {
     currentVersion: pkg.version,
+    basePath: process.env.BASE_PATH || '',
   },
   async headers() {
     return [

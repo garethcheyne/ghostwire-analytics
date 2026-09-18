@@ -144,6 +144,15 @@ export async function checkAuth(request: Request) {
   };
 }
 
+/** Auth context for server components and pages (session cookie only), same shape as checkAuth. */
+export async function getAuthFromHeaders(headers: Headers) {
+  const auth = await getAuth();
+  const session = await auth.api.getSession({ headers });
+  const user = session ? await loadUser(session.user.id) : null;
+
+  return user ? { user, authType: 'session' as const } : null;
+}
+
 export async function hasPermission(role: string, permission: string | string[]) {
   return ensureArray(permission).some(e => ROLE_PERMISSIONS[role]?.includes(e));
 }

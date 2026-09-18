@@ -7,3 +7,6 @@ src/generated
 .git
 .vscode
 *.log
+geo
+public/script.js
+public/recorder.js

@@ -32,8 +32,8 @@ working reference for features and server logic (`reference/umami/`, see AGENTS.
 - [x] Port `checkAuth` / `parseRequest` onto Better Auth sessions + API keys + share tokens
 - [x] Port server libs (`lib/`, `queries/`, `permissions/`) and API routes, Postgres path only, with their tests (617 passing)
 - [x] Tracker script (`script.js`, global `ghostwire`, `data-ghostwire-event`) + collect endpoint, verified cross-origin
-- [ ] GeoIP (MaxMind GeoLite2) build step
-- [ ] Websites: list, create, edit, delete, reset, transfer, tracking code
+- [x] GeoIP (MaxMind GeoLite2) build step, bundled into the Docker image
+- [x] Websites: list (search, sparklines), create, settings (details, tracking code, replays/heatmaps, sharing, reset, delete, transfer)
 - [ ] Website overview: stats bar, pageviews/visitors chart, metrics tables (pages, referrers, browsers,
       OS, devices, countries, regions, cities, languages, screens, events, hostnames, channels), world map
 - [ ] Filters, date range picker, comparison

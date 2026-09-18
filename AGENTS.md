@@ -34,7 +34,8 @@ Read at any time for conventions, theming, Docker setup and branding. Treat as r
 | Package manager | npm |
 
 TypeScript is pinned to 6.x because TS 7 (native compiler) isn't yet supported by Next's build-time type check.
-Regenerate `package-lock.json` with the Docker image's npm if `npm ci` fails in the build (see git history).
+The Dockerfile uses `npm install` rather than `npm ci`: lockfiles written by npm < 11.19 miss optional wasm deps that
+the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm ci`.
 
 ## Theming and UI rules
 - Theme tokens in `src/app/globals.css` match ghostwire-proxy exactly (sky primary `199 89% 48%`, slate surfaces,
