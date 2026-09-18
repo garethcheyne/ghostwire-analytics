@@ -6,6 +6,9 @@ import { addCustomEvent, record } from 'rrweb';
 
   if (!currentScript) return;
 
+  // Don't record the page while it's shown inside Ghostwire's heatmap viewer.
+  if (window.name === 'ghostwire-heatmap') return;
+
   const _data = 'data-';
   const attr = currentScript.getAttribute.bind(currentScript);
   const config = value => attr(`${_data}${value}`);

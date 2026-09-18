@@ -374,10 +374,14 @@ type MetricEntry = PerformanceEntry & {
 
   /* Tracking functions */
 
+  const HEATMAP_FRAME_NAME = 'ghostwire-heatmap';
+
   const trackingDisabled = () =>
     disabled ||
     !website ||
     localStorage?.getItem('ghostwire.disabled') ||
+    // The page is being shown inside Ghostwire's heatmap viewer, not visited.
+    window.name === HEATMAP_FRAME_NAME ||
     (domain && !domains.includes(hostname)) ||
     (dnt && hasDoNotTrack());
 
