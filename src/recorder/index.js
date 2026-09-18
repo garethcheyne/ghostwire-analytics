@@ -47,6 +47,10 @@ import { addCustomEvent, record } from 'rrweb';
   let maskLevel = 'moderate';
   let maxDuration = 300000;
   let blockSelector = '';
+  let maskTextSelector = '';
+  let hideMedia = false;
+  let excludePaths = [];
+  let replayPaused = false;
 
   let replayBuffer = [];
   let heatmapBuffer = [];
@@ -301,6 +305,46 @@ import { addCustomEvent, record } from 'rrweb';
     scheduleHeatmapFlush();
   };
 
+  /** Stops recording on a private page; resumes (with a fresh snapshot) when the visitor leaves it. */
+  const syncPrivatePage = () => {
+    if (replayStopped || !excludePaths.length) return;
+
+    const excluded = isExcludedPath(location.pathname);
+
+    if (excluded && !replayPaused) {
+      replayPaused = true;
+      if (replayStopFn) {
+        addCustomEvent('paused', { reason: 'private page' });
+        flushReplay();
+        replayStopFn();
+        replayStopFn = null;
+      }
+      if (replayFlushTimer) clearInterval(replayFlushTimer);
+      replayFlushTimer = null;
+    } else if (!excluded && replayPaused) {
+      replayPaused = false;
+      beginReplayCapture();
+    }
+  };
+
+  const watchPrivatePages = () => {
+    if (!excludePaths.length) return;
+
+    ['pushState', 'replaceState'].forEach(method => {
+      const original = history[method];
+      history[method] = function (...args) {
+        const result = original.apply(this, args);
+        try {
+          syncPrivatePage();
+        } catch {
+          /* never break navigation */
+        }
+        return result;
+      };
+    });
+    window.addEventListener('popstate', syncPrivatePage);
+  };
+
   const stopReplay = () => {
     if (replayStopped) return;
 
@@ -315,19 +359,34 @@ import { addCustomEvent, record } from 'rrweb';
     }
   };
 
-  const getMaskConfig = level => {
-    switch (level) {
-      case 'strict':
-        return {
-          maskAllInputs: true,
-          maskTextSelector: '*',
-        };
-      default:
-        return {
-          maskAllInputs: true,
-        };
-    }
-  };
+  // Sites can mark elements in their markup: gw-block / data-gw-block (not recorded),
+  // gw-mask / data-gw-mask (text masked), gw-ignore (input not recorded).
+  const joinSelectors = (...selectors) => selectors.filter(Boolean).join(', ');
+
+  const getMaskConfig = level => ({
+    maskAllInputs: true,
+    blockClass: /^(rr|gw)-block$/,
+    maskTextClass: /^(rr|gw)-mask$/,
+    ignoreClass: 'gw-ignore',
+    maskTextSelector:
+      level === 'strict' ? '*' : joinSelectors('[data-gw-mask]', maskTextSelector) || undefined,
+    blockSelector: joinSelectors(
+      '[data-gw-block]',
+      hideMedia && 'img, picture, video, canvas, svg image',
+      blockSelector,
+    ),
+  });
+
+  // Paths where recording pauses: '*' matches anything, e.g. /account/*.
+  const isExcludedPath = path =>
+    excludePaths.some(pattern => {
+      const source = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+      try {
+        return new RegExp('^' + source + '$').test(path);
+      } catch {
+        return false;
+      }
+    });
 
   const shouldSample = value => {
     if (value >= 1) return true;
@@ -438,7 +497,8 @@ import { addCustomEvent, record } from 'rrweb';
   };
 
   const beginReplayCapture = () => {
-    replayStartTime = Date.now();
+    // Resuming after a private page keeps the visit's original start (for maxDuration).
+    replayStartTime = replayStartTime ?? Date.now();
 
     replayFlushTimer = setInterval(() => flushReplay(), REPLAY_FLUSH_INTERVAL);
 
@@ -499,7 +559,6 @@ import { addCustomEvent, record } from 'rrweb';
       recordCanvas: false,
       recordCrossOriginIframes: false,
       checkoutEveryNms: 30000,
-      ...(blockSelector && { blockSelector }),
     });
 
     if (replayStopped && replayStopFn) {
@@ -706,7 +765,9 @@ import { addCustomEvent, record } from 'rrweb';
     }
 
     if (shouldRecordReplay) {
-      beginReplayCapture();
+      if (isExcludedPath(location.pathname)) replayPaused = true;
+      else beginReplayCapture();
+      watchPrivatePages();
     }
 
     if (!shouldRecordHeatmap && !shouldRecordReplay) {
@@ -746,6 +807,9 @@ import { addCustomEvent, record } from 'rrweb';
       if (typeof data.maskLevel === 'string') maskLevel = data.maskLevel;
       if (typeof data.maxDuration === 'number') maxDuration = data.maxDuration;
       if (typeof data.blockSelector === 'string') blockSelector = data.blockSelector;
+      if (typeof data.maskTextSelector === 'string') maskTextSelector = data.maskTextSelector;
+      hideMedia = data.hideMedia === true;
+      if (Array.isArray(data.excludePaths)) excludePaths = data.excludePaths;
     } catch {
       return;
     }

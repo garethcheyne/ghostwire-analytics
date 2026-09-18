@@ -2,6 +2,21 @@ import { describe, expect, test } from 'vitest';
 import { getRecorderConfig, getRecorderEnabled } from './recorder';
 
 describe('getRecorderConfig', () => {
+  test('keeps privacy options and cleans the page list', () => {
+    expect(
+      getRecorderConfig({
+        maskTextSelector: '.customer',
+        hideMedia: true,
+        excludePaths: [' /account/* ', '', 42, '/checkout'],
+      }),
+    ).toEqual({
+      maskTextSelector: '.customer',
+      hideMedia: true,
+      excludePaths: ['/account/*', '/checkout'],
+    });
+    expect(getRecorderConfig({ hideMedia: 'yes', excludePaths: 'nope' })).toEqual({});
+  });
+
   test('returns an empty object for non-object values', () => {
     expect(getRecorderConfig(null)).toEqual({});
     expect(getRecorderConfig(undefined)).toEqual({});

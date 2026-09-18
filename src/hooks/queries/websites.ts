@@ -29,6 +29,9 @@ export interface ReplayConfig {
   maskLevel?: 'strict' | 'moderate';
   maxDuration?: number;
   blockSelector?: string;
+  maskTextSelector?: string;
+  hideMedia?: boolean;
+  excludePaths?: string[];
 }
 
 export interface WebsiteListParams {

@@ -1,4 +1,5 @@
 'use client';
+import { ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ import {
   FieldTitle,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -44,6 +47,9 @@ const DEFAULTS: Required<ReplayConfig> = {
   maskLevel: 'moderate',
   maxDuration: 300000,
   blockSelector: '',
+  maskTextSelector: '',
+  hideMedia: false,
+  excludePaths: [],
 };
 
 function RateSlider({
@@ -125,7 +131,9 @@ function RecordingForm({ initial }: { initial: Required<ReplayConfig> }) {
                 <FieldLabel>Text masking</FieldLabel>
                 <Select
                   value={config.maskLevel}
-                  onValueChange={value => set('maskLevel', value as ReplayConfig['maskLevel'] & string)}
+                  onValueChange={value =>
+                    set('maskLevel', value as ReplayConfig['maskLevel'] & string)
+                  }
                   disabled={disabled}
                 >
                   <SelectTrigger className="w-64">
@@ -164,15 +172,79 @@ function RecordingForm({ initial }: { initial: Required<ReplayConfig> }) {
                   disabled={disabled}
                   className="font-mono"
                 />
-                <FieldDescription>CSS selector for elements to leave out of recordings.</FieldDescription>
+                <FieldDescription>
+                  CSS selector for elements to leave out of recordings.
+                </FieldDescription>
               </Field>
+              <Field>
+                <FieldLabel htmlFor="replay-mask">Mask text in</FieldLabel>
+                <Input
+                  id="replay-mask"
+                  placeholder=".customer-name, .address"
+                  value={config.maskTextSelector}
+                  onChange={event => set('maskTextSelector', event.target.value)}
+                  disabled={disabled || config.maskLevel === 'strict'}
+                  className="font-mono"
+                />
+                <FieldDescription>
+                  Text in these elements shows as asterisks (all text already is when strict).
+                </FieldDescription>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="replay-exclude">Pause recording on these pages</FieldLabel>
+                <Textarea
+                  id="replay-exclude"
+                  placeholder={'/account/*\n/checkout/payment'}
+                  rows={3}
+                  value={config.excludePaths.join('\n')}
+                  onChange={event =>
+                    set(
+                      'excludePaths',
+                      event.target.value.split('\n').map(line => line.trimStart()),
+                    )
+                  }
+                  disabled={disabled}
+                  className="font-mono"
+                />
+                <FieldDescription>
+                  One path per line; * matches anything. Recording resumes on other pages.
+                </FieldDescription>
+              </Field>
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldTitle>Hide images and video</FieldTitle>
+                  <FieldDescription>
+                    Show placeholders instead, e.g. for ID photos or documents.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  checked={config.hideMedia}
+                  onCheckedChange={value => set('hideMedia', value)}
+                  disabled={disabled}
+                  aria-label="Hide images and video"
+                />
+              </Field>
+              <Alert>
+                <ShieldCheck />
+                <AlertTitle>Private by design</AlertTitle>
+                <AlertDescription>
+                  <span>
+                    Inputs are always masked. In your own markup, add <code>gw-block</code> or{' '}
+                    <code>data-gw-block</code> to leave an element out, <code>gw-mask</code> or{' '}
+                    <code>data-gw-mask</code> to mask its text, and <code>gw-ignore</code> to skip
+                    an input&apos;s typing.
+                  </span>
+                </AlertDescription>
+              </Alert>
             </>
           )}
           <FieldSeparator />
           <Field orientation="horizontal">
             <FieldContent>
               <FieldTitle>Heatmaps</FieldTitle>
-              <FieldDescription>Collect click positions and scroll depth per page.</FieldDescription>
+              <FieldDescription>
+                Collect click positions and scroll depth per page.
+              </FieldDescription>
             </FieldContent>
             <Switch
               checked={config.heatmapEnabled}

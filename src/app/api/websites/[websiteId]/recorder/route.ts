@@ -41,6 +41,9 @@ export async function GET(
       maskLevel: config.maskLevel ?? 'moderate',
       maxDuration: config.maxDuration ?? 300000,
       blockSelector: config.blockSelector ?? '',
+      maskTextSelector: config.maskTextSelector ?? '',
+      hideMedia: config.hideMedia === true,
+      excludePaths: config.excludePaths ?? [],
     },
     { headers },
   );
