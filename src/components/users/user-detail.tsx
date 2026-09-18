@@ -2,7 +2,7 @@
 import { format, formatDistanceStrict, formatDistanceToNowStrict } from 'date-fns';
 import { ArrowLeft, Eye, Play, TriangleAlert, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import { formatMetricLabel } from '@/components/analytics/metric-labels';
 import { DeviceIcon } from '@/components/analytics/sessions-view';
 import { StatCards } from '@/components/analytics/stat-cards';
@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useCurrentWebsite } from '@/components/websites/website-context';
 import { type WebsiteUserDetail, useWebsiteUser } from '@/hooks/queries/users';
 import { formatLongNumber } from '@/lib/format';
+import { SupportActions } from './support-actions';
 
 const ACTIVITY_LIMIT = 500;
 
@@ -45,24 +46,55 @@ function describeSession(session: Session | undefined) {
 
 type UserError = WebsiteUserDetail['errors'][number];
 
+/** Where the timeline links to: app pages when signed in, or a support link's own pages. */
+export interface UserLinks {
+  error: (groupId: string) => string | null;
+  session: (sessionId: string) => string | null;
+  replay: (replayId: string) => string | null;
+}
+
+const UserLinksContext = createContext<UserLinks>({
+  error: () => null,
+  session: () => null,
+  replay: () => null,
+});
+
+function MaybeLink({
+  href,
+  className,
+  children,
+}: {
+  href: string | null;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return href ? (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  ) : (
+    <span className={className}>{children}</span>
+  );
+}
+
 type TimelineItem =
   | ({ kind: 'activity'; key: string } & Activity)
   | ({ kind: 'error'; key: string } & UserError & { visitId: string; sessionId: string });
 
 function TimelineRow({ item }: { item: TimelineItem }) {
-  const website = useCurrentWebsite();
+  const links = useContext(UserLinksContext);
 
   if (item.kind === 'error') {
     return (
       <li className="relative flex items-center gap-2 py-1.5 text-sm">
         <span className="absolute -left-[21px] flex size-2.5 rounded-full border-2 border-background bg-destructive" />
         <TriangleAlert className="size-4 shrink-0 text-destructive" aria-label="Error" />
-        <Link
-          href={`/websites/${website.id}/errors/${item.groupId}`}
+        <MaybeLink
+          href={links.error(item.groupId)}
           className="min-w-0 flex-1 truncate text-destructive hover:underline"
         >
           <span className="font-medium">{item.type}</span>: {item.message}
-        </Link>
+        </MaybeLink>
         <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
           {format(new Date(item.createdAt), 'h:mm:ss a')}
         </span>
@@ -99,7 +131,7 @@ function TimelineRow({ item }: { item: TimelineItem }) {
 }
 
 function Timeline({ user }: { user: WebsiteUserDetail }) {
-  const website = useCurrentWebsite();
+  const links = useContext(UserLinksContext);
   const sessions = useMemo(() => new Map(user.sessions.map(s => [s.id, s])), [user.sessions]);
   const replays = useMemo(() => new Map(user.replays.map(r => [r.id, r])), [user.replays]);
 
@@ -152,12 +184,12 @@ function Timeline({ user }: { user: WebsiteUserDetail }) {
                 <span className="text-sm font-medium">
                   {format(start, 'EEE d MMM yyyy, h:mm a')}
                 </span>
-                <Link
-                  href={`/websites/${website.id}/sessions/${first.sessionId}`}
+                <MaybeLink
+                  href={links.session(first.sessionId)}
                   className="truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
                 >
                   {describeSession(session) || 'Session'}
-                </Link>
+                </MaybeLink>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">
@@ -170,9 +202,9 @@ function Timeline({ user }: { user: WebsiteUserDetail }) {
                   )}
                   {end > start && ` · ${formatDistanceStrict(end, start)}`}
                 </span>
-                {replay && (
+                {replay && links.replay(replay.id) && (
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/websites/${website.id}/replays/${replay.id}`}>
+                    <Link href={links.replay(replay.id)!}>
                       <Play data-icon="inline-start" />
                       Watch replay ({formatReplayLength(replay.duration)})
                     </Link>
@@ -194,7 +226,7 @@ function Timeline({ user }: { user: WebsiteUserDetail }) {
 
 /** Recent errors (browser and server) for the user, linking to each error. */
 function UserErrors({ errors }: { errors: UserError[] }) {
-  const website = useCurrentWebsite();
+  const links = useContext(UserLinksContext);
 
   return (
     <Card>
@@ -206,8 +238,8 @@ function UserErrors({ errors }: { errors: UserError[] }) {
         <ul className="flex flex-col">
           {errors.slice(0, 10).map(error => (
             <li key={error.id}>
-              <Link
-                href={`/websites/${website.id}/errors/${error.groupId}`}
+              <MaybeLink
+                href={links.error(error.groupId)}
                 className="flex flex-col gap-0.5 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
               >
                 <span className="truncate">
@@ -219,7 +251,7 @@ function UserErrors({ errors }: { errors: UserError[] }) {
                   {error.urlPath && ` · ${error.urlPath}`} ·{' '}
                   {formatDistanceToNowStrict(new Date(error.createdAt), { addSuffix: true })}
                 </span>
-              </Link>
+              </MaybeLink>
             </li>
           ))}
         </ul>
@@ -231,6 +263,14 @@ function UserErrors({ errors }: { errors: UserError[] }) {
 export function UserDetail({ userId }: { userId: string }) {
   const website = useCurrentWebsite();
   const { data: user, isPending, error } = useWebsiteUser(website.id, userId);
+  const links = useMemo<UserLinks>(
+    () => ({
+      error: groupId => `/websites/${website.id}/errors/${groupId}`,
+      session: sessionId => `/websites/${website.id}/sessions/${sessionId}`,
+      replay: replayId => `/websites/${website.id}/replays/${replayId}`,
+    }),
+    [website.id],
+  );
 
   if (isPending) return <Skeleton className="h-96 w-full" />;
 
@@ -240,6 +280,28 @@ export function UserDetail({ userId }: { userId: string }) {
     );
   }
 
+  return (
+    <UserDetailView
+      user={user}
+      links={links}
+      back={{ href: `/websites/${website.id}/users`, label: 'Users' }}
+      actions={<SupportActions websiteId={website.id} user={user} />}
+    />
+  );
+}
+
+/** One user's profile, devices, errors and timeline. */
+export function UserDetailView({
+  user,
+  links,
+  back,
+  actions,
+}: {
+  user: WebsiteUserDetail;
+  links: UserLinks;
+  back?: { href: string; label: string };
+  actions?: React.ReactNode;
+}) {
   const field = (key: string) => user.properties.find(p => p.dataKey === key)?.stringValue;
   const name = field('name');
   const email = field('email');
@@ -263,116 +325,123 @@ export function UserDetail({ userId }: { userId: string }) {
     user.sessions.reduce((total, session) => total + Number(session[key]), 0);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <Link
-          href={`/websites/${website.id}/users`}
-          className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-3.5" />
-          Users
-        </Link>
-        <h1 className="truncate text-2xl font-semibold tracking-tight">{name || user.id}</h1>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <span className="font-mono">{user.id}</span>
-            <CopyButton value={user.id} label="Copy user ID" />
-          </span>
-          {email && <span>{email}</span>}
-          {lastSeen && (
-            <span>
-              Last seen {formatDistanceToNowStrict(new Date(lastSeen), { addSuffix: true })}
-            </span>
-          )}
+    <UserLinksContext.Provider value={links}>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            {back && (
+              <Link
+                href={back.href}
+                className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="size-3.5" />
+                {back.label}
+              </Link>
+            )}
+            <h1 className="truncate text-2xl font-semibold tracking-tight">{name || user.id}</h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="font-mono">{user.id}</span>
+                <CopyButton value={user.id} label="Copy user ID" />
+              </span>
+              {email && <span>{email}</span>}
+              {lastSeen && (
+                <span>
+                  Last seen {formatDistanceToNowStrict(new Date(lastSeen), { addSuffix: true })}
+                </span>
+              )}
+            </div>
+          </div>
+          {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
         </div>
-      </div>
 
-      <StatCards
-        stats={[
-          { label: 'Devices', value: devices.length, format: formatLongNumber },
-          { label: 'Visits', value: sum('visits'), format: formatLongNumber },
-          { label: 'Views', value: sum('views'), format: formatLongNumber },
-          { label: 'Events', value: sum('events'), format: formatLongNumber },
-          { label: 'Replays', value: user.replays.length, format: formatLongNumber },
-          { label: 'Errors', value: user.errors.length, format: formatLongNumber },
-        ]}
-      />
+        <StatCards
+          stats={[
+            { label: 'Devices', value: devices.length, format: formatLongNumber },
+            { label: 'Visits', value: sum('visits'), format: formatLongNumber },
+            { label: 'Views', value: sum('views'), format: formatLongNumber },
+            { label: 'Events', value: sum('events'), format: formatLongNumber },
+            { label: 'Replays', value: user.replays.length, format: formatLongNumber },
+            { label: 'Errors', value: user.errors.length, format: formatLongNumber },
+          ]}
+        />
 
-      <div className="grid gap-6 *:min-w-0 lg:grid-cols-3">
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Identified as</CardTitle>
-              <CardDescription>Latest values the site passed to identify.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-2 gap-4">
-                {user.properties.map(property => (
+        <div className="grid gap-6 *:min-w-0 lg:grid-cols-3">
+          <div className="flex flex-col gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Identified as</CardTitle>
+                <CardDescription>Latest values the site passed to identify.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="grid grid-cols-2 gap-4">
+                  {user.properties.map(property => (
+                    <Detail
+                      key={property.dataKey}
+                      label={property.dataKey}
+                      value={
+                        property.stringValue ??
+                        property.numberValue ??
+                        (property.dateValue && format(new Date(property.dateValue), 'd MMM yyyy'))
+                      }
+                    />
+                  ))}
                   <Detail
-                    key={property.dataKey}
-                    label={property.dataKey}
-                    value={
-                      property.stringValue ??
-                      property.numberValue ??
-                      (property.dateValue && format(new Date(property.dateValue), 'd MMM yyyy'))
-                    }
+                    label="First seen"
+                    value={firstSeen && format(new Date(firstSeen), 'd MMM yyyy, h:mm a')}
                   />
-                ))}
-                <Detail
-                  label="First seen"
-                  value={firstSeen && format(new Date(firstSeen), 'd MMM yyyy, h:mm a')}
-                />
-                <Detail
-                  label="Last seen"
-                  value={lastSeen && format(new Date(lastSeen), 'd MMM yyyy, h:mm a')}
-                />
-              </dl>
-            </CardContent>
-          </Card>
+                  <Detail
+                    label="Last seen"
+                    value={lastSeen && format(new Date(lastSeen), 'd MMM yyyy, h:mm a')}
+                  />
+                </dl>
+              </CardContent>
+            </Card>
 
-          <Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Devices</CardTitle>
+                <CardDescription>Browsers they used, most recent first.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="flex flex-col">
+                  {devices.map(session => (
+                    <li key={session.id}>
+                      <MaybeLink
+                        href={links.session(session.id)}
+                        className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                      >
+                        <DeviceIcon device={session.device} />
+                        <span className="min-w-0 flex-1 truncate">{describeSession(session)}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {formatDistanceToNowStrict(new Date(session.lastAt), { addSuffix: true })}
+                        </span>
+                      </MaybeLink>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+
+            {user.errors.length > 0 && <UserErrors errors={user.errors} />}
+          </div>
+
+          <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Devices</CardTitle>
-              <CardDescription>Browsers they used, most recent first.</CardDescription>
+              <CardTitle>Activity</CardTitle>
+              <CardDescription>
+                Every visit, newest first, including browsing before they logged in on the same
+                device.
+                {user.activity.length >= ACTIVITY_LIMIT &&
+                  ` Showing the most recent ${ACTIVITY_LIMIT} actions.`}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="flex flex-col">
-                {devices.map(session => (
-                  <li key={session.id}>
-                    <Link
-                      href={`/websites/${website.id}/sessions/${session.id}`}
-                      className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-                    >
-                      <DeviceIcon device={session.device} />
-                      <span className="min-w-0 flex-1 truncate">{describeSession(session)}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {formatDistanceToNowStrict(new Date(session.lastAt), { addSuffix: true })}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <Timeline user={user} />
             </CardContent>
           </Card>
-
-          {user.errors.length > 0 && <UserErrors errors={user.errors} />}
         </div>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Activity</CardTitle>
-            <CardDescription>
-              Every visit, newest first, including browsing before they logged in on the same
-              device.
-              {user.activity.length >= ACTIVITY_LIMIT &&
-                ` Showing the most recent ${ACTIVITY_LIMIT} actions.`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Timeline user={user} />
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </UserLinksContext.Provider>
   );
 }

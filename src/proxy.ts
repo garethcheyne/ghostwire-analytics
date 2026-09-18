@@ -29,7 +29,7 @@ const trackerHeaders = {
 };
 
 // Paths reachable without a dashboard session.
-const PUBLIC_PATHS = [/^\/login(\/|$)/, /^\/share\//, /^\/api\//, /^\/[qp]\//, /^\/_next\//];
+const PUBLIC_PATHS = [/^\/login(\/|$)/, /^\/share\//, /^\/support\//, /^\/api\//, /^\/[qp]\//, /^\/_next\//];
 const PUBLIC_FILES = /\.(js|css|png|ico|svg|jpg|jpeg|gif|webp|txt|xml|json|map|woff2?)$/;
 
 const contentSecurityPolicy = getContentSecurityPolicy();

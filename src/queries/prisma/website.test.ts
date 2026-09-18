@@ -99,6 +99,11 @@ function createDeleteTx(calls: string[]) {
         calls.push('sourceMap');
       }),
     },
+    supportLink: {
+      deleteMany: vi.fn(async () => {
+        calls.push('supportLink');
+      }),
+    },
     segment: {
       deleteMany: vi.fn(async () => {
         calls.push('segment');
@@ -180,6 +185,7 @@ describe('website delete dependencies', () => {
       'alertLog',
       'release',
       'sourceMap',
+      'supportLink',
       'segment',
       'annotation',
       'share',

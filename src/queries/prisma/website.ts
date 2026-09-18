@@ -263,6 +263,10 @@ export async function deleteWebsite(websiteId: string) {
         where: { websiteId },
       });
 
+      await tx.supportLink.deleteMany({
+        where: { websiteId },
+      });
+
       await tx.segment.deleteMany({
         where: { websiteId },
       });

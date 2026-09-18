@@ -769,3 +769,19 @@ model SourceMap {
   @@index([websiteId, release])
   @@map("source_map")
 }
+
+/// An expiring, read-only link to one identified user's timeline, for support tickets.
+model SupportLink {
+  id             String    @id() @map("support_link_id") @db.Uuid
+  websiteId      String    @map("website_id") @db.Uuid
+  distinctId     String    @map("distinct_id") @db.VarChar(50)
+  slug           String    @unique() @db.VarChar(64)
+  includeReplays Boolean   @default(false) @map("include_replays")
+  note           String?   @db.VarChar(200)
+  createdBy      String?   @map("created_by") @db.Uuid
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(6)
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([websiteId, distinctId])
+  @@map("support_link")
+}
