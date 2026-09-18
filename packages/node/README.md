@@ -62,6 +62,27 @@ export { onRequestError } from '@ghostwire/node/next';
 
 Configure it with the environment variables above, or call `init()` in `register()`.
 
+#### Serve the tracker from your own domain
+
+Ad blockers often block requests to analytics hosts. `withGhostwire` adds rewrites so the
+tracker, the replay recorder and their ingest endpoints are served from `/_gw` on your site
+(first-party). Nothing else on your Ghostwire server is reachable through it.
+
+```ts
+// next.config.ts
+import { withGhostwire } from '@ghostwire/node/next';
+
+export default withGhostwire(nextConfig, { host: 'https://analytics.example.com' });
+```
+
+Then point the tracker at the path: `<GhostwireProvider host="/_gw" ... />` from
+`@ghostwire/react`, or `<script defer src="/_gw/script.js" data-website-id="..."></script>`.
+
+- Your own rewrites are kept. Options: `path` (default `/_gw`), `scriptName`.
+- If your `proxy.ts` (middleware) protects every path, exclude `/_gw` from its matcher.
+- Visitor locations come from the `X-Forwarded-For` header. Vercel and reverse proxies set it;
+  if your Next server faces the internet directly, every visit looks like it came from itself.
+
 ### Errors you handle
 
 ```ts

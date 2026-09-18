@@ -66,6 +66,13 @@ describe('GhostwireProvider', () => {
     expect(screen.getByText('app')).toBeTruthy();
   });
 
+  it('loads the tracker from your own domain when proxied (host="/_gw")', () => {
+    render(<GhostwireProvider host="/_gw" websiteId={WEBSITE_ID} />);
+
+    const script = document.querySelector('script[data-website-id]') as HTMLScriptElement;
+    expect(script.getAttribute('src')).toBe('/_gw/script.js');
+  });
+
   it('reuses a tracker script already in the page', () => {
     const existing = document.createElement('script');
     existing.dataset.websiteId = WEBSITE_ID;

@@ -209,3 +209,40 @@ describe('normalizeRequest', () => {
     });
   });
 });
+
+describe('withGhostwire', () => {
+  it('proxies only the tracking endpoints under /_gw', async () => {
+    const { withGhostwire } = await import('./next');
+    const config = withGhostwire({ reactStrictMode: true }, { host: 'https://gw.example.com/' });
+
+    expect(config.reactStrictMode).toBe(true);
+    const rewrites = (await config.rewrites()) as { source: string; destination: string }[];
+    expect(rewrites).toContainEqual({
+      source: '/_gw/script.js',
+      destination: 'https://gw.example.com/script.js',
+    });
+    expect(rewrites).toContainEqual({
+      source: '/_gw/api/send',
+      destination: 'https://gw.example.com/api/send',
+    });
+    expect(rewrites.every(rewrite => rewrite.source.startsWith('/_gw/'))).toBe(true);
+  });
+
+  it('keeps the app’s own rewrites', async () => {
+    const { withGhostwire } = await import('./next');
+    const mine = { source: '/old', destination: '/new' };
+
+    const list = withGhostwire({ rewrites: async () => [mine] }, { host: 'https://gw', path: 'a' });
+    const listed = (await list.rewrites()) as { source: string }[];
+    expect(listed.at(-1)).toBe(mine);
+    expect(listed[0].source).toBe('/a/script.js');
+
+    const phased = withGhostwire(
+      { rewrites: () => ({ afterFiles: [mine] }) },
+      { host: 'https://gw' },
+    );
+    const result = (await phased.rewrites()) as { beforeFiles: unknown[]; afterFiles: unknown[] };
+    expect(result.afterFiles).toEqual([mine]);
+    expect(result.beforeFiles).toHaveLength(5);
+  });
+});

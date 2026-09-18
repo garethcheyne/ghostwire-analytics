@@ -32,7 +32,7 @@ export function Root() {
 
 | Prop | |
 | --- | --- |
-| `host` | Your Ghostwire Analytics server. |
+| `host` | Your Ghostwire Analytics server, or `/_gw` when you proxy it through your own domain (see `withGhostwire` in `@ghostwire/node/next`). |
 | `websiteId` | From the website's settings in Ghostwire. |
 | `errors` | Capture uncaught errors and rejected promises. Error reporting must also be switched on in the website's settings. |
 | `user` | The signed-in user (`id` plus any fields you want to search by, like `email`). `null` when signed out: the visitor goes back to anonymous. |
