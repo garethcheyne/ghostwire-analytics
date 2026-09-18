@@ -17,6 +17,37 @@ docker compose up -d --build
 Open http://localhost:8770 and sign in as `admin` / `ghostwire` (or `ADMIN_PASSWORD` if set).
 Change the password straight away.
 
+### Beta deployment checklist
+
+1. In `.env`: a real `BETTER_AUTH_SECRET` (`npx auth secret`), `BETTER_AUTH_URL` set to the public
+   `https://` address, `ADMIN_PASSWORD` set before the first start, and a strong `POSTGRES_PASSWORD`.
+2. `docker compose --profile backup up -d --build` (the app, the database and daily backups).
+3. A proxy host in ghostwire-proxy pointing at port 8770, with TLS.
+4. An uptime check on `https://<your host>/api/health` (200 when the app and database are up, 503
+   when the database isn't).
+5. Sign in, change the admin password, turn on two-factor, then add your sites.
+
+### Logs
+
+The app logs JSON lines, to `docker logs` and to daily files in the `app-logs` volume
+(`/app/logs/app-YYYY-MM-DD.log`, kept `LOG_RETENTION_DAYS`, default 30). The files outlive
+rebuilds and restarts.
+
+```bash
+docker compose logs -f app                                          # live
+docker compose exec app sh -c 'tail -n 100 /app/logs/app-$(date +%F).log'
+docker compose exec app sh -c 'grep -h "\"level\":\"error\"" /app/logs/*.log'   # every error
+docker compose exec app sh -c 'grep -h "\"event\":\"stats\"" /app/logs/*.log'   # traffic
+docker compose cp app:/app/logs ./logs                              # copy them out
+```
+
+Every 5 minutes there's a `stats` line with what the app took in and what it dropped and why
+(`send.accepted.event`, `send.dropped.bot`, `send.dropped.rate_limited`, `errors.accepted.browser`,
+`alerts.sent`, `http.server_error`...). Server errors are logged with their route and stack
+(`api.server_error`, `request.error`), and background jobs log what they did (`alert.delivery`,
+`email_report.sent`, `retention.removed`). Settings that break a deployment are logged at every
+start (`config.auth_secret`, `config.auth_url`). `LOG_LEVEL=debug` adds more detail.
+
 ### In production
 
 - **HTTPS**: put it behind [ghostwire-proxy](../ghostwire-proxy) (or any reverse proxy) with a

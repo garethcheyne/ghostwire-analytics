@@ -121,6 +121,14 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
   (`requireLocalEmailVerified: false`, provider not "trusted"); new users only with `OIDC_AUTO_CREATE=true`.
 - **Retention** (`src/lib/retention.ts`, scheduled from instrumentation): off unless `DATA_RETENTION_DAYS` (or the
   per-kind `REPLAY_`/`HEATMAP_`/`ERROR_RETENTION_DAYS`) is set. Never deletes page views, events or saved replays.
+- **Logging** (`src/lib/logger.ts`, `src/lib/metrics.ts`): server code logs through `log.info/warn/error(event,
+  fields)` (JSON lines to stdout and daily files in `LOG_DIR`; errors are serialized with their stack), never
+  `console`. Per-request outcomes go to counters (`count('send.dropped.bot')`), flushed as one `stats` line every
+  `STATS_INTERVAL_MINUTES` (5). Next.js loads a separate copy of a module per bundle (each route handler, the
+  instrumentation), so process-wide state such as counters and the log file handle lives on `globalThis`.
+  Next's own server errors are logged by `onRequestError` in `src/instrumentation.ts`. In Docker the logs are in
+  the `app-logs` volume (`/app/logs`); inspect with `docker compose exec app sh -c 'tail /app/logs/app-*.log'`.
+  `/api/health` checks the database (503 when it's down); `/api/heartbeat` is the container liveness check.
 - **First admin** is created on startup when there are no users (`src/instrumentation.ts` → `src/lib/setup.ts`):
   username `admin`, password `ADMIN_PASSWORD` (default `ghostwire`).
 

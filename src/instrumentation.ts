@@ -2,7 +2,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { log } = await import('@/lib/logger');
     log.info('app.start', {
-      version: process.env.npm_package_version,
+      version: process.env.currentVersion,
       node: process.version,
       logDir: process.env.LOG_DIR ?? null,
       email: !!process.env.SMTP_URL,
@@ -10,6 +10,24 @@ export async function register() {
       retention: process.env.DATA_RETENTION_DAYS ?? null,
       sharedRateLimits: process.env.RATE_LIMIT_STORE === 'postgres',
     });
+
+    // Settings that make a deployment unsafe or broken, shouted about at every start.
+    if (!process.env.BETTER_AUTH_SECRET || process.env.BETTER_AUTH_SECRET.length < 32) {
+      log.error('config.auth_secret', {
+        message:
+          'BETTER_AUTH_SECRET is missing or shorter than 32 characters. Generate one with: npx auth secret',
+      });
+    }
+    if (
+      process.env.NODE_ENV === 'production' &&
+      !process.env.BETTER_AUTH_URL?.startsWith('https://')
+    ) {
+      log.warn('config.auth_url', {
+        message:
+          'BETTER_AUTH_URL is not an https:// address; sign-in cookies need HTTPS in production.',
+        value: process.env.BETTER_AUTH_URL ?? null,
+      });
+    }
 
     const { ensureAdminUser } = await import('@/lib/setup');
 

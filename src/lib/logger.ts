@@ -31,25 +31,28 @@ function serialize(value: unknown): unknown {
   return value;
 }
 
-let stream: fs.WriteStream | null = null;
-let streamDay = '';
-let lastCleanup = 0;
+// One file handle per process: Next.js loads a copy of this module per bundle, so the state
+// lives on globalThis.
+const files: { stream: fs.WriteStream | null; day: string; lastCleanup: number } = ((
+  globalThis as any
+).__ghostwireLogFiles ??= { stream: null, day: '', lastCleanup: 0 });
 
 function fileStream(now: Date) {
   const dir = process.env.LOG_DIR;
   if (!dir) return null;
 
   const day = now.toISOString().slice(0, 10);
-  if (stream && streamDay === day) return stream;
+  if (files.stream && files.day === day) return files.stream;
 
   try {
     fs.mkdirSync(dir, { recursive: true });
-    stream?.end();
-    stream = fs.createWriteStream(path.join(dir, `app-${day}.log`), { flags: 'a' });
+    files.stream?.end();
+    const stream = fs.createWriteStream(path.join(dir, `app-${day}.log`), { flags: 'a' });
     stream.on('error', () => {
-      stream = null;
+      if (files.stream === stream) files.stream = null;
     });
-    streamDay = day;
+    files.stream = stream;
+    files.day = day;
     cleanup(dir, now);
     return stream;
   } catch {
@@ -59,8 +62,8 @@ function fileStream(now: Date) {
 
 /** Deletes log files older than LOG_RETENTION_DAYS (checked at most once an hour). */
 function cleanup(dir: string, now: Date) {
-  if (now.getTime() - lastCleanup < 60 * 60 * 1000) return;
-  lastCleanup = now.getTime();
+  if (now.getTime() - files.lastCleanup < 60 * 60 * 1000) return;
+  files.lastCleanup = now.getTime();
 
   const days = Number(process.env.LOG_RETENTION_DAYS ?? 14);
   if (!Number.isFinite(days) || days <= 0) return;

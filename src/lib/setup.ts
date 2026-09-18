@@ -27,6 +27,11 @@ export async function ensureAdminUser() {
     username,
     message: 'Change its password after signing in.',
   });
+  if (!process.env.ADMIN_PASSWORD) {
+    log.warn('setup.default_password', {
+      message: `The admin account uses the default password. Sign in as "${username}" and change it now.`,
+    });
+  }
 
   return true;
 }
