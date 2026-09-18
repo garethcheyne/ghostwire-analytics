@@ -21,6 +21,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: 'standalone',
   basePath: process.env.BASE_PATH || '',
+  // Dev server only: let other machines on the local network open it (e.g. http://192.168.0.x:3000).
+  allowedDevOrigins: ['192.168.*.*', '10.*.*.*', '*.local'],
   env: {
     currentVersion: pkg.version,
     basePath: process.env.BASE_PATH || '',
