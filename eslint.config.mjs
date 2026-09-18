@@ -25,5 +25,7 @@ export default defineConfig([
     'src/generated/**',
     'public/script.js',
     'public/recorder.js',
+    'packages/*/dist/**',
+    'packages/*/node_modules/**',
   ]),
 ]);

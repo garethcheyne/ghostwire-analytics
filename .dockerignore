@@ -10,3 +10,5 @@ src/generated
 geo
 public/script.js
 public/recorder.js
+# Client libraries are built and published separately.
+packages
