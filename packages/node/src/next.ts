@@ -41,8 +41,7 @@ interface Rewrite {
 }
 
 type Rewrites =
-  | Rewrite[]
-  | { beforeFiles?: Rewrite[]; afterFiles?: Rewrite[]; fallback?: Rewrite[] };
+  Rewrite[] | { beforeFiles?: Rewrite[]; afterFiles?: Rewrite[]; fallback?: Rewrite[] };
 
 export interface GhostwireProxyOptions {
   /** Your Ghostwire Analytics server, e.g. https://analytics.example.com */
@@ -91,10 +90,7 @@ export function ghostwireRewrites({
  */
 export function withGhostwire<
   T extends { rewrites?: () => Rewrites | Promise<Rewrites> } & Record<string, any>,
->(
-  nextConfig: T,
-  options: GhostwireProxyOptions,
-): T & { rewrites: () => Promise<Rewrites> } {
+>(nextConfig: T, options: GhostwireProxyOptions): T & { rewrites: () => Promise<Rewrites> } {
   const ours = ghostwireRewrites(options);
 
   return {
