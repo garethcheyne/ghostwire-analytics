@@ -9,11 +9,14 @@ import { AppLink } from '@/components/share/share-context';
 
 function LiveVisitors({ websiteId }: { websiteId: string }) {
   const { data } = useActiveVisitors(websiteId);
+  const { kind = 'website' } = useCurrentWebsite();
   const visitors = data?.visitors ?? 0;
 
   return (
     <AppLink
-      href={`/websites/${websiteId}/realtime`}
+      // Realtime is a website page; for links and pixels the badge is just a count.
+      href={kind === 'website' ? `/websites/${websiteId}/realtime` : '#'}
+      onClick={kind === 'website' ? undefined : event => event.preventDefault()}
       className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs hover:bg-muted/50"
     >
       <span className="relative flex size-2">

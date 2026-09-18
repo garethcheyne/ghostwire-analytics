@@ -16,7 +16,11 @@ export type WebsiteListItem = Website & {
   } | null;
 };
 
-async function deleteWebsiteDependentData(tx: any, websiteId: string) {
+/**
+ * Deletes everything recorded under an id: events, sessions, replays, heatmaps, errors and so
+ * on. Links and pixels record their visits under their own id, so they use this too.
+ */
+export async function deleteWebsiteDependentData(tx: any, websiteId: string) {
   await tx.sessionReplaySaved.deleteMany({
     where: { websiteId },
   });

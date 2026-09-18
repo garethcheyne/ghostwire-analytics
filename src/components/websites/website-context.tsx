@@ -9,6 +9,8 @@ export interface WebsiteContextValue {
   userId: string | null;
   canUpdate: boolean;
   canDelete: boolean;
+  /** Links and pixels reuse the website reports; some website-only pages don't apply. */
+  kind?: 'website' | 'link' | 'pixel';
 }
 
 const WebsiteContext = createContext<WebsiteContextValue | null>(null);

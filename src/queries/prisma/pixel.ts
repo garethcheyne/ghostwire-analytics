@@ -1,5 +1,6 @@
 import type { Pixel, Prisma } from '@/generated/prisma/client';
 import prisma from '@/lib/prisma';
+import { deleteWebsiteDependentData } from './website';
 import { sanitizeSortFilters } from '@/lib/sort';
 import type { PageResult, QueryFilters } from '@/lib/types';
 
@@ -62,6 +63,12 @@ export async function updatePixel(pixelId: string, data: any) {
   return prisma.client.pixel.update({ where: { id: pixelId }, data });
 }
 
+/** Deletes a pixel with its views (recorded under the pixel's id) and shares. */
 export async function deletePixel(pixelId: string) {
-  return prisma.client.pixel.delete({ where: { id: pixelId } });
+  return prisma.transaction(async (tx: any) => {
+    await deleteWebsiteDependentData(tx, pixelId);
+    await tx.share.deleteMany({ where: { entityId: pixelId } });
+
+    return tx.pixel.delete({ where: { id: pixelId } });
+  });
 }

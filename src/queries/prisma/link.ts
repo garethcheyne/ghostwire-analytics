@@ -1,5 +1,6 @@
 import type { Link, Prisma } from '@/generated/prisma/client';
 import prisma from '@/lib/prisma';
+import { deleteWebsiteDependentData } from './website';
 import { sanitizeSortFilters } from '@/lib/sort';
 import type { PageResult, QueryFilters } from '@/lib/types';
 
@@ -68,6 +69,12 @@ export async function updateLink(linkId: string, data: any) {
   return prisma.client.link.update({ where: { id: linkId }, data });
 }
 
+/** Deletes a link with its clicks (recorded under the link's id) and shares. */
 export async function deleteLink(linkId: string) {
-  return prisma.client.link.delete({ where: { id: linkId } });
+  return prisma.transaction(async (tx: any) => {
+    await deleteWebsiteDependentData(tx, linkId);
+    await tx.share.deleteMany({ where: { entityId: linkId } });
+
+    return tx.link.delete({ where: { id: linkId } });
+  });
 }
