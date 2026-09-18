@@ -12,6 +12,10 @@ services:
       # Required. Generate with: npx auth secret
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:8770}
+      # The first admin, created on start when there are no users yet (default admin / ghostwire).
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       # The app's own logs: JSON lines on stdout and daily files in the app-logs volume.
       LOG_DIR: /app/logs
       LOG_LEVEL: ${LOG_LEVEL:-info}
