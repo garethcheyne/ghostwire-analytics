@@ -7,10 +7,28 @@ PostgreSQL.
 Built with Next.js 16, shadcn/ui, Prisma 7 and Better Auth. Based on
 [Umami](https://github.com/umami-software/umami) (MIT).
 
-## Run with Docker
+## Install on your server
+
+On a Linux server with Docker (Compose v2), git and curl:
 
 ```bash
-cp .env.example .env              # then set BETTER_AUTH_SECRET (npx auth secret)
+curl -fsSL https://raw.githubusercontent.com/garethcheyne/ghostwire-analytics/main/scripts/install.sh | sudo bash
+```
+
+It asks for your domain and the first admin, suggests a port that's free on the server, creates
+random secrets for the database and sign-in, writes `/opt/ghostwire-analytics/.env`, builds and
+starts everything, and prints a report (URL, ports, sign-in, files, commands). The report is
+also saved to `install-report.txt`, without the password. Then put your domain behind HTTPS
+(ghostwire-proxy or any reverse proxy) pointing at the port it chose.
+
+Run the same command again to update: it keeps your `.env` and backs up the database first.
+For automated installs, give the answers as `GW_*` variables and add `--yes` (see the top of
+[`scripts/install.sh`](scripts/install.sh)).
+
+### Run with Docker by hand
+
+```bash
+cp .env.example .env              # set POSTGRES_PASSWORD and BETTER_AUTH_SECRET (npx auth secret)
 docker compose up -d --build
 ```
 
