@@ -74,9 +74,10 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
   `website.errorsEnabled`. Grouping, stack parsing and noise filtering live in `src/lib/errors.ts`.
   **Capture must only observe**: never cancel, wrap or rethrow a site's errors, and never throw from capture code
   (tracker, recorder and client libraries alike).
-- **Client libraries** live in `packages/<name>` (`react`, `node`; Python to follow). Each is self-contained
-  (own package.json, lockfile, tsup build, vitest tests), excluded from the app's tsconfig, tests and Docker image.
-  Run `npm install && npm test && npm run build` inside the package.
+- **Client libraries** live in `packages/<name>`: `react`, `node` (also the `ghostwire` CLI for releases and source
+  maps, and `withGhostwire` for Next) and `python` (`ghostwire-analytics`, stdlib only). Each is self-contained
+  (own manifest, tests), excluded from the app's tsconfig, tests and Docker image. JS: `npm install && npm test &&
+  npm run build` inside the package; Python: `python -m unittest discover -s tests`.
 - **Heatmap viewer frame**: the viewer loads the live page in an iframe named `ghostwire-heatmap`. There the
   tracker and recorder send nothing (so previews aren't counted as visits); the tracker instead posts
   `{ type: 'ghostwire:heatmap-frame', width, height }` to the parent so the viewer can size the preview.
@@ -89,8 +90,35 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
 - **Boards**: widget metadata in `src/lib/board-components.ts` (Umami's type names), renderers in
   `src/components/boards/widgets.tsx`. The personal dashboard is a board-shaped `parameters` object saved via
   `/api/dashboard`. Board share responses include `names` for the widgets' entities (viewers can't list them).
-- **Ingest limits** (`src/lib/rate-limit.ts`, in memory): `/api/send` 600/min and `/api/record` 240/min per IP
-  (no IP, no limit); errors 600/min per website and 20/min per session.
+- **Ingest limits** (`src/lib/rate-limit.ts`): `/api/send` 600/min and `/api/record` 240/min per IP (no IP, no
+  limit); errors 600/min per website and 20/min per session. In memory, or shared through the `rate_limit` table
+  with `RATE_LIMIT_STORE=postgres` (fails open). Use `createLimiter`/`createIpRateLimiter` (async) in routes.
+- **Alerts** (`src/lib/alerts.ts`, delivery in `src/lib/notify.ts`): channels (`notification_channel`, per user or
+  team: email via SMTP_URL, Slack, Discord, signed webhooks) and one `alert_rule` per type per website.
+  `error.new`/`error.regression` fire from the ingest routes via `afterResponse()` (Next `after`), using the
+  `isNew`/`regressed` flags `saveError` returns; `error.spike`/`traffic.drop` run every 5 minutes. Rules are
+  claimed through `last_triggered_at` so several containers don't double-send. Deliveries go to `alert_log`.
+- **Releases and source maps**: the tracker's `data-release` (and the client libraries' `release`) lands on
+  `website_event.release`, `error_event.release` and `error_group.first_/last_/regressed_release`; `release` rows
+  are recorded throttled (`src/lib/releases.ts`) or registered by deploys. Source maps (`source_map`, gzip, keyed
+  by release + minified URL path) are applied at ingest (`resolveFrames`) and again when viewing older errors.
+  A frame's function name comes from the *caller's* call site (the name a map gives a position is the callee's).
+  CI endpoints accept the website's server key (`gwe_…`) through `authorizeWebsiteWrite` (`src/lib/website-key.ts`).
+- **Support links** (`support_link`): expiring public pages at `/support/<slug>` with one identified user's
+  timeline, served by `/api/support/<slug>` (replays only when the link includes them, and only that user's).
+  `UserDetailView` renders both the app page and the support page; links come from a `UserLinks` context.
+- **Forget a user**: `forgetUser()` deletes every session linked to the distinct ID (via `deleteSession`), their
+  server errors and support links. Needs `canDeleteWebsite`; audited as `user.forget`.
+- **Audit log** (`audit_log`, `src/lib/audit.ts`): `audit(request, auth, entry)` in routes for security and admin
+  actions; Better Auth activity (sign-ins incl. failures and SSO, 2FA, passwords, API keys, admin and team
+  endpoints) is recorded by the `hooks.after` middleware in `better-auth.ts`. Secrets are redacted by key name.
+  Admin-only page at `/admin/audit`. Route tests that load `@/lib/audit` must mock it (it imports Prisma).
+- **Email reports** (`email_report`, `src/lib/email-reports.ts`): weekly (Mondays) or monthly (the 1st) after
+  07:00 UTC, checked hourly and claimed via `last_sent_at`. Periods use UTC arithmetic (date-fns would shift
+  across daylight saving).
+- **Single sign-on** (`src/lib/sso.ts`): Better Auth `genericOAuth` provider `oidc` when `OIDC_DISCOVERY_URL` and
+  `OIDC_CLIENT_ID` are set. Existing users link by email only when the provider marks it verified
+  (`requireLocalEmailVerified: false`, provider not "trusted"); new users only with `OIDC_AUTO_CREATE=true`.
 - **Retention** (`src/lib/retention.ts`, scheduled from instrumentation): off unless `DATA_RETENTION_DAYS` (or the
   per-kind `REPLAY_`/`HEATMAP_`/`ERROR_RETENTION_DAYS`) is set. Never deletes page views, events or saved replays.
 - **First admin** is created on startup when there are no users (`src/instrumentation.ts` → `src/lib/setup.ts`):

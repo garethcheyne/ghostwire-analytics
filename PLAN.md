@@ -102,6 +102,25 @@ Folded into the client libraries rather than a separate `@ghostwire/next`:
 - [x] Reverse proxy and TLS via ghostwire-proxy (documented; its `X-Real-IP` gives visitor locations)
 - [ ] Periodically review Umami releases (`git -C reference/umami pull`) for fixes worth porting
 
+## Phase 8 — Operations and support ✅
+
+- [x] Alerts: Slack, Discord, signed webhook and email channels (personal or team); new error, regression,
+      error spike and traffic drop rules per website, with delivery history
+- [x] Release tracking: `data-release`/`release`, crash-free sessions, new and regressed errors per release,
+      deploy markers on the traffic chart, deploy API
+- [x] Source maps: upload API and `ghostwire` CLI, stack frames mapped to original files with code context
+- [x] Replay privacy: markup opt-outs (`gw-block`, `gw-mask`, `gw-ignore`), masked selectors, hidden media,
+      recording paused on chosen pages
+- [x] Support: copy-for-ticket summaries and expiring read-only support links (optionally with replays)
+- [x] Forget a user (data-protection erasure), audit log of sign-ins, security and admin actions
+- [x] Weekly and monthly email reports
+- [x] Python client (`packages/python`): exceptions, crashes, ASGI/WSGI middleware, logging, releases
+- [x] Single sign-on with any OpenID Connect provider
+- [x] Tracker injection through ghostwire-proxy (generated OpenResty snippet for a host's Advanced config)
+- [x] Shared rate limits (`RATE_LIMIT_STORE=postgres`) for more than one app container
+- [ ] Native "inject tracker" switch in ghostwire-proxy itself (a change in that repo)
+- [ ] Partitioning or rollups for `website_event`, once there are tens of millions of events
+
 ---
 
 ## Open questions
