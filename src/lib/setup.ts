@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth';
+import { auth } from '@/lib/better-auth';
 import { ROLES } from '@/lib/auth-roles';
 import { prisma } from '@/lib/prisma';
 

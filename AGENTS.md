@@ -54,8 +54,15 @@ Regenerate `package-lock.json` with the Docker image's npm if `npm ci` fails in 
   `teamId` columns reference `organization.id`. Login sessions are `AuthSession` (table `auth_session`) because
   `session` is Umami's visitor-session table. IDs are UUIDs (`advanced.database.generateId: 'uuid'`).
 - **Team context** is the session's active organization (team switcher in the sidebar), not Umami's `/teams/:id` URLs.
-- **API auth**: ported routes go through one `checkAuth(request)` that accepts the Better Auth session cookie,
-  `Authorization: Bearer gwa_...` API keys, or share tokens. Keep that single entry point.
+- **API auth**: ported routes go through one `checkAuth(request)` (`src/lib/auth.ts`) that accepts the Better Auth
+  session cookie, `Authorization: Bearer gwa_...` API keys, or share tokens. Keep that single entry point.
+  Better Auth is configured in `src/lib/better-auth.ts` and imported lazily from server code, so modules that only
+  need `hasPermission` (and their tests, which mock `@/lib/prisma`) don't boot it.
+- **Ported code conventions**: Umami's `ROLES` constants hold our role names. The Umami Cloud (`CLOUD_MODE`), Redis
+  and soft-deleted user/team paths are removed. `@/lib/prisma`'s default export is Umami's helper object
+  (`prisma.client`, `rawQuery`, `pagedQuery`...); its named `prisma` export is the bare client.
+- **Strictness**: `strict` with `noImplicitAny: false` (as in Umami). `strictNullChecks` stays on because Better
+  Auth's types need it. ESLint allows explicit `any` for the same reason.
 - **First admin** is created on startup when there are no users (`src/instrumentation.ts` → `src/lib/setup.ts`):
   username `admin`, password `ADMIN_PASSWORD` (default `ghostwire`).
 

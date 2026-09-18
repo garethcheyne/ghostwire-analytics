@@ -10,7 +10,7 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
-// Auth (Better Auth). Regenerate with: npx auth generate --config src/lib/auth.ts
+// Auth (Better Auth). Regenerate with: npx auth generate --config src/lib/better-auth.ts
 // then re-apply the table names and relations below.
 // ---------------------------------------------------------------------------
 

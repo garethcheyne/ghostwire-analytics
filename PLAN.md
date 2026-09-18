@@ -29,8 +29,8 @@ working reference for features and server logic (`reference/umami/`, see AGENTS.
 
 ## Phase 1 — Core analytics
 
-- [ ] Port `checkAuth` / `parseRequest` onto Better Auth sessions + API keys + share tokens
-- [ ] Port shared server libs (`lib/`, `queries/`, `permissions/`), Postgres path only, with their tests
+- [x] Port `checkAuth` / `parseRequest` onto Better Auth sessions + API keys + share tokens
+- [x] Port server libs (`lib/`, `queries/`, `permissions/`) and API routes, Postgres path only, with their tests (617 passing)
 - [ ] Tracker script (`script.js`, global `ghostwire`) + collect endpoint (`/api/send`, `/api/batch`)
 - [ ] GeoIP (MaxMind GeoLite2) build step
 - [ ] Websites: list, create, edit, delete, reset, transfer, tracking code
@@ -62,7 +62,7 @@ extend with the original Ghostwire ideas:
 
 ## Phase 5 — Workspace features
 
-- [ ] Dashboard, Boards (create, design, share)
+- [ ] Dashboard, Boards (create, design, share); restore `src/lib/boards.test.ts` from reference with the board component registry
 - [ ] Links (short links, `/q/:slug`) and Pixels (`/p/:slug`)
 - [ ] Share pages (`/share/:slug`)
 - [ ] Teams: create, join by access code, members and roles
