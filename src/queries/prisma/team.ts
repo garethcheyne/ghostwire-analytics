@@ -155,7 +155,11 @@ export async function updateTeam(teamId: string, data: Prisma.OrganizationUpdate
   });
 }
 
-export async function deleteTeam(teamId: string) {
+/**
+ * Deletes a team with its links, pixels and boards. Its websites are kept: they move to
+ * `websiteOwnerId` (the person deleting the team) rather than being left without an owner.
+ */
+export async function deleteTeam(teamId: string, websiteOwnerId: string) {
   const { client, transaction } = prisma;
 
   const [links, pixels, boards] = await Promise.all([
@@ -166,6 +170,10 @@ export async function deleteTeam(teamId: string) {
   const entityIds = [...links.map(l => l.id), ...pixels.map(p => p.id), ...boards.map(b => b.id)];
 
   return transaction([
+    client.website.updateMany({
+      where: { teamId },
+      data: { teamId: null, userId: websiteOwnerId },
+    }),
     client.member.deleteMany({ where: { organizationId: teamId } }),
     client.invitation.deleteMany({ where: { organizationId: teamId } }),
     client.share.deleteMany({ where: { entityId: { in: entityIds } } }),

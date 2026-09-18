@@ -21,7 +21,7 @@ import { useWebsiteDateRange } from '@/hooks/queries/analytics';
 import { useDateRange } from '@/hooks/use-date-range';
 import { getDateRangeValue } from '@/lib/date';
 
-const PRESETS = [
+export const PRESETS = [
   { value: '0day', label: 'Today' },
   { value: '24hour', label: 'Last 24 hours' },
   { value: '0week', label: 'This week' },

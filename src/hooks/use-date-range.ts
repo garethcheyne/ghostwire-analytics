@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { DEFAULT_DATE_RANGE_VALUE } from '@/lib/constants';
 import { getOffsetDateRange, parseDateRange } from '@/lib/date';
+import { useDefaultDateRange } from './use-default-date-range';
 import { useTimezone } from './use-timezone';
 
 /**
@@ -13,7 +14,8 @@ import { useTimezone } from './use-timezone';
 export function useDateRange() {
   const searchParams = useSearchParams();
   const timezone = useTimezone();
-  const date = searchParams.get('date') || DEFAULT_DATE_RANGE_VALUE;
+  const defaultDate = useDefaultDateRange();
+  const date = searchParams.get('date') || defaultDate;
   const unit = searchParams.get('unit') || '';
   const offset = Number(searchParams.get('offset') || 0);
   const compare = searchParams.get('compare') || 'prev';

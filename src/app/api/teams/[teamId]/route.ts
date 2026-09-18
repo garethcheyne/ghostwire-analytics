@@ -65,7 +65,7 @@ export async function DELETE(
     return unauthorized({ message: 'You must be the owner/manager of this team.' });
   }
 
-  await deleteTeam(teamId);
+  await deleteTeam(teamId, auth.user.id);
 
   return ok();
 }

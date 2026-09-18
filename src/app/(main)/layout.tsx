@@ -1,10 +1,12 @@
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { TwoFactorGate } from '@/components/auth/two-factor-gate';
 import { AppHeader } from '@/components/layout/app-header';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { auth } from '@/lib/better-auth';
 import { ROLES } from '@/lib/auth-roles';
+import { isTwoFactorRequired } from '@/lib/two-factor-policy';
 import pkg from '../../../package.json';
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +18,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   const { user } = session;
   const sidebarOpen = (await cookies()).get('sidebar_state')?.value !== 'false';
+  const mustSetUpTwoFactor = !user.twoFactorEnabled && (await isTwoFactorRequired(user));
 
   return (
     <SidebarProvider defaultOpen={sidebarOpen}>
@@ -31,6 +34,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           }}
         />
         <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6">{children}</main>
+        <TwoFactorGate required={mustSetUpTwoFactor} />
       </SidebarInset>
     </SidebarProvider>
   );
