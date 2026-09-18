@@ -126,6 +126,8 @@ export const EVENT_TYPE = {
 export const HEATMAP_EVENT_TYPE = {
   click: 1,
   scroll: 2,
+  /** A click that caused no DOM change or navigation (recorded in addition to the click). */
+  deadClick: 3,
 } as const;
 
 export const ENTITY_TYPE = {

@@ -3,7 +3,11 @@
  * come from many screen sizes; they're grouped into standard widths, scaled to that width,
  * and drawn over the page rendered at the same width.
  */
-import type { HeatmapPoint, HeatmapResult } from '@/queries/sql/heatmap/getHeatmap';
+import type {
+  HeatmapFrustrationSpot,
+  HeatmapPoint,
+  HeatmapResult,
+} from '@/queries/sql/heatmap/getHeatmap';
 
 export const SCREEN_WIDTHS = [320, 375, 425, 768, 1024, 1440, 1920] as const;
 
@@ -135,6 +139,33 @@ export function getBucketPoints(points: HeatmapPoint[], bucket: ScreenWidthBucke
 
     if (existing) existing.count += point.count;
     else merged.set(key, { pageX, pageY, count: point.count });
+  }
+
+  return [...merged.values()];
+}
+
+/** Rage or dead click spots in one width bucket, scaled to it and merged by position. */
+export function getBucketSpots(spots: HeatmapFrustrationSpot[], bucket: ScreenWidthBucket) {
+  const merged = new Map<
+    string,
+    { pageX: number; pageY: number; visits: number; clicks: number }
+  >();
+
+  for (const spot of spots) {
+    if (getNearestWidth(spot.viewportW) !== bucket.width) continue;
+
+    const scale = bucket.width / Math.max(1, spot.viewportW);
+    const pageX = Math.round(spot.pageX * scale);
+    const pageY = Math.round(spot.pageY * scale);
+    const key = `${pageX}:${pageY}`;
+    const existing = merged.get(key);
+
+    if (existing) {
+      existing.visits += spot.visits;
+      existing.clicks = Math.max(existing.clicks, spot.clicks);
+    } else {
+      merged.set(key, { pageX, pageY, visits: spot.visits, clicks: spot.clicks });
+    }
   }
 
   return [...merged.values()];

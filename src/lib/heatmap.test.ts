@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getBreakpoint,
   getBucketPoints,
+  getBucketSpots,
   getBusiestBucket,
   getNearestWidth,
   getScreenWidthBuckets,
@@ -79,6 +80,26 @@ describe('getBucketPoints', () => {
 
     // 720 snaps to 768, so only the two 1440 points are in the 1440 bucket.
     expect(getBucketPoints(points, bucket)).toEqual([{ pageX: 100, pageY: 50, count: 3 }]);
+  });
+});
+
+describe('getBucketSpots', () => {
+  it('keeps spots in the bucket, scales them, and merges visits at the same place', () => {
+    const spot = (viewportW: number, pageX: number, visits: number, clicks: number) => ({
+      pageX,
+      pageY: 100,
+      pageW: viewportW,
+      pageH: 2000,
+      viewportW,
+      viewportH: 900,
+      visits,
+      clicks,
+    });
+    const [bucket] = getScreenWidthBuckets([point(1440, 0, 0)]);
+
+    expect(
+      getBucketSpots([spot(1440, 50, 2, 3), spot(1440, 50, 1, 5), spot(375, 5, 9, 9)], bucket),
+    ).toEqual([{ pageX: 50, pageY: 100, visits: 3, clicks: 5 }]);
   });
 });
 

@@ -1,8 +1,19 @@
 'use client';
+import { Angry, MousePointerBan } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatLongNumber } from '@/lib/format';
 import type { ScrollBand } from '@/lib/heatmap';
+import { cn } from '@/lib/utils';
+
+export interface FrustrationMarker {
+  kind: 'rage' | 'dead';
+  pageX: number;
+  pageY: number;
+  visits: number;
+  clicks: number;
+}
 
 /** Frame name the tracker and recorder check, so the previewed page isn't counted as a visit. */
 export const HEATMAP_FRAME_NAME = 'ghostwire-heatmap';
@@ -130,6 +141,44 @@ function ScrollLayer({ bands, scale }: { bands: ScrollBand[]; scale: number }) {
   );
 }
 
+function MarkerLayer({ markers, scale }: { markers: FrustrationMarker[]; scale: number }) {
+  return (
+    <div className="pointer-events-none absolute inset-0">
+      {markers.map(marker => {
+        const Icon = marker.kind === 'rage' ? Angry : MousePointerBan;
+        // Fixed colours, not theme tokens: markers sit on the visitor's page, which doesn't follow our theme.
+        const visits = `${marker.visits} ${marker.visits === 1 ? 'visit' : 'visits'}`;
+
+        return (
+          <Tooltip key={`${marker.kind}:${marker.pageX}:${marker.pageY}`}>
+            <TooltipTrigger asChild>
+              {/* Counter-scaled so markers stay a readable size however far the page is zoomed out. */}
+              <span
+                className={cn(
+                  'pointer-events-auto absolute flex size-7 items-center justify-center rounded-full shadow-md ring-2 ring-white',
+                  marker.kind === 'rage' ? 'bg-red-600 text-white' : 'bg-zinc-900/90 text-white',
+                )}
+                style={{
+                  left: marker.pageX,
+                  top: marker.pageY,
+                  transform: `translate(-50%, -50%) scale(${1 / scale})`,
+                }}
+              >
+                <Icon className="size-4" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {marker.kind === 'rage'
+                ? `Rage clicks: ${visits}, up to ${marker.clicks} clicks in a second`
+                : `Dead clicks: ${marker.clicks} with no response, ${visits}`}
+            </TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
  * The page rendered at the chosen screen width, scaled down to fit, with the heat overlay on top.
  * The live page loads in a named iframe; if it can't be framed, the overlay still shows.
@@ -140,12 +189,14 @@ export function HeatmapStage({
   height,
   points,
   bands,
+  markers,
 }: {
   url: string | null;
   width: number;
   height: number;
   points?: { pageX: number; pageY: number; count: number }[];
   bands?: ScrollBand[];
+  markers?: FrustrationMarker[];
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState(0);
@@ -204,6 +255,7 @@ export function HeatmapStage({
               <>
                 {points && <ClickLayer points={points} width={width} height={height} />}
                 {bands && <ScrollLayer bands={bands} scale={scale} />}
+                {markers && <MarkerLayer markers={markers} scale={scale} />}
               </>
             ) : (
               <Skeleton className="absolute inset-0 rounded-none" />

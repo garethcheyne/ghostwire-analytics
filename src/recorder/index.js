@@ -34,6 +34,11 @@ import { addCustomEvent, record } from 'rrweb';
   };
   const HEATMAP_FLUSH_EVENT_COUNT = 20;
   const HEATMAP_FLUSH_INTERVAL = 5000;
+  // A click with no DOM change, navigation or scroll within this time is a dead click.
+  const DEAD_CLICK_WAIT = 1000;
+  // Focusing these is their reaction, so a click on them is never dead.
+  const DEAD_CLICK_IGNORE =
+    'input, textarea, select, option, label, video, audio, iframe, [contenteditable]';
 
   let replayEnabled = false;
   let heatmapEnabled = false;
@@ -284,8 +289,8 @@ import { addCustomEvent, record } from 'rrweb';
 
   const queueHeatmapEvent = event => {
     heatmapBuffer.push({
-      ...event,
       timestamp: Date.now(),
+      ...event,
     });
 
     if (heatmapBuffer.length >= HEATMAP_FLUSH_EVENT_COUNT) {
@@ -533,6 +538,47 @@ import { addCustomEvent, record } from 'rrweb';
       maxScrollPct = 0;
     };
 
+    const watchForDeadClick = (target, click) => {
+      if (typeof MutationObserver === 'undefined') return;
+      if (target?.closest?.(DEAD_CLICK_IGNORE)) return;
+
+      const { href } = location;
+      const { scrollX, scrollY } = window;
+      let reacted = false;
+      const onReaction = () => {
+        reacted = true;
+      };
+      const observer = new MutationObserver(onReaction);
+
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true,
+      });
+      window.addEventListener('pagehide', onReaction, { once: true });
+
+      setTimeout(() => {
+        observer.disconnect();
+        window.removeEventListener('pagehide', onReaction);
+
+        const selectedText = String(window.getSelection?.() ?? '').length > 0;
+
+        if (
+          reacted ||
+          selectedText ||
+          location.href !== href ||
+          window.scrollX !== scrollX ||
+          window.scrollY !== scrollY ||
+          document.visibilityState === 'hidden'
+        ) {
+          return;
+        }
+
+        queueHeatmapEvent({ ...click, type: 'dead' });
+      }, DEAD_CLICK_WAIT);
+    };
+
     const onClick = event => {
       if (!event.isTrusted || event.button !== 0) return;
 
@@ -556,7 +602,7 @@ import { addCustomEvent, record } from 'rrweb';
       const pageW = Math.max(rawPageW, Math.ceil(pageX), Math.ceil(targetRight));
       const pageH = Math.max(rawPageH, Math.ceil(pageY), Math.ceil(targetBottom));
 
-      queueHeatmapEvent({
+      const click = {
         type: 'click',
         url: location.href,
         x: Math.round(event.clientX),
@@ -567,7 +613,11 @@ import { addCustomEvent, record } from 'rrweb';
         pageH,
         viewportW: window.innerWidth,
         viewportH: window.innerHeight,
-      });
+        timestamp: Date.now(),
+      };
+
+      queueHeatmapEvent(click);
+      watchForDeadClick(target, click);
     };
 
     const onScroll = () => {

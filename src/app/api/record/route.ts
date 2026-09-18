@@ -38,7 +38,7 @@ const schema = z.discriminatedUnion('type', [
         .array(
           z.discriminatedUnion('type', [
             z.object({
-              type: z.literal('click'),
+              type: z.literal(['click', 'dead']),
               url: z.string(),
               x: z.coerce.number().optional(),
               y: z.coerce.number().optional(),
@@ -210,11 +210,16 @@ export async function POST(request: Request) {
         websiteId,
         sessionId,
         visitId,
-        eventType: event.type === 'click' ? HEATMAP_EVENT_TYPE.click : HEATMAP_EVENT_TYPE.scroll,
-        x: event.type === 'click' ? (event.x ?? null) : null,
-        y: event.type === 'click' ? (event.y ?? null) : null,
-        pageX: event.type === 'click' ? (event.pageX ?? null) : null,
-        pageY: event.type === 'click' ? (event.pageY ?? null) : null,
+        eventType:
+          event.type === 'click'
+            ? HEATMAP_EVENT_TYPE.click
+            : event.type === 'dead'
+              ? HEATMAP_EVENT_TYPE.deadClick
+              : HEATMAP_EVENT_TYPE.scroll,
+        x: event.type !== 'scroll' ? (event.x ?? null) : null,
+        y: event.type !== 'scroll' ? (event.y ?? null) : null,
+        pageX: event.type !== 'scroll' ? (event.pageX ?? null) : null,
+        pageY: event.type !== 'scroll' ? (event.pageY ?? null) : null,
         pageW: event.pageW ?? null,
         viewportW: event.viewportW ?? null,
         viewportH: event.viewportH ?? null,

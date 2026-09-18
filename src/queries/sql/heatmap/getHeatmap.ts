@@ -1,4 +1,3 @@
-
 import { HEATMAP_EVENT_TYPE, OPERATORS } from '@/lib/constants';
 import { filtersObjectToArray } from '@/lib/params';
 import prisma from '@/lib/prisma';
@@ -10,6 +9,13 @@ const FUNCTION_NAME = 'getHeatmap';
 const POINT_LIMIT = 5000;
 const PAGE_LIMIT = 100;
 const SCROLL_BUCKET_SIZE = 10;
+// Rage clicks: at least RAGE_MIN_CLICKS clicks within RAGE_WINDOW_MS, all within RAGE_RADIUS px.
+const RAGE_MIN_CLICKS = 3;
+const RAGE_WINDOW_MS = 1000;
+const RAGE_RADIUS = 40;
+// Frustration spots closer than this (px) are merged into one.
+const SPOT_GRID = 24;
+const SPOT_LIMIT = 200;
 
 export type HeatmapMode = 'click' | 'scroll';
 
@@ -57,10 +63,25 @@ export interface HeatmapSnapshotIframe {
 
 export type HeatmapSnapshot = HeatmapSnapshotIframe;
 
+/** A place on the page where visitors rage clicked or clicked with no effect. */
+export interface HeatmapFrustrationSpot {
+  pageX: number;
+  pageY: number;
+  pageW: number;
+  pageH: number;
+  viewportW: number;
+  viewportH: number;
+  /** Visits that hit this spot. */
+  visits: number;
+  /** Rage: the most clicks in one burst. Dead: total clicks with no effect. */
+  clicks: number;
+}
+
 export interface HeatmapResult {
   mode: HeatmapMode;
   pages: HeatmapPage[];
   points: HeatmapPoint[];
+  frustration: { rage: HeatmapFrustrationSpot[]; dead: HeatmapFrustrationSpot[] };
   snapshot: HeatmapSnapshot | null;
   scroll: {
     buckets: HeatmapScrollBucket[];
@@ -136,7 +157,14 @@ async function relationalQuery(
   const pages = rawPages;
 
   if (!urlPath) {
-    return { mode, pages, points: [], snapshot: null, scroll: emptyScroll() };
+    return {
+      mode,
+      pages,
+      points: [],
+      frustration: emptyFrustration(),
+      snapshot: null,
+      scroll: emptyScroll(),
+    };
   }
 
   if (mode === 'scroll') {
@@ -215,6 +243,7 @@ async function relationalQuery(
       mode,
       pages,
       points: [],
+      frustration: emptyFrustration(),
       snapshot,
       scroll,
     };
@@ -273,7 +302,111 @@ async function relationalQuery(
     pageH: viewport?.pageH ?? null,
   });
 
-  return { mode, pages, points: rawPoints, snapshot, scroll: emptyScroll() };
+  const frustration = await getFrustrationSpots(websiteId, urlPath, parameters, filterContext);
+
+  return { mode, pages, points: rawPoints, frustration, snapshot, scroll: emptyScroll() };
+}
+
+function emptyFrustration(): HeatmapResult['frustration'] {
+  return { rage: [], dead: [] };
+}
+
+const SPOT_COLUMNS = `
+  (round(page_x / ${SPOT_GRID}.0) * ${SPOT_GRID})::int as "pageX",
+  (round(page_y / ${SPOT_GRID}.0) * ${SPOT_GRID})::int as "pageY",
+  page_w::int as "pageW",
+  page_h::int as "pageH",
+  viewport_w::int as "viewportW",
+  viewport_h::int as "viewportH"`;
+
+/**
+ * Rage clicks are found from click timestamps (so they work on existing data); dead clicks are
+ * recorded by the recorder when a click causes no DOM change or navigation within a second.
+ */
+async function getFrustrationSpots(
+  websiteId: string,
+  urlPath: string,
+  { startDate, endDate }: HeatmapParameters,
+  filterContext: HeatmapFilterContext,
+): Promise<HeatmapResult['frustration']> {
+  const { rawQuery } = prisma;
+  const params = {
+    ...filterContext.queryParams,
+    websiteId,
+    urlPath,
+    startDate,
+    endDate,
+    clickType: HEATMAP_EVENT_TYPE.click,
+    deadType: HEATMAP_EVENT_TYPE.deadClick,
+  };
+  const where = (type: string) => `
+    where h.website_id = {{websiteId::uuid}}
+      and h.event_type = {{${type}}}
+      and h.url_path = {{urlPath}}
+      and h.created_at between {{startDate}} and {{endDate}}
+      ${filterContext.filterQuery}
+      and h.page_x is not null
+      and h.page_y is not null
+      and h.page_w is not null
+      and h.page_h is not null
+      and h.viewport_w is not null
+      and h.viewport_h is not null`;
+
+  const [rage, dead] = await Promise.all([
+    rawQuery(
+      `
+      with clicks as (
+        select h.visit_id, h.created_at, h.page_x, h.page_y, h.page_w, h.page_h,
+          h.viewport_w, h.viewport_h
+        from heatmap_event h
+        ${filterContext.joinQuery}
+        ${where('clickType')}
+      ),
+      bursts as (
+        select c.*,
+          (select count(*) from clicks d
+            where d.visit_id = c.visit_id
+              and d.created_at between c.created_at - interval '${RAGE_WINDOW_MS} milliseconds'
+                and c.created_at
+              and abs(d.page_x - c.page_x) <= ${RAGE_RADIUS}
+              and abs(d.page_y - c.page_y) <= ${RAGE_RADIUS}) as burst
+        from clicks c
+      ),
+      incidents as (
+        select visit_id, ${SPOT_COLUMNS}, max(burst) as burst
+        from bursts
+        where burst >= ${RAGE_MIN_CLICKS}
+        group by visit_id, 2, 3, 4, 5, 6, 7
+      )
+      select "pageX", "pageY", "pageW", "pageH", "viewportW", "viewportH",
+        count(*)::int as visits,
+        max(burst)::int as clicks
+      from incidents
+      group by 1, 2, 3, 4, 5, 6
+      order by visits desc, clicks desc
+      limit ${SPOT_LIMIT}
+      `,
+      params,
+      FUNCTION_NAME,
+    ),
+    rawQuery(
+      `
+      select ${SPOT_COLUMNS},
+        count(distinct h.visit_id)::int as visits,
+        count(*)::int as clicks
+      from heatmap_event h
+      ${filterContext.joinQuery}
+      ${where('deadType')}
+      group by 1, 2, 3, 4, 5, 6
+      order by clicks desc
+      limit ${SPOT_LIMIT}
+      `,
+      params,
+      FUNCTION_NAME,
+    ),
+  ]);
+
+  return { rage, dead };
 }
 
 function emptyScroll(): HeatmapResult['scroll'] {

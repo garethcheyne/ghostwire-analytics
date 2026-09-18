@@ -1,5 +1,14 @@
 'use client';
-import { Flame, Laptop, Monitor, Search, Smartphone, Tablet } from 'lucide-react';
+import {
+  Angry,
+  Flame,
+  Laptop,
+  Monitor,
+  MousePointerBan,
+  Search,
+  Smartphone,
+  Tablet,
+} from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { WebsiteHeader } from '@/components/analytics/website-header';
@@ -32,6 +41,7 @@ import {
   type Breakpoint,
   getBreakpoint,
   getBucketPoints,
+  getBucketSpots,
   getBusiestBucket,
   getScreenWidthBuckets,
   getScrollBands,
@@ -39,7 +49,7 @@ import {
   type ScreenWidthBucket,
 } from '@/lib/heatmap';
 import { cn } from '@/lib/utils';
-import { HeatmapStage } from './heatmap-stage';
+import { type FrustrationMarker, HeatmapStage } from './heatmap-stage';
 
 const BREAKPOINTS: { id: Breakpoint; label: string }[] = [
   { id: 'desktop', label: 'Desktop' },
@@ -143,6 +153,25 @@ function PageHeatmap({
     () => (current && mode === 'scroll' ? getScrollBands(current.scroll, bucket) : []),
     [current, bucket, mode],
   );
+  const [layers, setLayers] = useState<string[]>(['rage', 'dead']);
+  const frustration = useMemo(() => {
+    if (!current || !bucket || mode !== 'click') return { rage: [], dead: [] };
+
+    return {
+      rage: getBucketSpots(current.frustration.rage, bucket),
+      dead: getBucketSpots(current.frustration.dead, bucket),
+    };
+  }, [current, bucket, mode]);
+  const markers: FrustrationMarker[] = [
+    ...(layers.includes('dead')
+      ? frustration.dead.map(spot => ({ ...spot, kind: 'dead' as const }))
+      : []),
+    ...(layers.includes('rage')
+      ? frustration.rage.map(spot => ({ ...spot, kind: 'rage' as const }))
+      : []),
+  ];
+  const rageVisits = frustration.rage.reduce((sum, spot) => sum + spot.visits, 0);
+  const deadClicks = frustration.dead.reduce((sum, spot) => sum + spot.clicks, 0);
 
   if (isPending) {
     return <Skeleton className="h-[36rem] w-full" />;
@@ -173,7 +202,41 @@ function PageHeatmap({
           </span>{' '}
           on <span className="font-mono">{urlPath}</span>, {recorded}
         </p>
-        <WidthSelect buckets={buckets} value={bucket.width} unit={unit} onChange={onWidthChange} />
+        <div className="flex flex-wrap items-center gap-2">
+          {mode === 'click' && (
+            <ToggleGroup
+              type="multiple"
+              variant="outline"
+              size="sm"
+              value={layers}
+              onValueChange={setLayers}
+              aria-label="Frustration markers"
+            >
+              <ToggleGroupItem
+                value="rage"
+                disabled={!rageVisits}
+                title="3+ clicks on the same spot within a second"
+              >
+                <Angry />
+                {rageVisits} rage
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="dead"
+                disabled={!deadClicks}
+                title="Clicks with no response within a second"
+              >
+                <MousePointerBan />
+                {deadClicks} dead
+              </ToggleGroupItem>
+            </ToggleGroup>
+          )}
+          <WidthSelect
+            buckets={buckets}
+            value={bucket.width}
+            unit={unit}
+            onChange={onWidthChange}
+          />
+        </div>
       </div>
       <HeatmapStage
         url={current?.snapshot?.url ?? null}
@@ -181,6 +244,7 @@ function PageHeatmap({
         height={height}
         points={mode === 'click' ? points : undefined}
         bands={mode === 'scroll' ? bands : undefined}
+        markers={mode === 'click' ? markers : undefined}
       />
     </div>
   );
