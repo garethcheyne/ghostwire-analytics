@@ -4,7 +4,7 @@ import { config as loadEnv } from 'dotenv';
 loadEnv({ path: ['.env.local', '.env'], quiet: true });
 import { PrismaPg } from '@prisma/adapter-pg';
 import { type Prisma, PrismaClient } from '../../src/generated/prisma/client.js';
-import { getSessionCountForDay } from './distributions/temporal.js';
+import { generateTimestampForDay, getSessionCountForDay } from './distributions/temporal.js';
 import {
   type EventData,
   type EventDataEntry,
@@ -216,10 +216,41 @@ async function generateSiteData(
   const allEventData: EventDataEntry[] = [];
   const allRevenue: RevenueData[] = [];
 
+  // Ghostwire addition: a share of each day's visits come from people seen in the previous
+  // RETURN_WINDOW days (same session hash, new visit), so retention and cohorts have data.
+  const RETURN_RATE = 0.25;
+  const RETURN_WINDOW = 30;
+  const sessionsByDay: SessionData[][] = [];
+
   for (let dayIndex = 0; dayIndex < days.length; dayIndex++) {
     const day = days[dayIndex];
     const sessionCount = getSessionCountForDay(config.sessionsPerDay, day);
     const sessions = createSessions(websiteId, day, sessionCount);
+
+    const returning: SessionData[] = [];
+    const returnCount = dayIndex > 0 ? Math.round(sessionCount * RETURN_RATE) : 0;
+
+    for (let r = 0; r < returnCount; r++) {
+      // Favour recent visitors: pick how many days back with a decaying probability.
+      const back = Math.min(dayIndex, 1 + Math.floor(-Math.log(Math.random() || 1e-9) * 5));
+      if (back > RETURN_WINDOW) continue;
+      const pool = sessionsByDay[dayIndex - back];
+      if (!pool?.length) continue;
+      const original = pool[Math.floor(Math.random() * pool.length)];
+      returning.push({ ...original, createdAt: generateTimestampForDay(day) });
+    }
+
+    sessionsByDay.push(sessions);
+
+    for (const session of returning) {
+      const { events, eventDataEntries } = generateEventsForSession(session, siteConfig, config.getJourney());
+      allEvents.push(...events);
+      allEventData.push(...eventDataEntries);
+
+      if (config.revenueConfigs) {
+        allRevenue.push(...generateRevenueForEvents(events, config.revenueConfigs));
+      }
+    }
 
     for (const session of sessions) {
       const journey = config.getJourney();

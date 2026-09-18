@@ -1,5 +1,6 @@
 import { getRandomReferrer } from '../distributions/referrers.js';
 import { addSeconds, randomInt, uuid } from '../utils.js';
+import { maybePerformanceEvent } from './performance.js';
 import type { SessionData } from './sessions.js';
 
 export const EVENT_TYPE = {
@@ -48,6 +49,11 @@ export interface EventData {
   eventName: string | null;
   tag: string | null;
   createdAt: Date;
+  lcp?: number;
+  inp?: number;
+  cls?: number;
+  fcp?: number;
+  ttfb?: number;
 }
 
 export interface EventDataEntry {
@@ -121,6 +127,11 @@ export function generateEventsForSession(
       tag: null,
       createdAt: currentTime,
     });
+
+    const vitals = maybePerformanceEvent(events[events.length - 1], session.device);
+    if (vitals) {
+      events.push(vitals);
+    }
 
     // Check for custom events on this page
     for (const customEvent of siteConfig.customEvents) {
