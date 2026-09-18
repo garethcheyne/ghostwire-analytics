@@ -41,5 +41,6 @@ export const updateWebsiteRequestSchema = z
     domain: z.string().trim().regex(DOMAIN_REGEX).max(500).optional(),
     shareId: z.string().max(50).nullable().optional(),
     replayConfig: replayConfigInputSchema.nullable().optional(),
+    errorsEnabled: z.boolean().optional(),
   })
   .meta({ id: 'UpdateWebsiteRequest' });

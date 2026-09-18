@@ -131,29 +131,56 @@ test('without data-errors, only manual ghostwire.error() calls are sent', async 
   });
 });
 
-test('with data-errors, reports uncaught errors with recent breadcrumbs', async () => {
-  const fetchMock = loadTracker({ errors: 'true' });
-  await import('./index');
-  await vi.waitFor(() => expect(sentOfType(fetchMock, 'event')).toHaveLength(1));
+test('with data-errors, reports uncaught errors with breadcrumbs, only observing', async () => {
+  const fetchMock = loadTracker({ errors: 'true', 'before-send': 'testBeforeSend' });
+  // A site hook with a bug: throws for one particular error.
+  (window as any).testBeforeSend = (type: string, payload: any) => {
+    if (type === 'error' && payload.error.message === 'hook trips') throw new Error('site hook bug');
+    return payload;
+  };
 
-  const button = document.createElement('button');
-  button.id = 'pay';
-  button.textContent = 'Pay now';
-  document.body.appendChild(button);
-  button.click();
+  try {
+    await import('./index');
+    await vi.waitFor(() => expect(sentOfType(fetchMock, 'event')).toHaveLength(1));
 
-  const error = new TypeError('order is undefined');
-  window.dispatchEvent(new ErrorEvent('error', { error, message: error.message }));
+    // The site's fetch is untouched (no wrapping).
+    expect(window.fetch).toBe(fetchMock);
 
-  await vi.waitFor(() => expect(sentOfType(fetchMock, 'error')).toHaveLength(1));
-  const [{ payload }] = sentOfType(fetchMock, 'error');
+    const button = document.createElement('button');
+    button.id = 'pay';
+    button.textContent = 'Pay now';
+    document.body.appendChild(button);
+    button.click();
+    button.remove();
 
-  expect(payload.error).toMatchObject({
-    type: 'TypeError',
-    message: 'order is undefined',
-    handled: false,
-  });
-  expect(payload.error.breadcrumbs.map((b: any) => b.type)).toEqual(['navigation', 'click']);
-  expect(payload.error.breadcrumbs[1].message).toBe('button#pay "Pay now"');
-  button.remove();
+    // Reported, and not cancelled: the browser still logs it and other handlers still run.
+    const error = new TypeError('order is undefined');
+    const errorEvent = new ErrorEvent('error', { error, message: error.message, cancelable: true });
+    window.dispatchEvent(errorEvent);
+    expect(errorEvent.defaultPrevented).toBe(false);
+
+    await vi.waitFor(() => expect(sentOfType(fetchMock, 'error')).toHaveLength(1));
+    const [{ payload }] = sentOfType(fetchMock, 'error');
+
+    expect(payload.error).toMatchObject({
+      type: 'TypeError',
+      message: 'order is undefined',
+      handled: false,
+    });
+    expect(payload.error.breadcrumbs.map((b: any) => b.type)).toEqual(['navigation', 'click']);
+    expect(payload.error.breadcrumbs[1].message).toBe('button#pay "Pay now"');
+
+    // A circular rejection reason can't make the listener throw.
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const rejection = new Event('unhandledrejection', { cancelable: true }) as any;
+    rejection.reason = circular;
+    expect(() => window.dispatchEvent(rejection)).not.toThrow();
+    expect(rejection.defaultPrevented).toBe(false);
+
+    // A throwing site hook doesn't surface as a rejected promise.
+    await expect((window as any).ghostwire.error(new Error('hook trips'))).resolves.toBeUndefined();
+  } finally {
+    delete (window as any).testBeforeSend;
+  }
 });

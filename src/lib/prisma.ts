@@ -868,6 +868,8 @@ function getClient() {
   const client = new PrismaClient({
     adapter,
     errorFormat: 'pretty',
+    // Never returned by default (API responses spread website rows); ask for it explicitly.
+    omit: { website: { errorKeyHash: true } },
     ...(logQuery ? PRISMA_LOG_OPTIONS : {}),
   });
 

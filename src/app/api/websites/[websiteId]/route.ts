@@ -47,7 +47,7 @@ export async function POST(
   }
 
   const { websiteId } = await params;
-  const { name, domain, shareId, replayConfig } = body;
+  const { name, domain, shareId, replayConfig, errorsEnabled } = body;
 
   if (!(await canUpdateWebsite(auth, websiteId))) {
     return unauthorized();
@@ -72,6 +72,7 @@ export async function POST(
     const website = await updateWebsite(websiteId, {
       name,
       domain,
+      errorsEnabled,
       ...(replayConfig !== undefined && {
         replayConfig: nextReplayConfig as Prisma.InputJsonObject,
         recorderEnabled: getRecorderEnabled(nextReplayConfig),

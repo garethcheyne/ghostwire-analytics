@@ -407,6 +407,7 @@ type MetricEntry = PerformanceEntry & {
     if (!payload) return;
 
     if (type === 'event') {
+      // Page views and events double as breadcrumbs for error reports.
       addBreadcrumb(
         payload.name ? 'event' : 'navigation',
         String(payload.name ?? payload.url ?? ''),
@@ -647,6 +648,10 @@ type MetricEntry = PerformanceEntry & {
 
   /* Errors */
 
+  // Error capture only observes. It never wraps or replaces site code (no fetch/console
+  // patching), never cancels an error (the browser still logs it and other handlers still run),
+  // and anything that goes wrong inside it is swallowed so it can't add errors of its own.
+
   type Breadcrumb = { type: string; message: string; timestamp: number };
 
   const MAX_BREADCRUMBS = 20;
@@ -655,82 +660,129 @@ type MetricEntry = PerformanceEntry & {
   const breadcrumbs: Breadcrumb[] = [];
   const lastReported = new Map<string, number>();
   let errorCount = 0;
+  let reporting = false;
 
   function addBreadcrumb(type: string, message: string) {
     breadcrumbs.push({ type, message: message.slice(0, 300), timestamp: Date.now() });
     if (breadcrumbs.length > MAX_BREADCRUMBS) breadcrumbs.shift();
   }
 
-  const describeElement = (el: Element) => {
-    const text = (el.textContent || '').trim().replace(/s+/g, ' ').slice(0, 40);
-    return `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${text ? ` "${text}"` : ''}`;
+  // Cheap description of a clicked element. Text is read only from small interactive elements,
+  // never from containers (reading a container's text on every click can be expensive).
+  const describeElement = (target: Element) => {
+    const el = target.closest('a,button,[role="button"],input,select,textarea,label') ?? target;
+    const tag = el.tagName.toLowerCase();
+    const id = el.id ? `#${el.id}` : '';
+    const text =
+      el === target && !/^(a|button|label)$/.test(tag)
+        ? ''
+        : (el.textContent || '').slice(0, 80).trim().replace(/\s+/g, ' ').slice(0, 40);
+
+    return `${tag}${id}${text ? ` "${text}"` : ''}`;
+  };
+
+  const toError = (value: unknown): Error => {
+    if (value instanceof Error) return value;
+    if (typeof value === 'string') return new Error(value);
+
+    let message: string;
+    try {
+      message = JSON.stringify(value) ?? String(value);
+    } catch {
+      message = String(value); // circular or otherwise unserializable
+    }
+    return new Error(message);
   };
 
   const reportError = (
     error: unknown,
     { handled = false, context }: { handled?: boolean; context?: EventData } = {},
   ): Promise<void> => {
-    const err =
-      error instanceof Error
-        ? error
-        : new Error(typeof error === 'string' ? error : JSON.stringify(error) || String(error));
-    const message = err.message || String(error);
-    const key = `${err.name}:${message}:${(err.stack || '').slice(0, 200)}`;
-    const now = Date.now();
+    // An error raised while reporting would otherwise come straight back here.
+    if (reporting) return Promise.resolve();
+    reporting = true;
 
-    // Skip repeats of the same error in quick succession, and runaway loops.
-    if (errorCount >= MAX_ERRORS_PER_PAGE || now - (lastReported.get(key) ?? 0) < REPEAT_WINDOW) {
-      return Promise.resolve();
-    }
-    lastReported.set(key, now);
-    errorCount++;
+    try {
+      const err = toError(error);
+      const message = err.message || String(err);
+      const key = `${err.name}:${message}:${(err.stack || '').slice(0, 200)}`;
+      const now = Date.now();
 
-    return send(
-      {
-        ...getPayload(),
-        error: {
-          type: err.name || 'Error',
-          message,
-          stack: err.stack,
-          handled,
-          breadcrumbs: breadcrumbs.slice(),
-          context,
+      // Skip repeats of the same error in quick succession, and runaway loops.
+      if (errorCount >= MAX_ERRORS_PER_PAGE || now - (lastReported.get(key) ?? 0) < REPEAT_WINDOW) {
+        return Promise.resolve();
+      }
+      lastReported.set(key, now);
+      errorCount++;
+
+      return send(
+        {
+          ...getPayload(),
+          error: {
+            type: err.name || 'Error',
+            message,
+            stack: typeof err.stack === 'string' ? err.stack : undefined,
+            handled,
+            breadcrumbs: breadcrumbs.slice(),
+            context,
+          },
         },
-      },
-      'error',
-    );
+        'error',
+      ).catch(() => {});
+    } catch {
+      return Promise.resolve();
+    } finally {
+      reporting = false;
+    }
   };
 
-  const initErrors = () => {
-    window.addEventListener('error', event => reportError(event.error ?? event.message));
-    window.addEventListener('unhandledrejection', event => reportError(event.reason));
-    document.addEventListener(
-      'click',
-      event =>
-        event.target instanceof Element && addBreadcrumb('click', describeElement(event.target)),
-      true,
-    );
-
-    // Failed requests become breadcrumbs (not errors). Query strings are dropped: they can hold tokens.
-    const originalFetch = window.fetch;
-    window.fetch = async (...args: Parameters<typeof fetch>) => {
-      const [input, init] = args;
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      const method = (
-        init?.method || (input instanceof Request ? input.method : 'GET')
-      ).toUpperCase();
-      const label = `${method} ${url.split('?')[0]}`;
-      const own = url.startsWith(endpoint);
-
+  const safely =
+    <T extends unknown[]>(fn: (...args: T) => void) =>
+    (...args: T) => {
       try {
-        const response = await originalFetch(...args);
-        if (!own && response.status >= 400) addBreadcrumb('request', `${label} ${response.status}`);
-        return response;
-      } catch (e) {
-        if (!own) addBreadcrumb('request', `${label} failed`);
-        throw e;
+        fn(...args);
+      } catch {
+        /* never let capture code throw into the page */
       }
     };
+
+  const initErrors = () => {
+    window.addEventListener(
+      'error',
+      safely((event: ErrorEvent) => void reportError(event.error ?? event.message)),
+    );
+    window.addEventListener(
+      'unhandledrejection',
+      safely((event: PromiseRejectionEvent) => void reportError(event.reason)),
+    );
+    document.addEventListener(
+      'click',
+      safely((event: MouseEvent) => {
+        if (event.target instanceof Element) addBreadcrumb('click', describeElement(event.target));
+      }),
+      { capture: true, passive: true },
+    );
+
+    // Failed requests become breadcrumbs, read from Resource Timing (no fetch/XHR wrapping).
+    // responseStatus is available in Chromium and Firefox; elsewhere requests are just skipped.
+    // Query strings are dropped: they can hold tokens.
+    try {
+      new PerformanceObserver(
+        safely((list: PerformanceObserverEntryList) => {
+          for (const entry of list.getEntries() as PerformanceResourceTiming[]) {
+            const status = (entry as PerformanceResourceTiming & { responseStatus?: number })
+              .responseStatus;
+            const isRequest =
+              entry.initiatorType === 'fetch' || entry.initiatorType === 'xmlhttprequest';
+
+            if (!isRequest || entry.name.startsWith(endpoint) || !status || status < 400) continue;
+            addBreadcrumb('request', `${entry.name.split('?')[0]} ${status}`);
+          }
+        }),
+      ).observe({ type: 'resource', buffered: false });
+    } catch {
+      /* Resource Timing not supported */
+    }
   };
 
   /* Start */
