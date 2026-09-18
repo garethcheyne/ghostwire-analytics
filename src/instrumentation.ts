@@ -8,5 +8,9 @@ export async function register() {
       // Don't block startup (e.g. database not migrated yet); log and carry on.
       console.error('Could not check for an admin user:', error);
     }
+
+    // Deletes old replay/heatmap/error data, only when a retention period is configured.
+    const { startRetentionSchedule } = await import('@/lib/retention');
+    startRetentionSchedule();
   }
 }

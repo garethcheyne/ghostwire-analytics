@@ -39,3 +39,6 @@ next-env.d.ts
 
 # Client library builds
 packages/*/dist
+
+# database backups (docker compose --profile backup)
+/backups
