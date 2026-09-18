@@ -64,6 +64,11 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
   (`prisma.client`, `rawQuery`, `pagedQuery`...); its named `prisma` export is the bare client.
 - **Strictness**: `strict` with `noImplicitAny: false` (as in Umami). `strictNullChecks` stays on because Better
   Auth's types need it. ESLint allows explicit `any` for the same reason.
+- **Heatmap viewer frame**: the viewer loads the live page in an iframe named `ghostwire-heatmap`. There the
+  tracker and recorder send nothing (so previews aren't counted as visits); the tracker instead posts
+  `{ type: 'ghostwire:heatmap-frame', width, height }` to the parent so the viewer can size the preview.
+- **Heatmap event types**: click 1, scroll 2, dead click 3 (recorded by the recorder alongside the click).
+  Rage clicks aren't stored; they're computed from click timestamps in `getHeatmap`.
 - **First admin** is created on startup when there are no users (`src/instrumentation.ts` → `src/lib/setup.ts`):
   username `admin`, password `ADMIN_PASSWORD` (default `ghostwire`).
 

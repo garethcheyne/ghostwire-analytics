@@ -50,14 +50,14 @@ working reference for features and server logic (`reference/umami/`, see AGENTS.
 - [x] UTM, Revenue, Attribution
 - [x] Annotations
 
-## Phase 4 — Replays and heatmaps
+## Phase 4 — Replays and heatmaps ✅
 
 Umami already has both (rrweb recorder, `heatmap_event` table with clicks and scroll depth). Port them, then
 extend with the original Ghostwire ideas:
 
-- [ ] Session replay: recorder script, `/api/record`, replay list/player, saved replays
-- [ ] Heatmaps: click + scroll collection, viewer
-- [ ] Extensions: rage/dead click detection, breakpoint filter (mobile < 768, tablet < 1024, desktop),
+- [x] Session replay: recorder script, `/api/record`, replay list/player (with visit timeline), saved replays
+- [x] Heatmaps: click + scroll collection, viewer over the live page
+- [x] Extensions: rage/dead click detection, breakpoint grouping (mobile < 768, tablet < 1024, desktop),
       live-page iframe overlay with a `postMessage` handshake from the tracker
 
 ## Phase 5 — Workspace features

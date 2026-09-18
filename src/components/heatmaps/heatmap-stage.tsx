@@ -1,6 +1,7 @@
 'use client';
-import { Angry, MousePointerBan } from 'lucide-react';
+import { Angry, Info, MousePointerBan } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatLongNumber } from '@/lib/format';
@@ -179,9 +180,16 @@ function MarkerLayer({ markers, scale }: { markers: FrustrationMarker[]; scale: 
   );
 }
 
+// The largest preview we'll draw; very long pages are cut off rather than exhausting memory.
+const MAX_STAGE_HEIGHT = 30000;
+// How long the framed page has to report its size before the preview is sized (once).
+const HANDSHAKE_WAIT = 3500;
+
 /**
  * The page rendered at the chosen screen width, scaled down to fit, with the heat overlay on top.
- * The live page loads in a named iframe; if it can't be framed, the overlay still shows.
+ * The live page loads in a named iframe. Its tracker answers with a `ghostwire:heatmap-frame`
+ * message giving the page's real size; if nothing answers, the overlay still shows over a
+ * notice explaining why the preview may be missing.
  */
 export function HeatmapStage({
   url,
@@ -199,11 +207,13 @@ export function HeatmapStage({
   markers?: FrustrationMarker[];
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const [available, setAvailable] = useState(0);
-  // The overlay waits for the current frame (page + width) to load.
+  // State below is tagged with the frame (page + width) it belongs to, so a new frame starts fresh.
   const frameKey = `${url}:${width}`;
   const [loadedFrame, setLoadedFrame] = useState<string | null>(null);
-  const loaded = !url || loadedFrame === frameKey;
+  const reported = useRef<{ key: string; height: number } | null>(null);
+  const [settled, setSettled] = useState<{ key: string; height: number | null } | null>(null);
 
   useEffect(() => {
     const element = wrapperRef.current;
@@ -219,26 +229,65 @@ export function HeatmapStage({
   }, []);
 
   useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== frameRef.current?.contentWindow) return;
+      if (event.data?.type !== 'ghostwire:heatmap-frame') return;
+
+      const pageHeight = Number(event.data.height);
+      if (Number.isFinite(pageHeight) && pageHeight > 0) {
+        const previous = reported.current?.key === frameKey ? reported.current.height : 0;
+        reported.current = { key: frameKey, height: Math.max(previous, pageHeight) };
+      }
+      setLoadedFrame(frameKey);
+    };
+
+    window.addEventListener('message', onMessage);
     // Some sites never fire load inside a frame; show the overlay after a moment regardless.
-    const timer = window.setTimeout(() => setLoadedFrame(frameKey), 2500);
-    return () => window.clearTimeout(timer);
+    const loadTimer = window.setTimeout(() => setLoadedFrame(frameKey), 2500);
+    // Size the preview once, from the largest height reported. Resizing on every report could
+    // loop on pages whose sections are sized to the (frame) viewport.
+    const settleTimer = window.setTimeout(() => {
+      const pageHeight = reported.current?.key === frameKey ? reported.current.height : null;
+      setSettled({ key: frameKey, height: pageHeight });
+    }, HANDSHAKE_WAIT);
+
+    return () => {
+      window.removeEventListener('message', onMessage);
+      window.clearTimeout(loadTimer);
+      window.clearTimeout(settleTimer);
+    };
   }, [frameKey]);
 
+  const loaded = !url || loadedFrame === frameKey;
+  const handshake = settled?.key === frameKey ? settled : null;
+  const stageHeight = Math.min(MAX_STAGE_HEIGHT, Math.max(height, handshake?.height ?? 0));
+  const unresponsive = !!url && handshake?.height === null;
   const scale = available ? Math.min(1, available / width) : 0;
 
   return (
-    <div ref={wrapperRef} className="w-full">
+    <div ref={wrapperRef} className="flex w-full flex-col gap-3">
+      {(unresponsive || !url) && (
+        <Alert>
+          <Info />
+          <AlertDescription>
+            {url
+              ? "The live page didn't respond, so the preview may be blank or out of date. The site may block being shown in a frame, or this page doesn't have the tracking script. The overlay still shows where visitors clicked."
+              : 'Set the website domain in settings to see the page under the overlay.'}
+          </AlertDescription>
+        </Alert>
+      )}
       {scale > 0 && (
         <div
           className="relative mx-auto overflow-hidden rounded-lg border bg-muted/40"
-          style={{ width: Math.round(width * scale), height: Math.round(height * scale) }}
+          style={{ width: Math.round(width * scale), height: Math.round(stageHeight * scale) }}
         >
           <div
             className="absolute top-0 left-0 origin-top-left"
-            style={{ width, height, transform: `scale(${scale})` }}
+            style={{ width, height: stageHeight, transform: `scale(${scale})` }}
           >
             {url && (
               <iframe
+                ref={frameRef}
                 key={frameKey}
                 name={HEATMAP_FRAME_NAME}
                 src={url}
@@ -247,13 +296,13 @@ export function HeatmapStage({
                 scrolling="no"
                 referrerPolicy="no-referrer"
                 className="pointer-events-none absolute inset-0 border-0 bg-white"
-                style={{ width, height }}
+                style={{ width, height: stageHeight }}
                 onLoad={() => setLoadedFrame(frameKey)}
               />
             )}
             {loaded ? (
               <>
-                {points && <ClickLayer points={points} width={width} height={height} />}
+                {points && <ClickLayer points={points} width={width} height={stageHeight} />}
                 {bands && <ScrollLayer bands={bands} scale={scale} />}
                 {markers && <MarkerLayer markers={markers} scale={scale} />}
               </>

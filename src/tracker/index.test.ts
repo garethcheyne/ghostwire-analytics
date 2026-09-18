@@ -61,3 +61,32 @@ test('sends nothing while the page is shown in the heatmap viewer', async () => 
     window.name = '';
   }
 });
+
+test('reports its size to the heatmap viewer that frames it', async () => {
+  const script = document.createElement('script');
+  script.src = 'https://analytics.example.com/script.js';
+  script.dataset.websiteId = 'website-id';
+
+  Object.defineProperties(document, {
+    currentScript: { configurable: true, value: script },
+    readyState: { configurable: true, value: 'complete' },
+  });
+
+  const postMessage = vi.fn();
+  vi.stubGlobal('fetch', vi.fn());
+  const parent = Object.getOwnPropertyDescriptor(window, 'parent');
+  Object.defineProperty(window, 'parent', { configurable: true, value: { postMessage } });
+  window.name = 'ghostwire-heatmap';
+
+  try {
+    await import('./index');
+
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'ghostwire:heatmap-frame' }),
+      '*',
+    );
+  } finally {
+    window.name = '';
+    if (parent) Object.defineProperty(window, 'parent', parent);
+  }
+});

@@ -389,8 +389,7 @@ type MetricEntry = PerformanceEntry & {
     if (trackingDisabled()) return;
 
     const callback = (window as unknown as Record<string, unknown>)[beforeSend as string] as
-      | BeforeSend
-      | undefined;
+      BeforeSend | undefined;
 
     if (typeof callback === 'function') {
       payload = await Promise.resolve(callback(type, payload as Payload));
@@ -651,6 +650,22 @@ type MetricEntry = PerformanceEntry & {
 
   if (distinctId) {
     void identify(distinctId);
+  }
+
+  // Inside Ghostwire's heatmap viewer the tracker sends nothing; it only tells the viewer the
+  // page loaded and how big it is, so the preview can be sized and the overlay shown.
+  if (window.name === HEATMAP_FRAME_NAME && window.parent !== window) {
+    const reportSize = () => {
+      const { scrollWidth, scrollHeight } = document.documentElement;
+      window.parent.postMessage(
+        { type: 'ghostwire:heatmap-frame', width: scrollWidth, height: scrollHeight },
+        '*',
+      );
+    };
+
+    reportSize();
+    window.addEventListener('load', reportSize);
+    setTimeout(reportSize, 1500);
   }
 
   if (autoTrack && !trackingDisabled()) {
