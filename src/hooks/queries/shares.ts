@@ -51,3 +51,31 @@ export function useDeleteShare(websiteId: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: shareKeys.website(websiteId) }),
   });
 }
+
+const boardShareKey = (boardId: string) => ['shares', 'board', boardId] as const;
+
+export function useBoardShares(boardId: string) {
+  return useQuery({
+    queryKey: boardShareKey(boardId),
+    queryFn: () => api.get<PageResult<Share>>(`/boards/${boardId}/shares`, { pageSize: 100 }),
+  });
+}
+
+export function useCreateBoardShare(boardId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (name: string) =>
+      api.post<Share>(`/boards/${boardId}/shares`, { name, parameters: {} }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: boardShareKey(boardId) }),
+  });
+}
+
+export function useDeleteBoardShare(boardId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (shareId: string) => api.del(`/share/id/${shareId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: boardShareKey(boardId) }),
+  });
+}

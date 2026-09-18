@@ -10,6 +10,8 @@ import { PerformanceView } from '@/components/analytics/performance-view';
 import { RealtimeView } from '@/components/analytics/realtime-view';
 import { SessionsView } from '@/components/analytics/sessions-view';
 import { WebsiteOverview } from '@/components/analytics/website-overview';
+import { DateRangePicker } from '@/components/analytics/date-range-picker';
+import { BoardCanvas } from '@/components/boards/board-canvas';
 import { AttributionView } from '@/components/reports/attribution-view';
 import { FunnelsView } from '@/components/reports/funnels-view';
 import { GoalsView } from '@/components/reports/goals-view';
@@ -28,6 +30,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WebsiteProvider } from '@/components/websites/website-context';
 import { api, setShareToken } from '@/lib/api-client';
+import { ENTITY_TYPE } from '@/lib/constants';
+import type { BoardParameters } from '@/lib/types';
 import { ShareProvider } from './share-context';
 
 // Views a website share can expose, in menu order (ids match the share's parameters).
@@ -51,6 +55,9 @@ const SECTIONS: { id: string; label: string; View: ComponentType }[] = [
 interface ShareData {
   shareType: number;
   websiteId?: string;
+  boardId?: string;
+  /** Board shares: names of the widgets' websites, links and pixels. */
+  names?: Record<string, string>;
   parameters: Record<string, unknown>;
   token: string;
 }
@@ -115,6 +122,10 @@ export function ShareView({ slug }: { slug: string }) {
     );
   }
 
+  if (share.shareType === ENTITY_TYPE.board && share.boardId) {
+    return <SharedBoard slug={slug} boardId={share.boardId} names={share.names ?? {}} />;
+  }
+
   const sections = SECTIONS.filter(section => share.parameters[section.id] === true);
 
   if (!share.websiteId || !website || !sections.length) {
@@ -171,6 +182,53 @@ export function ShareView({ slug }: { slug: string }) {
           <View />
         </div>
       </WebsiteProvider>
+    </ShareProvider>
+  );
+}
+
+/** A shared board: read-only widgets, with its own date range. */
+function SharedBoard({
+  slug,
+  boardId,
+  names,
+}: {
+  slug: string;
+  boardId: string;
+  names: Record<string, string>;
+}) {
+  const { data: board, isPending } = useQuery({
+    queryKey: ['share', slug, 'board', boardId],
+    queryFn: () =>
+      api.get<{ name: string; description: string; parameters: BoardParameters }>(
+        `/boards/${boardId}`,
+      ),
+  });
+
+  if (isPending) return <Skeleton className="h-96 w-full" />;
+  if (!board) {
+    return (
+      <Unavailable title="This link doesn't work" description="The board may have been deleted." />
+    );
+  }
+
+  return (
+    <ShareProvider value={{ slug, sections: {}, allowFilter: false }}>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className="truncate text-2xl font-semibold tracking-tight">{board.name}</h1>
+            {board.description && (
+              <p className="text-sm text-muted-foreground">{board.description}</p>
+            )}
+          </div>
+          <DateRangePicker />
+        </div>
+        <BoardCanvas
+          parameters={board.parameters ?? { rows: [] }}
+          editing={false}
+          entityNames={names}
+        />
+      </div>
     </ShareProvider>
   );
 }

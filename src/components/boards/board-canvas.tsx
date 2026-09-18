@@ -28,17 +28,22 @@ export function BoardCanvas({
   parameters,
   editing,
   onChange,
+  entityNames,
 }: {
   parameters: BoardParameters;
   editing: boolean;
-  onChange: (parameters: BoardParameters) => void;
+  onChange?: (parameters: BoardParameters) => void;
+  /** Names by id, when the viewer can't list websites (public shares). */
+  entityNames?: Record<string, string>;
 }) {
-  const { data: entities } = useBoardEntities();
+  const { data: entities } = useBoardEntities({ enabled: !entityNames });
   const [dialog, setDialog] = useState<Editing>(null);
   const rows = parameters.rows ?? [];
-  const names = new Map(entities?.map(entity => [entity.id, entity.name]));
+  const names = new Map(
+    entityNames ? Object.entries(entityNames) : entities?.map(entity => [entity.id, entity.name]),
+  );
 
-  const setRows = (next: BoardRow[]) => onChange({ ...parameters, rows: next });
+  const setRows = (next: BoardRow[]) => onChange?.({ ...parameters, rows: next });
 
   const updateRow = (rowId: string, change: (row: BoardRow) => BoardRow) =>
     setRows(rows.map(row => (row.id === rowId ? change(row) : row)));

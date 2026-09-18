@@ -45,40 +45,45 @@ function Change({ stat }: { stat: Stat }) {
 }
 
 const COLUMNS: Record<number, string> = {
-  3: 'md:grid-cols-3',
-  4: 'md:grid-cols-4',
-  5: 'md:grid-cols-5',
-  6: 'md:grid-cols-6',
+  3: '@xl:grid-cols-3',
+  4: '@2xl:grid-cols-4',
+  5: '@2xl:grid-cols-5',
+  6: '@3xl:grid-cols-6',
 };
 
+// Columns follow the space available (container queries), so the row also fits board widgets.
 /** Row of headline numbers with change against the comparison period. */
 export function StatCards({ stats, loading }: { stats?: Stat[]; loading?: boolean }) {
   const count = stats?.length ?? 5;
-  const grid = cn('grid grid-cols-2 gap-4', COLUMNS[count] ?? 'md:grid-cols-4');
+  const grid = cn('grid grid-cols-2 gap-4', COLUMNS[count] ?? '@2xl:grid-cols-4');
 
   if (loading || !stats) {
     return (
-      <div className={grid}>
-        {Array.from({ length: count }, (_, i) => (
-          <Skeleton key={i} className="h-24" />
-        ))}
+      <div className="@container">
+        <div className={grid}>
+          {Array.from({ length: count }, (_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={grid}>
-      {stats.map(stat => (
-        <Card key={stat.label} className="gap-2 py-4">
-          <CardContent className="flex flex-col gap-1 px-4">
-            <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              {stat.label}
-            </span>
-            <span className="text-2xl font-semibold tabular-nums">{stat.format(stat.value)}</span>
-            <Change stat={stat} />
-          </CardContent>
-        </Card>
-      ))}
+    <div className="@container">
+      <div className={grid}>
+        {stats.map(stat => (
+          <Card key={stat.label} className="gap-2 py-4">
+            <CardContent className="flex flex-col gap-1 px-4">
+              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {stat.label}
+              </span>
+              <span className="text-2xl font-semibold tabular-nums">{stat.format(stat.value)}</span>
+              <Change stat={stat} />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

@@ -70,6 +70,10 @@ export async function updateBoard(boardId: string, data: any) {
   return prisma.client.board.update({ where: { id: boardId }, data });
 }
 
+/** Deletes a board and its share links. */
 export async function deleteBoard(boardId: string) {
-  return prisma.client.board.delete({ where: { id: boardId } });
+  return prisma.transaction(async (tx: any) => {
+    await tx.share.deleteMany({ where: { entityId: boardId } });
+    return tx.board.delete({ where: { id: boardId } });
+  });
 }

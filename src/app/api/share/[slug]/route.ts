@@ -51,17 +51,14 @@ async function filterBoardEntityIdsForShare(
     const teamUserIds = await getTeamUserIds(teamId);
 
     return {
-      websiteIds: await filterEntityIds(
-        ids.websiteIds,
-        async id => isOwnedByTeam(await getWebsite(id), teamId, teamUserIds),
+      websiteIds: await filterEntityIds(ids.websiteIds, async id =>
+        isOwnedByTeam(await getWebsite(id), teamId, teamUserIds),
       ),
-      pixelIds: await filterEntityIds(
-        ids.pixelIds,
-        async id => isOwnedByTeam(await getPixel(id), teamId, teamUserIds),
+      pixelIds: await filterEntityIds(ids.pixelIds, async id =>
+        isOwnedByTeam(await getPixel(id), teamId, teamUserIds),
       ),
-      linkIds: await filterEntityIds(
-        ids.linkIds,
-        async id => isOwnedByTeam(await getLink(id), teamId, teamUserIds),
+      linkIds: await filterEntityIds(ids.linkIds, async id =>
+        isOwnedByTeam(await getLink(id), teamId, teamUserIds),
       ),
     };
   }
@@ -141,6 +138,34 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   }
 
   data.token = createToken({ ...data, type: SHARE_TOKEN_TYPE }, secret());
+
+  // Board shares: names of the widgets' websites, links and pixels (the viewer can't list them).
+  if (share.shareType === ENTITY_TYPE.board) {
+    const ids = [...data.websiteIds, ...data.pixelIds, ...data.linkIds];
+    const entities = ids.length
+      ? await prisma.client.website.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const [links, pixels] = await Promise.all([
+      data.linkIds.length
+        ? prisma.client.link.findMany({
+            where: { id: { in: data.linkIds } },
+            select: { id: true, name: true },
+          })
+        : [],
+      data.pixelIds.length
+        ? prisma.client.pixel.findMany({
+            where: { id: { in: data.pixelIds } },
+            select: { id: true, name: true },
+          })
+        : [],
+    ]);
+    data.names = Object.fromEntries(
+      [...entities, ...links, ...pixels].map(entity => [entity.id, entity.name]),
+    );
+  }
 
   return json(data);
 }

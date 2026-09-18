@@ -51,6 +51,7 @@ import {
 } from '@/hooks/queries/boards';
 import type { BoardParameters } from '@/lib/types';
 import { BoardCanvas } from './board-canvas';
+import { BoardShareButton } from './board-share-button';
 
 function NewBoardButton() {
   const router = useRouter();
@@ -308,6 +309,7 @@ export function BoardDetail({
           ) : (
             <>
               <DateRangePicker />
+              <BoardShareButton boardId={board.id} name={board.name} />
               <Button variant="outline" onClick={() => setWantsEdit(true)}>
                 <Pencil data-icon="inline-start" />
                 Edit

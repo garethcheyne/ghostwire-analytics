@@ -11,12 +11,12 @@ export interface BoardEntity {
 }
 
 /** Websites, links and pixels in the current context, for picking what a widget shows. */
-export function useBoardEntities() {
+export function useBoardEntities({ enabled = true }: { enabled?: boolean } = {}) {
   const { teamId, isPending } = useActiveTeam();
 
   return useQuery({
     queryKey: ['boards', 'entities', teamId],
-    enabled: !isPending,
+    enabled: enabled && !isPending,
     queryFn: async () => {
       const base = teamId ? `/teams/${teamId}` : '';
       const list = (kind: string) =>
