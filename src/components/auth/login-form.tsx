@@ -1,19 +1,55 @@
 'use client';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, KeyRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Field, FieldGroup, FieldLabel, FieldSeparator } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { authClient } from '@/lib/auth-client';
 import { AuthHeading, safeNext } from './auth-heading';
 
-export function LoginForm({ next }: { next?: string }) {
+/** Messages for the error codes Better Auth sends back after a failed SSO sign-in. */
+const SSO_ERRORS: Record<string, string> = {
+  signup_disabled: 'There is no Ghostwire account for that login. Ask an admin to add you.',
+  email_not_found: 'Your identity provider did not share an email address.',
+  account_not_linked: 'That login could not be linked to your Ghostwire account.',
+};
+
+export function LoginForm({
+  next,
+  ssoName,
+  ssoError,
+}: {
+  next?: string;
+  /** Set when single sign-on is configured (the button label). */
+  ssoName?: string;
+  ssoError?: string;
+}) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    ssoError ? (SSO_ERRORS[ssoError] ?? 'Single sign-on failed. Try again.') : null,
+  );
   const [pending, setPending] = useState(false);
+  const [ssoPending, setSsoPending] = useState(false);
+
+  async function handleSso() {
+    setSsoPending(true);
+    setError(null);
+
+    // Redirects to the identity provider; comes back to the callback URL.
+    const { error } = await authClient.signIn.social({
+      provider: 'oidc' as any,
+      callbackURL: safeNext(next),
+      errorCallbackURL: '/login',
+    });
+
+    if (error) {
+      setSsoPending(false);
+      setError(error.message || 'Single sign-on failed. Try again.');
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,6 +111,20 @@ export function LoginForm({ next }: { next?: string }) {
           </Button>
         </FieldGroup>
       </form>
+
+      {ssoName && (
+        <>
+          <FieldSeparator>or</FieldSeparator>
+          <Button variant="outline" size="lg" onClick={handleSso} disabled={ssoPending}>
+            {ssoPending ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <KeyRound data-icon="inline-start" />
+            )}
+            Sign in with {ssoName}
+          </Button>
+        </>
+      )}
     </div>
   );
 }
