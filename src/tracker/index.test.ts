@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest';
 
 afterEach(() => {
-  delete (window as any).umami;
+  delete (window as any).ghostwire;
   delete (document as any).currentScript;
   delete (document as any).readyState;
   vi.unstubAllGlobals();

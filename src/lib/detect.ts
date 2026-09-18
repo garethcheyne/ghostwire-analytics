@@ -14,9 +14,9 @@ const PROVIDER_HEADERS = [
   ...(process.env.CLOUD_MODE
     ? [
         {
-          countryHeader: 'x-umami-client-country',
-          regionHeader: 'x-umami-client-region',
-          cityHeader: 'x-umami-client-city',
+          countryHeader: 'x-ghostwire-client-country',
+          regionHeader: 'x-ghostwire-client-region',
+          cityHeader: 'x-ghostwire-client-city',
         },
       ]
     : []),

@@ -23,5 +23,7 @@ export default defineConfig([
     'next-env.d.ts',
     'reference/**',
     'src/generated/**',
+    'public/script.js',
+    'public/recorder.js',
   ]),
 ]);

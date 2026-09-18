@@ -545,7 +545,7 @@ describe('cache token handling', () => {
 
     const response = await callPOST(
       { type: 'event', payload: { website: WEBSITE_ID, url: '/', timestamp } },
-      { headers: { 'x-umami-cache': token } },
+      { headers: { 'x-ghostwire-cache': token } },
     );
 
     expect(fetchWebsiteMock).not.toHaveBeenCalled();
@@ -558,7 +558,7 @@ describe('cache token handling', () => {
 
     const response = await callPOST(
       { type: 'event', payload: { website: WEBSITE_ID, url: '/' } },
-      { headers: { 'x-umami-cache': token } },
+      { headers: { 'x-ghostwire-cache': token } },
     );
 
     expect(createSessionMock).toHaveBeenCalledTimes(1);
@@ -578,7 +578,7 @@ describe('cache token handling', () => {
 
     const response = await callPOST(
       { type: 'identify', payload: { website: WEBSITE_ID, id: 'user-42', data: { plan: 'pro' } } },
-      { headers: { 'x-umami-cache': token } },
+      { headers: { 'x-ghostwire-cache': token } },
     );
 
     expect(createSessionMock).toHaveBeenCalledTimes(1);
@@ -599,7 +599,7 @@ describe('cache token handling', () => {
   test('an invalid cache token falls back to website lookup', async () => {
     await callPOST(
       { type: 'event', payload: { website: WEBSITE_ID, url: '/' } },
-      { headers: { 'x-umami-cache': 'not-a-jwt' } },
+      { headers: { 'x-ghostwire-cache': 'not-a-jwt' } },
     );
 
     expect(fetchWebsiteMock).toHaveBeenCalledTimes(1);
@@ -613,7 +613,7 @@ describe('cache token handling', () => {
 
     await callPOST(
       { type: 'event', payload: { website: WEBSITE_ID, url: '/' } },
-      { headers: { 'x-umami-cache': token } },
+      { headers: { 'x-ghostwire-cache': token } },
     );
 
     expect(fetchWebsiteMock).toHaveBeenCalledTimes(1);
@@ -634,7 +634,7 @@ describe('cache token handling', () => {
 
     const response = await callPOST(
       { type: 'event', payload: { website: WEBSITE_ID, url: '/' } },
-      { headers: { 'x-umami-cache': token } },
+      { headers: { 'x-ghostwire-cache': token } },
     );
 
     expect(fetchWebsiteMock).toHaveBeenCalledTimes(1);
@@ -674,7 +674,7 @@ describe('30-minute visit expiry', () => {
 
     const response = await callPOST(
       { type: 'event', payload: { website: WEBSITE_ID, url: '/' } },
-      { headers: { 'x-umami-cache': token } },
+      { headers: { 'x-ghostwire-cache': token } },
     );
 
     const body = (await response.json()) as Record<string, any>;
@@ -696,7 +696,7 @@ describe('30-minute visit expiry', () => {
 
     const response = await callPOST(
       { type: 'event', payload: { website: WEBSITE_ID, url: '/' } },
-      { headers: { 'x-umami-cache': token } },
+      { headers: { 'x-ghostwire-cache': token } },
     );
 
     await expect(response.json()).resolves.toMatchObject({ visitId: 'cached-visit' });
@@ -721,7 +721,7 @@ describe('30-minute visit expiry', () => {
         type: 'event',
         payload: { website: WEBSITE_ID, url: '/', timestamp },
       },
-      { headers: { 'x-umami-cache': token } },
+      { headers: { 'x-ghostwire-cache': token } },
     );
 
     await expect(response.json()).resolves.toMatchObject({ visitId: 'cached-visit' });
@@ -815,7 +815,7 @@ describe('identify collection', () => {
     // Replaying with that token should recognise the same identity and skip.
     await callPOST(
       { type: 'identify', payload: { website: WEBSITE_ID, id: 'user-42' } },
-      { headers: { 'x-umami-cache': token } },
+      { headers: { 'x-ghostwire-cache': token } },
     );
 
     expect(saveSessionLinkMock).not.toHaveBeenCalled();

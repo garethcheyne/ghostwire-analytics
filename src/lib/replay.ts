@@ -3,7 +3,7 @@ export const RRWEB_EVENT_TYPE = {
   FullSnapshot: 2,
 } as const;
 
-export const REPLAY_EVENT_FRAGMENT_TYPE = 'umami:rrweb-event-fragment';
+export const REPLAY_EVENT_FRAGMENT_TYPE = 'ghostwire:rrweb-event-fragment';
 
 interface ReplayEventFragment {
   type: typeof REPLAY_EVENT_FRAGMENT_TYPE;

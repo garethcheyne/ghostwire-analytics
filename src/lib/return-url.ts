@@ -1,6 +1,6 @@
 import { getItem, removeItem, setItem } from '@/lib/storage';
 
-const RETURN_URL = 'umami.return-url';
+const RETURN_URL = 'ghostwire.return-url';
 
 /** Only same-origin relative paths are accepted to prevent open redirects. */
 export function isSafeReturnUrl(value: unknown): value is string {

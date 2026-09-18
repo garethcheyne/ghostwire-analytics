@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     let cache: Cache | null = null;
 
     if (websiteId) {
-      const cacheHeader = request.headers.get('x-umami-cache');
+      const cacheHeader = request.headers.get('x-ghostwire-cache');
 
       if (cacheHeader) {
         const result = parseToken(cacheHeader, secret()) as (Cache & { type?: string }) | null;

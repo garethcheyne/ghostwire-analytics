@@ -24,7 +24,7 @@ import { addCustomEvent, record } from 'rrweb';
   const REPLAY_FLUSH_EVENT_COUNT = 100;
   const REPLAY_FLUSH_INTERVAL = 2000;
   const REPLAY_MAX_PAYLOAD_SIZE = 500000;
-  const REPLAY_FRAGMENT_TYPE = 'umami:rrweb-event-fragment';
+  const REPLAY_FRAGMENT_TYPE = 'ghostwire:rrweb-event-fragment';
   const REPLAY_FRAGMENT_TOTAL_PLACEHOLDER = 999999999;
   const RRWEB_EVENT_TYPE = {
     FullSnapshot: 2,
@@ -50,7 +50,7 @@ import { addCustomEvent, record } from 'rrweb';
   let replayStopped = false;
   let heatmapStarted = false;
 
-  const getSessionCache = () => window.umami?.getSession?.()?.cache;
+  const getSessionCache = () => window.ghostwire?.getSession?.()?.cache;
 
   const getPayloadBody = (type, payload) =>
     JSON.stringify({
@@ -121,7 +121,7 @@ import { addCustomEvent, record } from 'rrweb';
       body,
       headers: {
         'Content-Type': 'application/json',
-        'x-umami-cache': cache,
+        'x-ghostwire-cache': cache,
       },
       credentials: 'omit',
     }).catch(() => {});
