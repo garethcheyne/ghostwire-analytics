@@ -322,6 +322,16 @@ export async function POST(request: Request) {
                 distinctId,
                 createdAt,
               }),
+              // Also link the anonymous session from the same browser (same hash, no user ID), so
+              // the user's history includes what they did before identifying and page loads that
+              // didn't identify. Only a link: people sharing an IP and browser share that session,
+              // and the session view won't attribute a session linked to several users.
+              saveSessionLink({
+                websiteId,
+                sessionId: uuid(sourceId, ip, userAgent, sessionSalt, ''),
+                distinctId,
+                createdAt,
+              }),
               updateSession({
                 websiteId,
                 sessionId,

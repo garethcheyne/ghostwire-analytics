@@ -98,7 +98,13 @@ function makeComputedSessionId(
   const createdAt = new Date(timestamp * 1000);
   const sessionSalt = getSalt(process.env.SALT_ROTATION || 'month', createdAt);
 
-  return uuid(sourceId, defaultClientInfo.ip, defaultClientInfo.userAgent, sessionSalt, distinctId ?? '');
+  return uuid(
+    sourceId,
+    defaultClientInfo.ip,
+    defaultClientInfo.userAgent,
+    sessionSalt,
+    distinctId ?? '',
+  );
 }
 
 beforeEach(() => {
@@ -772,18 +778,23 @@ describe('identify collection', () => {
     expect(createSessionMock.mock.calls[1][0]).toMatchObject({ distinctId: prefix });
   });
 
-  test('saves a session link and updates the session for a new distinctId', async () => {
-    await callPOST({
+  test('links the identified and anonymous sessions and updates the identified one', async () => {
+    const response = await callPOST({
       type: 'identify',
       payload: { website: WEBSITE_ID, id: 'user-42' },
     });
+    const { sessionId } = (await response.json()) as Record<string, any>;
 
-    expect(saveSessionLinkMock).toHaveBeenCalledTimes(1);
+    expect(saveSessionLinkMock).toHaveBeenCalledTimes(2);
     expect(updateSessionMock).toHaveBeenCalledTimes(1);
-    expect(saveSessionLinkMock.mock.calls[0][0]).toMatchObject({
-      websiteId: WEBSITE_ID,
-      distinctId: 'user-42',
-    });
+
+    const [identified, anonymous] = saveSessionLinkMock.mock.calls.map(([args]) => args);
+
+    expect(identified).toMatchObject({ websiteId: WEBSITE_ID, sessionId, distinctId: 'user-42' });
+    // Same browser without the user ID: the session its earlier, anonymous page views went to.
+    expect(anonymous).toMatchObject({ websiteId: WEBSITE_ID, distinctId: 'user-42' });
+    expect(anonymous.sessionId).not.toBe(sessionId);
+    expect(updateSessionMock.mock.calls[0][0]).toMatchObject({ sessionId, distinctId: 'user-42' });
   });
 
   test('saves session data when a data payload is present', async () => {

@@ -64,6 +64,10 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
   (`prisma.client`, `rawQuery`, `pagedQuery`...); its named `prisma` export is the bare client.
 - **Strictness**: `strict` with `noImplicitAny: false` (as in Umami). `strictNullChecks` stays on because Better
   Auth's types need it. ESLint allows explicit `any` for the same reason.
+- **Identified users**: tracked sites pass their username with `ghostwire.identify(id, data)` or
+  `data-distinct-id`. Identifying starts a separate session (the ID is part of the session hash), so
+  `/api/send` links both that session and the browser's anonymous session to the user in `session_link`.
+  The Users pages (`src/queries/sql/users`) read everything through `session_link`.
 - **Heatmap viewer frame**: the viewer loads the live page in an iframe named `ghostwire-heatmap`. There the
   tracker and recorder send nothing (so previews aren't counted as visits); the tracker instead posts
   `{ type: 'ghostwire:heatmap-frame', width, height }` to the parent so the viewer can size the preview.

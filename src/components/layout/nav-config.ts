@@ -25,6 +25,7 @@ import {
   User,
   UserCircle,
   UserPlus,
+  UserSearch,
   Users,
   Video,
   Wallet,
@@ -92,6 +93,7 @@ export function websiteNav(websiteId: string): NavGroup[] {
     {
       title: 'Audience',
       items: [
+        { title: 'Users', href: path('/users'), icon: UserSearch },
         { title: 'Segments', href: path('/segments'), icon: ChartPie },
         { title: 'Cohorts', href: path('/cohorts'), icon: UserPlus },
       ],
