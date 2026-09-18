@@ -42,3 +42,8 @@ packages/*/dist
 
 # database backups (docker compose --profile backup)
 /backups
+
+# python client
+__pycache__/
+*.egg-info/
+.venv/

@@ -146,7 +146,8 @@ functions are exported for scripts: `registerRelease()` and `uploadSourceMaps()`
 
 ## Other languages
 
-Any server can send errors over HTTP. Python and .NET stack traces are parsed automatically:
+For Python, use [`ghostwire-analytics`](../python) (FastAPI, Flask, Django, logging). Any other
+server can send errors over HTTP; .NET stack traces are parsed automatically:
 
 ```bash
 curl -X POST https://analytics.example.com/api/errors \
