@@ -1,7 +1,7 @@
 'use client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, formatDistanceStrict } from 'date-fns';
-import { ArrowLeft, Eye, Trash2, Zap } from 'lucide-react';
+import { ArrowLeft, Eye, Play, Trash2, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
@@ -28,9 +28,11 @@ import {
   useSessionActivity,
   useSessionProperties,
 } from '@/hooks/queries/analytics';
+import { useSessionReplays } from '@/hooks/queries/replays';
 import { api } from '@/lib/api-client';
 import { formatLongNumber, formatShortTime } from '@/lib/format';
 import { formatMetricLabel } from './metric-labels';
+import { formatReplayLength } from '@/components/replays/replays-view';
 import { DeviceIcon } from './sessions-view';
 import { StatCards } from './stat-cards';
 
@@ -110,6 +112,50 @@ function Activity({ items }: { items: SessionActivityItem[] }) {
   );
 }
 
+function SessionReplays({
+  sessionId,
+  firstAt,
+  lastAt,
+}: {
+  sessionId: string;
+  firstAt: string;
+  lastAt: string;
+}) {
+  const website = useCurrentWebsite();
+  const { data } = useSessionReplays(website.id, sessionId, firstAt, lastAt);
+
+  if (!data?.data.length) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Replays</CardTitle>
+        <CardDescription>Recorded visits by this visitor.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col">
+          {data.data.map(replay => (
+            <li key={replay.id}>
+              <Link
+                href={`/websites/${website.id}/replays/${replay.id}`}
+                className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+              >
+                <Play className="size-4 text-primary" />
+                <span className="flex-1">
+                  {format(new Date(replay.startedAt), 'd MMM yyyy, h:mm a')}
+                </span>
+                <span className="text-muted-foreground tabular-nums">
+                  {formatReplayLength(Number(replay.duration))}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
 function DeleteSession({ sessionId }: { sessionId: string }) {
   const website = useCurrentWebsite();
   const router = useRouter();
@@ -136,8 +182,8 @@ function DeleteSession({ sessionId }: { sessionId: string }) {
         <AlertDialogHeader>
           <AlertDialogTitle>Delete this session?</AlertDialogTitle>
           <AlertDialogDescription>
-            Its page views, events, properties and replays will be permanently deleted, for
-            example to honour a data deletion request.
+            Its page views, events, properties and replays will be permanently deleted, for example
+            to honour a data deletion request.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -154,7 +200,12 @@ function DeleteSession({ sessionId }: { sessionId: string }) {
 export function SessionDetail({ sessionId }: { sessionId: string }) {
   const website = useCurrentWebsite();
   const { data: session, isPending, error } = useSession(website.id, sessionId);
-  const { data: activity } = useSessionActivity(website.id, sessionId, session?.firstAt, session?.lastAt);
+  const { data: activity } = useSessionActivity(
+    website.id,
+    sessionId,
+    session?.firstAt,
+    session?.lastAt,
+  );
   const { data: properties } = useSessionProperties(website.id, sessionId);
 
   if (isPending) {
@@ -211,14 +262,25 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Visitor</CardTitle>
-            <CardDescription>Anonymous: a periodically rotating hash of IP and browser, no cookies.</CardDescription>
+            <CardDescription>
+              Anonymous: a periodically rotating hash of IP and browser, no cookies.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-4">
-              <Detail label="First seen" value={format(new Date(session.firstAt), 'd MMM yyyy, h:mm a')} />
-              <Detail label="Last seen" value={format(new Date(session.lastAt), 'd MMM yyyy, h:mm a')} />
+              <Detail
+                label="First seen"
+                value={format(new Date(session.firstAt), 'd MMM yyyy, h:mm a')}
+              />
+              <Detail
+                label="Last seen"
+                value={format(new Date(session.lastAt), 'd MMM yyyy, h:mm a')}
+              />
               <Detail label="Location" value={location} />
-              <Detail label="Language" value={session.language && formatMetricLabel('language', session.language)} />
+              <Detail
+                label="Language"
+                value={session.language && formatMetricLabel('language', session.language)}
+              />
               <Detail label="Browser" value={formatMetricLabel('browser', session.browser)} />
               <Detail label="OS" value={formatMetricLabel('os', session.os)} />
               <Detail label="Device" value={formatMetricLabel('device', session.device)} />
@@ -252,6 +314,8 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
           </CardContent>
         </Card>
       </div>
+
+      <SessionReplays sessionId={session.id} firstAt={session.firstAt} lastAt={session.lastAt} />
 
       {properties && properties.length > 0 && (
         <Card>

@@ -191,3 +191,56 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground/40;
 }
+
+/*
+ * rrweb-player controller themed to our tokens. Its Svelte-scoped rules carry extra class
+ * specificity, so these overrides use !important and stay scoped to .replay-player.
+ */
+.replay-player .rr-player {
+  background: var(--card) !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.replay-player .rr-controller {
+  background: var(--card) !important;
+  border-top: 1px solid var(--border);
+  border-radius: 0 !important;
+}
+.replay-player .rr-timeline__time {
+  color: var(--muted-foreground) !important;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+}
+.replay-player .rr-progress {
+  background: var(--muted) !important;
+  border-color: var(--card) !important;
+}
+.replay-player .rr-progress__step {
+  background: color-mix(in oklab, var(--primary) 35%, transparent) !important;
+}
+.replay-player .rr-progress__handler {
+  background: var(--primary) !important;
+}
+.replay-player .rr-controller__btns button {
+  color: var(--foreground) !important;
+  font-size: 0.75rem;
+}
+.replay-player .rr-controller__btns button svg {
+  fill: currentColor;
+}
+.replay-player .rr-controller__btns button:active {
+  background: var(--muted) !important;
+}
+.replay-player .rr-controller__btns button.active {
+  color: var(--primary-foreground) !important;
+  background: var(--primary) !important;
+}
+.replay-player .switch label {
+  color: var(--muted-foreground);
+}
+.replay-player .switch label::before {
+  background: var(--muted) !important;
+}
+.replay-player .switch input[type='checkbox']:checked + label::before {
+  background: var(--primary) !important;
+}

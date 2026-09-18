@@ -245,6 +245,7 @@ export function useSession(websiteId: string, sessionId: string) {
   return useQuery({
     queryKey: ['analytics', websiteId, 'session', sessionId],
     queryFn: () => api.get<SessionDetail>(`/websites/${websiteId}/sessions/${sessionId}`),
+    enabled: !!sessionId,
   });
 }
 

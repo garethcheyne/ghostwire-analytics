@@ -1,4 +1,3 @@
-
 import prisma from '@/lib/prisma';
 import type { PageResult, QueryFilters, SessionReplaySummary } from '@/lib/types';
 
@@ -44,8 +43,10 @@ async function relationalQuery(websiteId: string, filters: QueryFilters, session
            or session.device ilike {{search}})`
     : '';
 
+  // Length is first chunk start to last chunk end (Umami summed chunk spans, which misses the
+  // gaps between flushes and under-reports how long the recording plays).
   const havingQuery = minDurationMs
-    ? `having sum(extract(epoch from sr.ended_at - sr.started_at) * 1000) >= {{minDurationMs}}`
+    ? `having extract(epoch from max(sr.ended_at) - min(sr.started_at)) * 1000 >= {{minDurationMs}}`
     : '';
 
   return pagedRawQuery(
@@ -63,7 +64,7 @@ async function relationalQuery(websiteId: string, filters: QueryFilters, session
       count(sr.replay_id) as "chunkCount",
       min(sr.started_at) as "startedAt",
       max(sr.ended_at) as "endedAt",
-      sum(extract(epoch from sr.ended_at - sr.started_at) * 1000)::bigint as "duration",
+      (extract(epoch from max(sr.ended_at) - min(sr.started_at)) * 1000)::bigint as "duration",
       max(sr.created_at) as "createdAt"
     from session_replay sr
     join session on session.session_id = sr.session_id
