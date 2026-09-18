@@ -2,6 +2,7 @@
 import { format } from 'date-fns';
 import { ArrowLeft, Bookmark, BookmarkCheck, Eye, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { formatMetricLabel } from '@/components/analytics/metric-labels';
@@ -17,6 +18,8 @@ import { useSession, useSessionActivity } from '@/hooks/queries/analytics';
 import { useReplay, useReplaySaved, useSetReplaySaved } from '@/hooks/queries/replays';
 import { formatShortTime } from '@/lib/format';
 import { ReplayPlayer } from './replay-player';
+
+const SEEK_LEAD_MS = 3000;
 
 function formatOffset(ms: number) {
   const seconds = Math.max(0, Math.floor(ms / 1000));
@@ -118,6 +121,8 @@ export function ReplayDetail({ replayId }: { replayId: string }) {
     replay?.endedAt ?? undefined,
   );
   const playerRef = useRef<{ goto?: (ms: number, play?: boolean) => void } | null>(null);
+  // ?at=<epoch ms> (e.g. from an error): start playback a few seconds before that moment.
+  const at = Number(useSearchParams().get('at')) || null;
 
   if (isPending) {
     return <Skeleton className="h-[32rem] w-full" />;
@@ -165,7 +170,18 @@ export function ReplayDetail({ replayId }: { replayId: string }) {
         <SaveReplayButton replayId={replayId} />
       </div>
 
-      <ReplayPlayer events={replay.events} onReady={player => (playerRef.current = player)} />
+      {at && (
+        <p className="text-sm text-muted-foreground">
+          Starting {SEEK_LEAD_MS / 1000} seconds before {format(new Date(at), 'h:mm:ss a')}.
+        </p>
+      )}
+      <ReplayPlayer
+        events={replay.events}
+        onReady={player => {
+          playerRef.current = player;
+          if (at) player.goto?.(Math.max(0, at - firstTimestamp - SEEK_LEAD_MS), true);
+        }}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>

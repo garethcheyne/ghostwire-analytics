@@ -107,7 +107,11 @@ export function parseStack(
 
 function basename(file: string) {
   const path = file.split(/[?#]/)[0].replace(/\\/g, '/');
-  return path.slice(path.lastIndexOf('/') + 1) || path;
+  const name = path.slice(path.lastIndexOf('/') + 1);
+  if (name) return name;
+
+  // A script inline in a page ("https://site/", "https://site/shop/"): use the page's path.
+  return path.match(/^[a-z]+:\/\/[^/]+(\/.*)$/i)?.[1] || path;
 }
 
 /** The frame an error is blamed on: the most recent in-app frame, else the most recent frame. */

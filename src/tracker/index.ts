@@ -670,11 +670,12 @@ type MetricEntry = PerformanceEntry & {
   // Cheap description of a clicked element. Text is read only from small interactive elements,
   // never from containers (reading a container's text on every click can be expensive).
   const describeElement = (target: Element) => {
-    const el = target.closest('a,button,[role="button"],input,select,textarea,label') ?? target;
+    const el =
+      target.closest('a,button,[role="button"],summary,input,select,textarea,label') ?? target;
     const tag = el.tagName.toLowerCase();
     const id = el.id ? `#${el.id}` : '';
     const text =
-      el === target && !/^(a|button|label)$/.test(tag)
+      el === target && !/^(a|button|label|summary)$/.test(tag)
         ? ''
         : (el.textContent || '').slice(0, 80).trim().replace(/\s+/g, ' ').slice(0, 40);
 

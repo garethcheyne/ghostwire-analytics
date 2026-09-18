@@ -14,6 +14,9 @@ export interface Website {
   shareId: string | null;
   recorderEnabled: boolean;
   replayConfig: ReplayConfig | null;
+  errorsEnabled: boolean;
+  /** Last characters of the error ingest key, if one exists (the key itself is shown once). */
+  errorKeyHint: string | null;
   user?: { id: string; username: string | null } | null;
   createUser?: { id: string; username: string | null } | null;
 }
@@ -77,8 +80,9 @@ export function useUpdateWebsite(websiteId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Pick<Website, 'name' | 'domain' | 'replayConfig'>>) =>
-      api.post<Website>(`/websites/${websiteId}`, data),
+    mutationFn: (
+      data: Partial<Pick<Website, 'name' | 'domain' | 'replayConfig' | 'errorsEnabled'>>,
+    ) => api.post<Website>(`/websites/${websiteId}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: websiteKeys.all }),
   });
 }

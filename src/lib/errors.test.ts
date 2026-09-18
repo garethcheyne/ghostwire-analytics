@@ -93,6 +93,10 @@ describe('getCulprit', () => {
     expect(getCulprit(parseStack(nodeStack, 'node'))).toBe('orders.ts in getOrder');
     expect(getCulprit(parseStack(pythonStack, 'python'))).toBe('views.py in checkout');
     expect(getCulprit([])).toBeNull();
+    // Inline page scripts are named after the page.
+    expect(
+      getCulprit(parseStack('at applyCoupon (https://shop.example.com/cart/:12:9)', 'javascript')),
+    ).toBe('/cart/ in applyCoupon');
   });
 });
 
