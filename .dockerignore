@@ -1,0 +1,9 @@
+node_modules
+.next
+reference
+src/generated
+.env
+.env.*
+.git
+.vscode
+*.log

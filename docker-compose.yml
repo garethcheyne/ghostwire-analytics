@@ -1,0 +1,44 @@
+# Ghostwire Analytics: app + PostgreSQL.
+# Dev: `docker compose up -d db`, then `npm run dev`.
+# Full stack: `docker compose up -d --build`.
+services:
+  app:
+    build: .
+    image: ghostwire-analytics:latest
+    ports:
+      - "8770:3000"
+    environment:
+      DATABASE_URL: postgresql://ghostwire:${POSTGRES_PASSWORD:-ghostwire}@db:5432/ghostwire_analytics
+      # Required. Generate with: npx auth secret
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:8770}
+    depends_on:
+      db:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/heartbeat || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ghostwire_analytics
+      POSTGRES_USER: ghostwire
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ghostwire}
+    ports:
+      - "127.0.0.1:5436:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:

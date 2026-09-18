@@ -1,0 +1,38 @@
+# Upstream Umami clone, used as read-only reference (see AGENTS.md)
+/reference/umami
+
+# dependencies
+node_modules
+
+# testing
+/coverage
+/playwright-report
+/test-results
+
+# next.js
+next-env.d.ts
+/.next
+/out
+
+# build output
+/build
+/dist
+/public/script.js
+/public/recorder.js
+/geo
+/src/generated
+
+# misc
+.DS_Store
+.idea
+*.log
+.vscode
+.claude/settings.local.json
+
+# local env files
+.env
+.env.*
+!.env.example
+
+# TypeScript incremental build cache
+*.tsbuildinfo
