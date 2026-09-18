@@ -60,7 +60,7 @@ export function WebsiteOverview() {
           ]}
         />
       </div>
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 *:min-w-0 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <WorldMap websiteId={id} />
         </div>

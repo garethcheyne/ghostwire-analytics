@@ -361,7 +361,7 @@ export function ErrorDetail({ groupId }: { groupId: string }) {
         ]}
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 *:min-w-0 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
           <Card>
             <CardHeader>

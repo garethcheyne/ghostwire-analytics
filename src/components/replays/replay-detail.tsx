@@ -183,7 +183,7 @@ export function ReplayDetail({ replayId }: { replayId: string }) {
         }}
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 *:min-w-0 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Visitor</CardTitle>

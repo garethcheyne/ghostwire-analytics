@@ -258,7 +258,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
         ]}
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 *:min-w-0 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Visitor</CardTitle>

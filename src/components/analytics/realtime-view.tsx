@@ -226,7 +226,7 @@ export function RealtimeView() {
       {data && (
         <>
           <LiveLog websiteId={website.id} events={data.events} />
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-6 *:min-w-0 lg:grid-cols-3">
             <TopList title="Pages" rows={data.urls} type="path" />
             <TopList title="Referrers" rows={data.referrers} type="referrer" />
             <TopList title="Countries" rows={data.countries} type="country" />
