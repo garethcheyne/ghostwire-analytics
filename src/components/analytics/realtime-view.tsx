@@ -210,10 +210,10 @@ export function RealtimeView() {
             <Skeleton className="h-56 w-full" />
           ) : (
             <ChartContainer config={chartConfig} className="aspect-auto h-56 w-full">
-              <BarChart data={series} margin={{ left: -16, right: 8 }}>
+              <BarChart data={series} margin={{ left: 0, right: 8 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={32} />
-                <YAxis tickLine={false} axisLine={false} allowDecimals={false} width={40} />
+                <YAxis tickLine={false} axisLine={false} allowDecimals={false} width="auto" />
                 <ChartTooltip cursor={{ fill: 'var(--muted)', opacity: 0.5 }} content={<ChartTooltipContent />} />
                 <Bar dataKey="visitors" fill="var(--color-visitors)" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="views" fill="var(--color-views)" radius={[3, 3, 0, 0]} />

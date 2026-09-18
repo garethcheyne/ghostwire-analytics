@@ -43,12 +43,12 @@ working reference for features and server logic (`reference/umami/`, see AGENTS.
 - [x] Events (+ event properties), Sessions (+ session detail, activity, properties), Realtime
 - [x] Performance (web vitals), Compare, Breakdown
 
-## Phase 3 — Behavior, audience, growth
+## Phase 3 — Behavior, audience, growth ✅
 
-- [ ] Goals, Funnels, Journeys, Retention
-- [ ] Segments, Cohorts
-- [ ] UTM, Revenue, Attribution
-- [ ] Annotations
+- [x] Goals, Funnels, Journeys, Retention
+- [x] Segments, Cohorts
+- [x] UTM, Revenue, Attribution
+- [x] Annotations
 
 ## Phase 4 — Replays and heatmaps
 

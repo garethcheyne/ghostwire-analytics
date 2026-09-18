@@ -70,7 +70,7 @@ export function EventsChart({ websiteId, limit = 10 }: { websiteId: string; limi
 
   return (
     <ChartContainer config={config} className="aspect-auto h-72 w-full">
-      <BarChart data={rows} margin={{ left: -16, right: 8 }}>
+      <BarChart data={rows} margin={{ left: 0, right: 8 }}>
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey="label"
@@ -80,7 +80,7 @@ export function EventsChart({ websiteId, limit = 10 }: { websiteId: string; limi
           minTickGap={24}
           tickFormatter={tickFormatter}
         />
-        <YAxis tickLine={false} axisLine={false} allowDecimals={false} width={48} />
+        <YAxis tickLine={false} axisLine={false} allowDecimals={false} width="auto" />
         <ChartTooltip
           cursor={{ fill: 'var(--muted)', opacity: 0.5 }}
           content={<ChartTooltipContent labelFormatter={label => tickFormatter(String(label))} />}
