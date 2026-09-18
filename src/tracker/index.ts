@@ -428,7 +428,10 @@ type MetricEntry = PerformanceEntry & {
         credentials,
       });
 
-      const data = (await res.json()) as { cache?: string; disabled?: boolean } | null;
+      // Errors (e.g. 429 when rate limited) keep the current session token.
+      const data = res.ok
+        ? ((await res.json()) as { cache?: string; disabled?: boolean } | null)
+        : null;
       if (data) {
         disabled = !!data.disabled;
         cache = data.cache;

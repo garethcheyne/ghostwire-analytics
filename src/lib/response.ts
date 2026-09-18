@@ -47,6 +47,15 @@ export function payloadTooLarge(error?: Record<string, any>) {
   );
 }
 
+export function tooManyRequests(retryAfterSeconds = 60, error?: Record<string, any>) {
+  return Response.json(
+    {
+      error: { message: 'Too many requests', code: 'too-many-requests', status: 429, ...error },
+    },
+    { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } },
+  );
+}
+
 export function notFound(error?: Record<string, any>) {
   return Response.json(
     { error: { message: 'Not found', code: 'not-found', status: 404, ...error } },

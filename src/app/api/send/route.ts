@@ -8,9 +8,9 @@ import { truncateString } from '@/lib/format';
 import { createToken, parseToken } from '@/lib/jwt';
 import { isNoise, parseStack } from '@/lib/errors';
 import { fetchWebsite } from '@/lib/load';
-import { createRateLimiter } from '@/lib/rate-limit';
+import { createIpRateLimiter, createRateLimiter } from '@/lib/rate-limit';
 import { parseRequest } from '@/lib/request';
-import { badRequest, forbidden, json, serverError } from '@/lib/response';
+import { badRequest, forbidden, json, serverError, tooManyRequests } from '@/lib/response';
 import { anyObjectParam, urlOrPathParam } from '@/lib/schema';
 import { safeDecodeURI, safeDecodeURIComponent } from '@/lib/url';
 import {
@@ -100,6 +100,9 @@ const schema = z.object({
     ),
 });
 
+// Per-IP cap on all tracking calls; generous, so offices behind one IP aren't affected.
+const allowForIp = createIpRateLimiter({ limit: 600, windowMs: 60_000 });
+
 // Per-minute caps, so an error loop in one browser (or a broken release) can't flood storage.
 const allowErrorForWebsite = createRateLimiter({ limit: 600, windowMs: 60_000 });
 const allowErrorForSession = createRateLimiter({ limit: 20, windowMs: 60_000 });
@@ -163,6 +166,10 @@ async function collectBrowserError({
 
 export async function POST(request: Request) {
   try {
+    if (!allowForIp(request)) {
+      return tooManyRequests();
+    }
+
     const { body, error } = await parseRequest(request, schema, { skipAuth: true });
 
     if (error) {

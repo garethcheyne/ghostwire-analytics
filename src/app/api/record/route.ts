@@ -9,7 +9,15 @@ import { parseToken } from '@/lib/jwt';
 import { getRecorderConfig } from '@/lib/recorder';
 import { getReplayEventCount } from '@/lib/replay';
 import { parseRequest } from '@/lib/request';
-import { badRequest, forbidden, json, payloadTooLarge, serverError } from '@/lib/response';
+import { createIpRateLimiter } from '@/lib/rate-limit';
+import {
+  badRequest,
+  forbidden,
+  json,
+  payloadTooLarge,
+  serverError,
+  tooManyRequests,
+} from '@/lib/response';
 import { getWebsite } from '@/queries/prisma';
 import { saveRecording } from '@/queries/sql';
 import { saveHeatmapEvents } from '@/queries/sql/heatmap/saveHeatmapEvents';
@@ -100,8 +108,15 @@ export function OPTIONS() {
   return corsPreflight();
 }
 
+// Per-IP cap on replay uploads (the recorder batches every few seconds).
+const allowForIp = createIpRateLimiter({ limit: 240, windowMs: 60_000 });
+
 export async function POST(request: Request) {
   try {
+    if (!allowForIp(request)) {
+      return withCorsHeaders(tooManyRequests());
+    }
+
     const requestBodySize = await getRequestBodySize(request);
 
     if (requestBodySize && requestBodySize > MAX_RECORD_REQUEST_BYTES) {

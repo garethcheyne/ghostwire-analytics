@@ -6,7 +6,7 @@ import { getDevice } from '@/lib/detect';
 import { prisma } from '@/lib/prisma';
 import { createRateLimiter } from '@/lib/rate-limit';
 import { parseRequest } from '@/lib/request';
-import { forbidden, unauthorized } from '@/lib/response';
+import { forbidden, tooManyRequests, unauthorized } from '@/lib/response';
 import { saveError } from '@/queries/sql/errors/saveError';
 
 /*
@@ -114,10 +114,7 @@ export async function POST(request: Request) {
   }
 
   if (!allowForWebsite(website.id)) {
-    return Response.json(
-      { error: { message: 'Too many errors; try again shortly.' } },
-      { status: 429 },
-    );
+    return tooManyRequests(60, { message: 'Too many errors; try again shortly.' });
   }
 
   const userAgent = body.request?.userAgent;

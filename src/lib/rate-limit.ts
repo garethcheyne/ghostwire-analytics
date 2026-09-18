@@ -1,3 +1,5 @@
+import { getIpAddress } from './ip';
+
 /**
  * Fixed-window counters kept in memory. Good enough for a single app instance; each key may
  * be used `limit` times per `windowMs`.
@@ -24,5 +26,18 @@ export function createRateLimiter({ limit, windowMs }: { limit: number; windowMs
 
     window.count += 1;
     return window.count <= limit;
+  };
+}
+
+/**
+ * A limiter keyed by the client's IP (from the proxy headers). Requests without a known IP are
+ * always allowed, so a missing header never blocks every visitor at once.
+ */
+export function createIpRateLimiter(options: { limit: number; windowMs: number }) {
+  const allow = createRateLimiter(options);
+
+  return (request: Request) => {
+    const ip = getIpAddress(request.headers);
+    return !ip || allow(ip);
   };
 }
