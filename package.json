@@ -20,7 +20,8 @@
     "create-admin": "tsx scripts/create-admin.ts",
     "build:tracker": "rollup -c rollup.tracker.config.mjs",
     "build:recorder": "rollup -c rollup.recorder.config.mjs",
-    "build:geo": "node scripts/build-geo.mjs"
+    "build:geo": "node scripts/build-geo.mjs",
+    "db:seed": "tsx scripts/seed-data.ts"
   },
   "dependencies": {
     "@better-auth/api-key": "^1.7.5",
