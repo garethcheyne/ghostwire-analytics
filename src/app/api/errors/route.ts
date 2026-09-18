@@ -1,7 +1,7 @@
 import { browserName, detectOS } from 'detect-browser';
 import { z } from 'zod';
 import { verifyErrorKey } from '@/lib/error-key';
-import { ERROR_PLATFORMS } from '@/lib/errors';
+import { ERROR_PLATFORMS, parseStack } from '@/lib/errors';
 import { getDevice } from '@/lib/detect';
 import { prisma } from '@/lib/prisma';
 import { createRateLimiter } from '@/lib/rate-limit';
@@ -10,6 +10,7 @@ import { forbidden, tooManyRequests, unauthorized } from '@/lib/response';
 import { saveError } from '@/queries/sql/errors/saveError';
 import { afterResponse, notifyErrorSaved } from '@/lib/alerts';
 import { recordRelease } from '@/lib/releases';
+import { resolveFrames } from '@/lib/source-maps';
 
 /*
  * Error ingest for server-side clients (@ghostwire/node, Python, .NET, or plain HTTP).
@@ -122,6 +123,19 @@ export async function POST(request: Request) {
   const userAgent = body.request?.userAgent;
   const { hostname, urlPath } = splitUrl(body.request?.url);
 
+  const given = body.error.frames?.map(frame => ({
+    file: frame.file,
+    function: frame.function ?? null,
+    line: frame.line ?? null,
+    column: frame.column ?? null,
+    inApp: frame.inApp ?? true,
+  }));
+  const { frames } = await resolveFrames(
+    website.id,
+    body.release,
+    given?.length ? given : parseStack(body.error.stack, body.platform),
+  );
+
   const saved = await saveError({
     websiteId: website.id,
     source: 'server',
@@ -129,13 +143,7 @@ export async function POST(request: Request) {
     type: body.error.type || 'Error',
     message: body.error.message,
     stack: body.error.stack,
-    frames: body.error.frames?.map(frame => ({
-      file: frame.file,
-      function: frame.function ?? null,
-      line: frame.line ?? null,
-      column: frame.column ?? null,
-      inApp: frame.inApp ?? true,
-    })),
+    frames,
     distinctId: body.user?.id,
     hostname,
     urlPath,

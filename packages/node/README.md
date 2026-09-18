@@ -116,6 +116,34 @@ init({
 });
 ```
 
+## Releases and source maps
+
+Tell Ghostwire which version is live, and production stack traces show your original files
+instead of minified bundles. The package includes a `ghostwire` command for CI. It reads
+`GHOSTWIRE_HOST`, `GHOSTWIRE_WEBSITE_ID` and `GHOSTWIRE_ERROR_KEY`. The release defaults to
+`GHOSTWIRE_RELEASE`, or the commit SHA on Vercel, GitHub Actions and GitLab.
+
+```bash
+# Mark the deploy (shows on the traffic chart and the Releases page)
+npx ghostwire releases new 2.4.1 --environment production
+
+# Upload browser source maps for the release, then remove them from the build output
+npx ghostwire sourcemaps upload --dir .next/static --url-prefix /_next/static --delete
+```
+
+The website has to send the same release: `release` on `<GhostwireProvider>`, `data-release` on
+the script tag, or `release` in `init()` for server errors.
+
+For Next.js, `withGhostwire(nextConfig, { host, sourceMaps: true })` turns on browser source maps.
+Upload them in your build script:
+
+```json
+"build": "next build && ghostwire sourcemaps upload --dir .next/static --url-prefix /_next/static --delete"
+```
+
+For Vite, use `--dir dist/assets --url-prefix /assets` with `build.sourcemap: true`. The same
+functions are exported for scripts: `registerRelease()` and `uploadSourceMaps()`.
+
 ## Other languages
 
 Any server can send errors over HTTP. Python and .NET stack traces are parsed automatically:

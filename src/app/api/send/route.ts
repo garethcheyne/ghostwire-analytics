@@ -23,6 +23,7 @@ import {
 import { saveError } from '@/queries/sql/errors/saveError';
 import { afterResponse, notifyErrorSaved } from '@/lib/alerts';
 import { normalizeRelease, recordRelease } from '@/lib/releases';
+import { resolveFrames } from '@/lib/source-maps';
 
 interface Cache {
   websiteId: string;
@@ -137,8 +138,11 @@ async function collectBrowserError({
   if (!website?.errorsEnabled) return;
   if (!allowErrorForWebsite(websiteId) || !allowErrorForSession(sessionId)) return;
 
-  const frames = parseStack(error.stack, 'javascript');
-  if (isNoise(error.message, frames)) return;
+  const parsed = parseStack(error.stack, 'javascript');
+  if (isNoise(error.message, parsed)) return;
+
+  // With a source map for the release, group and show the error by its original code.
+  const { frames } = await resolveFrames(websiteId, rest.release, parsed);
 
   let urlPath: string | undefined;
   try {

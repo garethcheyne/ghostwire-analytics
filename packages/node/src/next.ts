@@ -50,6 +50,11 @@ export interface GhostwireProxyOptions {
   path?: string;
   /** Tracker script name, if your server renames it. Default "script.js". */
   scriptName?: string;
+  /**
+   * Build browser source maps (productionBrowserSourceMaps) so they can be uploaded with
+   * `ghostwire sourcemaps upload --dir .next/static --url-prefix /_next/static --delete`.
+   */
+  sourceMaps?: boolean;
 }
 
 /** The rewrites that serve the tracker from your own domain (only what tracking needs). */
@@ -95,6 +100,7 @@ export function withGhostwire<
 
   return {
     ...nextConfig,
+    ...(options.sourceMaps && { productionBrowserSourceMaps: true }),
     async rewrites(): Promise<Rewrites> {
       const existing = await nextConfig.rewrites?.();
 

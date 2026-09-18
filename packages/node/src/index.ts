@@ -302,3 +302,11 @@ export function reset() {
     monitorInstalled = false;
   }
 }
+
+export {
+  detectRelease,
+  registerRelease,
+  uploadSourceMaps,
+  type ReleaseInput,
+  type UploadInput,
+} from './releases';

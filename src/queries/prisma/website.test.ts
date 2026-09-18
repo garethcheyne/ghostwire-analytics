@@ -89,6 +89,16 @@ function createDeleteTx(calls: string[]) {
         calls.push('alertLog');
       }),
     },
+    release: {
+      deleteMany: vi.fn(async () => {
+        calls.push('release');
+      }),
+    },
+    sourceMap: {
+      deleteMany: vi.fn(async () => {
+        calls.push('sourceMap');
+      }),
+    },
     segment: {
       deleteMany: vi.fn(async () => {
         calls.push('segment');
@@ -168,6 +178,8 @@ describe('website delete dependencies', () => {
       'report',
       'alertRule',
       'alertLog',
+      'release',
+      'sourceMap',
       'segment',
       'annotation',
       'share',

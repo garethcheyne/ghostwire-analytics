@@ -93,7 +93,35 @@ function StatusActions({ group }: { group: ErrorGroupDetail }) {
   );
 }
 
+function FrameContext({ frame }: { frame: Frame }) {
+  const context = frame.context!;
+  const first = (frame.line ?? 1) - context.pre.length;
+  const rows = [...context.pre, context.line, ...context.post];
+
+  return (
+    <pre className="mt-1 overflow-x-auto rounded border bg-background py-1 text-[11px] leading-5">
+      {rows.map((code, index) => {
+        const lineNumber = first + index;
+        const current = index === context.pre.length;
+        return (
+          <div
+            key={lineNumber}
+            className={cn('flex gap-3 px-2', current && 'bg-destructive/10 text-foreground')}
+          >
+            <span className="w-8 shrink-0 text-right text-muted-foreground select-none">
+              {lineNumber}
+            </span>
+            <span className="whitespace-pre">{code || ' '}</span>
+          </div>
+        );
+      })}
+    </pre>
+  );
+}
+
 function FrameRow({ frame }: { frame: Frame }) {
+  const minifiedFile = frame.minified?.file.split('/').pop()?.split('?')[0];
+
   return (
     <li
       className={cn(
@@ -109,6 +137,13 @@ function FrameRow({ frame }: { frame: Frame }) {
         {frame.line !== null && `:${frame.line}`}
         {frame.column !== null && `:${frame.column}`}
       </span>
+      {frame.minified && (
+        <span className="text-[11px] text-muted-foreground/80">
+          mapped from {minifiedFile}:{frame.minified.line}:{frame.minified.column}
+          {frame.minified.function && ` (${frame.minified.function})`}
+        </span>
+      )}
+      {frame.inApp && frame.context && <FrameContext frame={frame} />}
     </li>
   );
 }
@@ -129,8 +164,27 @@ function StackTrace({ event }: { event: ErrorEventDetail }) {
     );
   }
 
+  const mapped = frames.some(frame => frame.minified);
+  const looksMinified =
+    !mapped &&
+    !event.context?.request &&
+    frames.some(frame => frame.inApp && /[-.][0-9a-f]{8,}.js/.test(frame.file));
+
   return (
     <div className="flex flex-col gap-2">
+      {mapped && (
+        <p className="text-xs text-muted-foreground">
+          Mapped to your source code with the source maps for {event.release}.
+        </p>
+      )}
+      {looksMinified && (
+        <p className="text-xs text-muted-foreground">
+          This looks like minified code.{' '}
+          {event.release
+            ? `Upload source maps for ${event.release} to see your original files.`
+            : 'Send a release and upload source maps to see your original files.'}
+        </p>
+      )}
       <ol className="flex flex-col gap-1">
         {visible.map((frame, index) => (
           <FrameRow key={index} frame={frame} />

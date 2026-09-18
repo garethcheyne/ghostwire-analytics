@@ -1,10 +1,12 @@
 'use client';
 import { endOfDay, format, formatDistanceToNowStrict, startOfDay } from 'date-fns';
-import { Rocket } from 'lucide-react';
+import { FileCode, Rocket, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { WebsiteHeader } from '@/components/analytics/website-header';
 import { CopyButton } from '@/components/copy-button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Empty,
@@ -25,7 +27,12 @@ import {
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCurrentWebsite } from '@/components/websites/website-context';
-import { type ReleaseSummary, useReleases } from '@/hooks/queries/releases';
+import {
+  type ReleaseSummary,
+  useDeleteSourceMaps,
+  useReleases,
+  useSourceMaps,
+} from '@/hooks/queries/releases';
 import { getDateRangeValue } from '@/lib/date';
 import { formatLongNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -54,6 +61,59 @@ function CrashFree({ release }: { release: ReleaseSummary }) {
     >
       {percent >= 99.95 ? '100' : percent.toFixed(1)}%
     </span>
+  );
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function SourceMaps() {
+  const { id: websiteId, canUpdate } = useCurrentWebsite();
+  const { data } = useSourceMaps(websiteId);
+  const remove = useDeleteSourceMaps(websiteId);
+
+  if (!data?.length) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Source maps</CardTitle>
+        <CardDescription>
+          Errors from these releases show your original files and code.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col divide-y">
+          {data.map(item => (
+            <li key={item.release} className="flex items-center gap-3 py-2 text-sm">
+              <FileCode className="text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate font-mono">{item.release}</span>
+              <span className="text-muted-foreground">
+                {item.files} {item.files === 1 ? 'file' : 'files'} · {formatBytes(item.size)} ·{' '}
+                {formatDistanceToNowStrict(new Date(item.uploadedAt), { addSuffix: true })}
+              </span>
+              {canUpdate && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Delete source maps for ${item.release}`}
+                  disabled={remove.isPending}
+                  onClick={() =>
+                    remove
+                      .mutateAsync(item.release)
+                      .then(() => toast.success(`Source maps for ${item.release} deleted`))
+                  }
+                >
+                  <Trash2 />
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -96,6 +156,18 @@ function SetupHelp({ websiteId }: { websiteId: string }) {
           <span className="text-muted-foreground">
             Uses the server key from Settings → Errors. Deploys show as markers on the traffic
             chart.
+          </span>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">Upload source maps after each build</span>
+          <pre className="overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-xs">
+            {`npx ghostwire sourcemaps upload --dir .next/static --url-prefix /_next/static --delete`}
+          </pre>
+          <span className="text-muted-foreground">
+            From <code>@ghostwire/node</code>, with GHOSTWIRE_HOST, GHOSTWIRE_WEBSITE_ID,
+            GHOSTWIRE_ERROR_KEY and GHOSTWIRE_RELEASE set. For Next.js, turn on browser source maps
+            with <code>withGhostwire(config, {'{ sourceMaps: true }'})</code>; --delete keeps them
+            off your public site.
           </span>
         </div>
       </CardContent>
@@ -234,6 +306,7 @@ export function ReleasesView() {
               </Table>
             </CardContent>
           </Card>
+          <SourceMaps />
           <SetupHelp websiteId={website.id} />
         </>
       )}

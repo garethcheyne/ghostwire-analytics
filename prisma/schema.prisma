@@ -676,6 +676,7 @@ model ErrorEvent {
   @@index([websiteId, createdAt])
   @@index([groupId, createdAt])
   @@index([websiteId, distinctId])
+  @@index([websiteId, release])
   @@index([sessionId])
   @@map("error_event")
 }
@@ -751,4 +752,20 @@ model Release {
   @@unique([websiteId, version])
   @@index([websiteId, firstSeen])
   @@map("release")
+}
+
+/// A source map for one minified file of one release (gzip-compressed).
+model SourceMap {
+  id        String    @id() @map("source_map_id") @db.Uuid
+  websiteId String    @map("website_id") @db.Uuid
+  release   String    @db.VarChar(100)
+  /// URL path of the minified file, e.g. /_next/static/chunks/app/page-4f2a.js
+  fileName  String    @map("file_name") @db.VarChar(500)
+  content   Bytes
+  size      Int
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([websiteId, release, fileName])
+  @@index([websiteId, release])
+  @@map("source_map")
 }

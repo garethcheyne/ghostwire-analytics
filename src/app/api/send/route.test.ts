@@ -22,6 +22,9 @@ import { saveError } from '@/queries/sql/errors/saveError';
 import { POST } from './route';
 
 vi.mock('@/lib/alerts', () => ({ afterResponse: vi.fn(), notifyErrorSaved: vi.fn() }));
+vi.mock('@/lib/source-maps', () => ({
+  resolveFrames: async (_w: string, _r: string, frames: unknown[]) => ({ frames, resolved: false }),
+}));
 vi.mock('@/lib/releases', () => ({
   normalizeRelease: (value?: string) => value?.trim() || null,
   recordRelease: vi.fn(),

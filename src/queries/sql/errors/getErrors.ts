@@ -1,4 +1,4 @@
-import type { ErrorStatus } from '@/lib/errors';
+import type { ErrorStatus, StackFrame } from '@/lib/errors';
 import prisma from '@/lib/prisma';
 import type { PageResult, QueryFilters } from '@/lib/types';
 
@@ -146,15 +146,7 @@ export interface ErrorEventDetail extends ErrorOccurrence {
   type: string;
   message: string;
   stack: string | null;
-  frames:
-    | {
-        file: string;
-        function: string | null;
-        line: number | null;
-        column: number | null;
-        inApp: boolean;
-      }[]
-    | null;
+  frames: StackFrame[] | null;
   hostname: string | null;
   context: Record<string, any> | null;
 }

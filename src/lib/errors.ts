@@ -17,6 +17,15 @@ export interface StackFrame {
   column: number | null;
   /** False for library, runtime and browser-extension code. */
   inApp: boolean;
+  /** Set when a source map resolved this frame: where it was in the minified file. */
+  minified?: {
+    file: string;
+    line: number | null;
+    column: number | null;
+    function?: string | null;
+  };
+  /** Original source around the line, from the source map. */
+  context?: { pre: string[]; line: string; post: string[] };
 }
 
 const MAX_FRAMES = 50;

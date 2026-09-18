@@ -1,7 +1,7 @@
 {
   "name": "@ghostwire/node",
   "version": "0.1.0",
-  "description": "Server-side error reporting for Ghostwire Analytics (Node, Express, Next.js).",
+  "description": "Server-side error reporting, releases and source maps for Ghostwire Analytics (Node, Express, Next.js).",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -48,5 +48,8 @@
     "nextjs",
     "node",
     "ghostwire"
-  ]
+  ],
+  "bin": {
+    "ghostwire": "./dist/cli.js"
+  }
 }
