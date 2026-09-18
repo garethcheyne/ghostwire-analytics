@@ -4,7 +4,7 @@ import { verifyErrorKey } from '@/lib/error-key';
 import { ERROR_PLATFORMS, parseStack } from '@/lib/errors';
 import { getDevice } from '@/lib/detect';
 import { prisma } from '@/lib/prisma';
-import { createRateLimiter } from '@/lib/rate-limit';
+import { createLimiter } from '@/lib/rate-limit';
 import { parseRequest } from '@/lib/request';
 import { forbidden, tooManyRequests, unauthorized } from '@/lib/response';
 import { saveError } from '@/queries/sql/errors/saveError';
@@ -71,7 +71,7 @@ const schema = z.object({
   timestamp: z.number().int().positive().optional(),
 });
 
-const allowForWebsite = createRateLimiter({ limit: 600, windowMs: 60_000 });
+const allowForWebsite = createLimiter({ name: 'errors', limit: 600, windowMs: 60_000 });
 
 function splitUrl(url: string | undefined) {
   if (!url) return { hostname: null, urlPath: null };
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
     return forbidden({ message: 'Error reporting is switched off for this website.' });
   }
 
-  if (!allowForWebsite(website.id)) {
+  if (!(await allowForWebsite(website.id))) {
     return tooManyRequests(60, { message: 'Too many errors; try again shortly.' });
   }
 

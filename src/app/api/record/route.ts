@@ -109,11 +109,11 @@ export function OPTIONS() {
 }
 
 // Per-IP cap on replay uploads (the recorder batches every few seconds).
-const allowForIp = createIpRateLimiter({ limit: 240, windowMs: 60_000 });
+const allowForIp = createIpRateLimiter({ name: 'record', limit: 240, windowMs: 60_000 });
 
 export async function POST(request: Request) {
   try {
-    if (!allowForIp(request)) {
+    if (!(await allowForIp(request))) {
       return withCorsHeaders(tooManyRequests());
     }
 

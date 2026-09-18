@@ -27,6 +27,8 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
       OIDC_NAME: ${OIDC_NAME:-}
       OIDC_AUTO_CREATE: ${OIDC_AUTO_CREATE:-}
+      # Set to postgres when running more than one app container.
+      RATE_LIMIT_STORE: ${RATE_LIMIT_STORE:-}
     depends_on:
       db:
         condition: service_healthy

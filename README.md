@@ -42,7 +42,11 @@ Change the password straight away.
   per kind. Saved replays are kept, and page views and events are never deleted. Unset, nothing
   is deleted.
 - **Rate limits**: tracking calls are capped per visitor IP (600 a minute, replays 240) and error
-  reports per website (600 a minute). The counters are in memory, for a single app container.
+  reports per website (600 a minute). Counters are in memory; with more than one app container,
+  set `RATE_LIMIT_STORE=postgres` so they're shared.
+- **At scale**: the reports query raw events with Umami's indexes. At around 200,000 events a
+  30-day overview takes about 50 ms. Past tens of millions of events, look at partitioning
+  `website_event` by month and a retention policy for old events before adding hardware.
 
 ## Develop
 

@@ -8,7 +8,7 @@ import { truncateString } from '@/lib/format';
 import { createToken, parseToken } from '@/lib/jwt';
 import { isNoise, parseStack } from '@/lib/errors';
 import { fetchWebsite } from '@/lib/load';
-import { createIpRateLimiter, createRateLimiter } from '@/lib/rate-limit';
+import { createIpRateLimiter, createLimiter } from '@/lib/rate-limit';
 import { parseRequest } from '@/lib/request';
 import { badRequest, forbidden, json, serverError, tooManyRequests } from '@/lib/response';
 import { anyObjectParam, urlOrPathParam } from '@/lib/schema';
@@ -105,11 +105,11 @@ const schema = z.object({
 });
 
 // Per-IP cap on all tracking calls; generous, so offices behind one IP aren't affected.
-const allowForIp = createIpRateLimiter({ limit: 600, windowMs: 60_000 });
+const allowForIp = createIpRateLimiter({ name: 'send', limit: 600, windowMs: 60_000 });
 
 // Per-minute caps, so an error loop in one browser (or a broken release) can't flood storage.
-const allowErrorForWebsite = createRateLimiter({ limit: 600, windowMs: 60_000 });
-const allowErrorForSession = createRateLimiter({ limit: 20, windowMs: 60_000 });
+const allowErrorForWebsite = createLimiter({ name: 'browser-errors', limit: 600, windowMs: 60_000 });
+const allowErrorForSession = createLimiter({ name: 'session-errors', limit: 20, windowMs: 60_000 });
 
 async function collectBrowserError({
   websiteId,
@@ -136,7 +136,7 @@ async function collectBrowserError({
 
   // Accepted only while error reporting is switched on for the website.
   if (!website?.errorsEnabled) return;
-  if (!allowErrorForWebsite(websiteId) || !allowErrorForSession(sessionId)) return;
+  if (!(await allowErrorForWebsite(websiteId)) || !(await allowErrorForSession(sessionId))) return;
 
   const parsed = parseStack(error.stack, 'javascript');
   if (isNoise(error.message, parsed)) return;
@@ -180,7 +180,7 @@ async function collectBrowserError({
 
 export async function POST(request: Request) {
   try {
-    if (!allowForIp(request)) {
+    if (!(await allowForIp(request))) {
       return tooManyRequests();
     }
 

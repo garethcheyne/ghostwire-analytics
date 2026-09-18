@@ -823,3 +823,14 @@ model EmailReport {
 
   @@map("email_report")
 }
+
+/// Rate-limit counters shared by every app container (RATE_LIMIT_STORE=postgres).
+model RateLimit {
+  key         String   @db.VarChar(200)
+  windowStart DateTime @map("window_start") @db.Timestamptz(6)
+  count       Int      @default(0)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+  @@map("rate_limit")
+}
