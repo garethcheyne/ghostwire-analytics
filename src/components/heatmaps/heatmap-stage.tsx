@@ -290,6 +290,9 @@ export function HeatmapStage({
                 ref={frameRef}
                 key={frameKey}
                 name={HEATMAP_FRAME_NAME}
+                // Scripts run (the tracker reports the page size), but the framed site can't
+                // navigate this app, open popups or submit forms.
+                sandbox="allow-scripts allow-same-origin"
                 src={url}
                 title="Page preview"
                 tabIndex={-1}

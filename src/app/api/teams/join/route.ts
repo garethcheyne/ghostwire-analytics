@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ROLES } from '@/lib/constants';
 import { parseRequest } from '@/lib/request';
-import { badRequest, json, notFound } from '@/lib/response';
+import { badRequest, json, notFound, unauthorized } from '@/lib/response';
 import { createTeamUser, findTeam, getTeamUser } from '@/queries/prisma';
 
 export async function POST(request: Request) {
@@ -13,6 +13,11 @@ export async function POST(request: Request) {
 
   if (error) {
     return error();
+  }
+
+  // Share links authenticate without a user; these routes are about the signed-in user.
+  if (!auth.user) {
+    return unauthorized();
   }
 
   const { accessCode } = body;

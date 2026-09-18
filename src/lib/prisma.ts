@@ -788,8 +788,14 @@ async function pagedRawQuery(
   const offset = +size * (+page - 1);
   const direction = sortDescending ? 'desc' : 'asc';
 
+  // orderBy is interpolated into SQL, so only a plain column name (or a quoted alias) is used.
+  const safeOrderBy =
+    orderBy && /^([a-z_][\w.]*|"[a-zA-Z_]\w*")$/i.test(orderBy) ? orderBy : undefined;
+
   const statements = [
-    orderBy ? `order by ${orderBy} ${direction}` : defaultOrderBy && `order by ${defaultOrderBy}`,
+    safeOrderBy
+      ? `order by ${safeOrderBy} ${direction}`
+      : defaultOrderBy && `order by ${defaultOrderBy}`,
     +size > 0 && `limit ${+size} offset ${offset}`,
   ]
     .filter(n => n)

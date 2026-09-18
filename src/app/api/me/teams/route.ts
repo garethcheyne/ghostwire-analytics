@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getQueryFilters, parseRequest } from '@/lib/request';
-import { json } from '@/lib/response';
+import { json, unauthorized } from '@/lib/response';
 import { pagingParams, sortingParams } from '@/lib/schema';
 import { getUserTeams } from '@/queries/prisma';
 
@@ -14,6 +14,11 @@ export async function GET(request: Request) {
 
   if (error) {
     return error();
+  }
+
+  // Share links authenticate without a user; these routes are about the signed-in user.
+  if (!auth.user) {
+    return unauthorized();
   }
 
   const filters = await getQueryFilters(query);

@@ -362,14 +362,17 @@ async function getFrustrationSpots(
         ${filterContext.joinQuery}
         ${where('clickType')}
       ),
+      -- Clicks in the same visit and the same RAGE_RADIUS-sized cell, within the time window
+      -- before each click. A window function keeps this linear in the number of clicks.
       bursts as (
         select c.*,
-          (select count(*) from clicks d
-            where d.visit_id = c.visit_id
-              and d.created_at between c.created_at - interval '${RAGE_WINDOW_MS} milliseconds'
-                and c.created_at
-              and abs(d.page_x - c.page_x) <= ${RAGE_RADIUS}
-              and abs(d.page_y - c.page_y) <= ${RAGE_RADIUS}) as burst
+          count(*) over (
+            partition by c.visit_id,
+              floor(c.page_x / ${RAGE_RADIUS}.0),
+              floor(c.page_y / ${RAGE_RADIUS}.0)
+            order by c.created_at
+            range between interval '${RAGE_WINDOW_MS} milliseconds' preceding and current row
+          ) as burst
         from clicks c
       ),
       incidents as (

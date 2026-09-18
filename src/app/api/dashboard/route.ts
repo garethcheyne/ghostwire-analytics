@@ -11,6 +11,11 @@ export async function GET(request: Request) {
     return error();
   }
 
+  // Share links authenticate without a user; these routes are about the signed-in user.
+  if (!auth.user) {
+    return unauthorized();
+  }
+
   const board = await getBoard(auth.user.id);
 
   if (board && board.userId !== auth.user.id) {
@@ -31,6 +36,11 @@ export async function POST(request: Request) {
 
   if (error) {
     return error();
+  }
+
+  // Share links authenticate without a user; these routes are about the signed-in user.
+  if (!auth.user) {
+    return unauthorized();
   }
 
   const userId = auth.user.id;

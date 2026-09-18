@@ -85,7 +85,14 @@ function splitUrl(url: string | undefined) {
   }
 }
 
+// One report is small; anything bigger is a misbehaving client.
+const MAX_BODY_BYTES = 256 * 1024;
+
 export async function POST(request: Request) {
+  if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) {
+    return Response.json({ error: { message: 'Report too large.' } }, { status: 413 });
+  }
+
   const { body, error } = await parseRequest(request, schema, { skipAuth: true });
 
   if (error) {
