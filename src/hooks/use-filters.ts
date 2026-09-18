@@ -1,6 +1,7 @@
 'use client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
+import { useShare } from '@/components/share/share-context';
 import { FILTER_COLUMNS, OPERATORS } from '@/lib/constants';
 
 export interface ActiveFilter {
@@ -26,6 +27,8 @@ export function useFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // Public shares can turn filtering off.
+  const canFilter = useShare()?.allowFilter ?? true;
 
   const filters = useMemo(() => {
     const result: ActiveFilter[] = [];
@@ -47,7 +50,9 @@ export function useFilters() {
   // Raw params to forward to the API (filters plus any applied segment/cohort).
   const params = useMemo(
     () => ({
-      ...Object.fromEntries(filters.map(({ key, operator, value }) => [key, `${operator}.${value}`])),
+      ...Object.fromEntries(
+        filters.map(({ key, operator, value }) => [key, `${operator}.${value}`]),
+      ),
       ...(segment && { segment }),
       ...(cohort && { cohort }),
     }),
@@ -65,13 +70,16 @@ export function useFilters() {
   );
 
   const addFilter = useCallback(
-    (name: string, value: string, operator: string = OPERATORS.equals) =>
+    (name: string, value: string, operator: string = OPERATORS.equals) => {
+      if (!canFilter) return;
+
       update(params => {
         let key = name;
         for (let i = 2; params.has(key); i++) key = `${name}${i}`;
         params.set(key, `${operator}.${value}`);
-      }),
-    [update],
+      });
+    },
+    [update, canFilter],
   );
 
   const removeFilter = useCallback((key: string) => update(params => params.delete(key)), [update]);
@@ -96,5 +104,15 @@ export function useFilters() {
     [update],
   );
 
-  return { filters, params, segment, cohort, addFilter, removeFilter, clearFilters, setSegment };
+  return {
+    filters,
+    params,
+    segment,
+    cohort,
+    canFilter,
+    addFilter,
+    removeFilter,
+    clearFilters,
+    setSegment,
+  };
 }

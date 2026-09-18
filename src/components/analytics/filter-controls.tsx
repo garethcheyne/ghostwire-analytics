@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useSegments } from '@/hooks/queries/segments';
 import { useFilters } from '@/hooks/use-filters';
 import { type FilterRow, FilterRows, emptyFilter } from './filter-rows';
+import { useShare } from '@/components/share/share-context';
 
 function AddFilterButton() {
   const { addFilter } = useFilters();
@@ -112,6 +113,12 @@ function SegmentPicker({ websiteId }: { websiteId: string }) {
 
 /** Filter and segment buttons for the website header. */
 export function FilterControls({ websiteId }: { websiteId: string }) {
+  const share = useShare();
+
+  if (share) {
+    return share.allowFilter ? <AddFilterButton /> : null;
+  }
+
   return (
     <>
       <SegmentPicker websiteId={websiteId} />

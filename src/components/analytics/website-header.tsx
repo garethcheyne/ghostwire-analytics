@@ -1,18 +1,18 @@
 'use client';
 import { ExternalLink } from 'lucide-react';
-import Link from 'next/link';
 import { useCurrentWebsite } from '@/components/websites/website-context';
 import { useActiveVisitors } from '@/hooks/queries/analytics';
 import { DateRangePicker } from './date-range-picker';
 import { FilterControls } from './filter-controls';
 import { FilterBar } from './filter-bar';
+import { AppLink } from '@/components/share/share-context';
 
 function LiveVisitors({ websiteId }: { websiteId: string }) {
   const { data } = useActiveVisitors(websiteId);
   const visitors = data?.visitors ?? 0;
 
   return (
-    <Link
+    <AppLink
       href={`/websites/${websiteId}/realtime`}
       className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs hover:bg-muted/50"
     >
@@ -27,7 +27,7 @@ function LiveVisitors({ websiteId }: { websiteId: string }) {
       <span className="tabular-nums">
         {visitors} {visitors === 1 ? 'visitor' : 'visitors'} now
       </span>
-    </Link>
+    </AppLink>
   );
 }
 

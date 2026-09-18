@@ -1,7 +1,6 @@
 'use client';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Eye, Zap } from 'lucide-react';
-import Link from 'next/link';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { useWebsiteEvents } from '@/hooks/queries/analytics';
 import { formatMetricLabel } from './metric-labels';
+import { AppLink } from '@/components/share/share-context';
 
 const PAGE_SIZE = 25;
 
@@ -81,12 +81,12 @@ export function EventsActivity({ websiteId }: { websiteId: string }) {
                 {formatMetricLabel('device', event.device)}
               </TableCell>
               <TableCell>
-                <Link
+                <AppLink
                   href={`/websites/${websiteId}/sessions/${event.sessionId}`}
                   className="font-mono text-xs text-primary hover:underline"
                 >
                   {event.sessionId.slice(0, 8)}
-                </Link>
+                </AppLink>
               </TableCell>
               <TableCell
                 className="text-right whitespace-nowrap text-muted-foreground"

@@ -4,7 +4,6 @@ import { format, subMinutes } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { Eye, UserPlus, Zap } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +23,7 @@ import { generateTimeSeries } from '@/lib/date';
 import { formatLongNumber } from '@/lib/format';
 import { formatMetricLabel } from './metric-labels';
 import { StatCards } from './stat-cards';
+import { AppLink } from '@/components/share/share-context';
 
 const WorldMap = dynamic(() => import('./world-map').then(m => m.WorldMap), {
   ssr: false,
@@ -132,12 +132,12 @@ function LiveLog({ websiteId, events }: { websiteId: string; events: RealtimeEve
                       }
                     />
                     <span className="min-w-0 flex-1 truncate">{text}</span>
-                    <Link
+                    <AppLink
                       href={`/websites/${websiteId}/sessions/${event.sessionId}`}
                       className="shrink-0 font-mono text-xs text-primary hover:underline"
                     >
                       {event.sessionId.slice(0, 8)}
-                    </Link>
+                    </AppLink>
                   </li>
                 );
               })}

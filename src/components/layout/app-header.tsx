@@ -1,10 +1,8 @@
 'use client';
-import { LogOut, Moon, Settings, ShieldCheck, Sun } from 'lucide-react';
+import { LogOut, Settings, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,8 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { authClient } from '@/lib/auth-client';
+import { ThemeToggle } from './theme-toggle';
 
 export interface HeaderUser {
   name: string;
@@ -38,7 +36,6 @@ function initials(name: string) {
 
 export function AppHeader({ user }: { user: HeaderUser }) {
   const router = useRouter();
-  const { resolvedTheme, setTheme } = useTheme();
 
   async function signOut() {
     await authClient.signOut();
@@ -49,23 +46,13 @@ export function AppHeader({ user }: { user: HeaderUser }) {
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:h-16 sm:px-6">
       <SidebarTrigger className="-ml-1" />
-      <Separator orientation="vertical" className="mr-2 data-vertical:h-4 data-vertical:self-center" />
+      <Separator
+        orientation="vertical"
+        className="mr-2 data-vertical:h-4 data-vertical:self-center"
+      />
       <div className="flex-1" />
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-          >
-            <Sun className="scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-            <Moon className="absolute scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Toggle theme</TooltipContent>
-      </Tooltip>
+      <ThemeToggle />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

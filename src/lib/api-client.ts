@@ -16,6 +16,13 @@ export class ApiError extends Error {
 
 type Params = Record<string, string | number | boolean | null | undefined>;
 
+// Set on public share pages: requests authenticate with the share's token instead of a session.
+let shareToken: string | null = null;
+
+export function setShareToken(token: string | null) {
+  shareToken = token;
+}
+
 function toQueryString(params?: Params) {
   if (!params) return '';
 
@@ -32,10 +39,21 @@ function toQueryString(params?: Params) {
   return query ? `?${query}` : '';
 }
 
-async function request<T>(method: string, path: string, params?: Params, body?: unknown): Promise<T> {
+async function request<T>(
+  method: string,
+  path: string,
+  params?: Params,
+  body?: unknown,
+): Promise<T> {
   const response = await fetch(`/api${path}${toQueryString(params)}`, {
     method,
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    headers: {
+      ...(body !== undefined && { 'Content-Type': 'application/json' }),
+      ...(shareToken && {
+        'x-ghostwire-share-token': shareToken,
+        'x-ghostwire-share-context': '1',
+      }),
+    },
     body: body !== undefined ? JSON.stringify(body) : undefined,
     credentials: 'same-origin',
   });

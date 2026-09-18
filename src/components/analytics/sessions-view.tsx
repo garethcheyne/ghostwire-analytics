@@ -1,7 +1,6 @@
 'use client';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Monitor, Smartphone, Tablet } from 'lucide-react';
-import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +20,7 @@ import { formatMetricLabel } from './metric-labels';
 import { StatCards } from './stat-cards';
 import { WebsiteHeader } from './website-header';
 import { WeeklyTraffic } from './weekly-traffic';
+import { AppLink } from '@/components/share/share-context';
 
 const PAGE_SIZE = 25;
 
@@ -81,13 +81,13 @@ function SessionsTable({ websiteId }: { websiteId: string }) {
           {data.data.map(session => (
             <TableRow key={`${session.id}-${session.hostname}`}>
               <TableCell>
-                <Link
+                <AppLink
                   href={`/websites/${websiteId}/sessions/${session.id}`}
                   className="flex items-center gap-2 font-mono text-xs text-primary hover:underline"
                 >
                   <DeviceIcon device={session.device} />
                   {session.id.slice(0, 8)}
-                </Link>
+                </AppLink>
               </TableCell>
               <TableCell className="text-right tabular-nums">{session.visits}</TableCell>
               <TableCell className="text-right tabular-nums">{session.views}</TableCell>

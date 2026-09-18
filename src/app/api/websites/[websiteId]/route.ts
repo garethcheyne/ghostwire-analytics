@@ -33,6 +33,11 @@ export async function GET(
 
   const website = await getWebsite(websiteId);
 
+  // Public share pages only need to know what they're showing, not who owns it or its settings.
+  if (!auth.user && website) {
+    return json({ id: website.id, name: website.name, domain: website.domain });
+  }
+
   return json(website);
 }
 
