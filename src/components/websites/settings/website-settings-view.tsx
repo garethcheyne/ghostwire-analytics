@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentWebsite } from '../website-context';
 import { DataSettings } from './data-settings';
 import { GeneralSettings } from './general-settings';
+import { ErrorSettings } from './error-settings';
 import { RecordingSettings } from './recording-settings';
 import { SharingSettings } from './sharing-settings';
 import { TrackingCode } from './tracking-code';
@@ -13,6 +14,7 @@ const TABS = [
   { id: 'general', label: 'General', content: GeneralSettings },
   { id: 'tracking', label: 'Tracking code', content: TrackingCode },
   { id: 'recording', label: 'Replays & heatmaps', content: RecordingSettings },
+  { id: 'errors', label: 'Errors', content: ErrorSettings },
   { id: 'sharing', label: 'Sharing', content: SharingSettings },
   { id: 'data', label: 'Data', content: DataSettings },
 ] as const;
@@ -22,7 +24,9 @@ export function WebsiteSettingsView() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const tab = TABS.some(t => t.id === searchParams.get('tab')) ? searchParams.get('tab')! : 'general';
+  const tab = TABS.some(t => t.id === searchParams.get('tab'))
+    ? searchParams.get('tab')!
+    : 'general';
 
   return (
     <div className="flex flex-col gap-6">
