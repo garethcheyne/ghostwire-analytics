@@ -12,8 +12,18 @@ import { formatMetricLabel } from './metric-labels';
 const COUNTRY_CODES = ISO_COUNTRIES as Record<string, string>;
 
 /** Visitors by country, shaded by share of the top country. Click a country to filter. */
-export function WorldMap({ websiteId }: { websiteId: string }) {
-  const { data } = useWebsiteMetrics(websiteId, 'country', 250);
+export function WorldMap({
+  websiteId,
+  data: provided,
+  title = 'Map',
+}: {
+  websiteId: string;
+  /** Country rows to show instead of fetching them (e.g. realtime). */
+  data?: { x: string | null; y: number }[];
+  title?: string;
+}) {
+  const { data: fetched } = useWebsiteMetrics(websiteId, 'country', 250);
+  const data = provided ?? fetched;
   const { addFilter } = useFilters();
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -27,7 +37,7 @@ export function WorldMap({ websiteId }: { websiteId: string }) {
   return (
     <Card className="gap-2">
       <CardHeader>
-        <CardTitle>Map</CardTitle>
+        <CardTitle>{title}</CardTitle>
         <CardDescription className="min-h-5">
           {hovered
             ? `${formatMetricLabel('country', hovered)}: ${formatLongNumber(hoveredCount)} visitors`

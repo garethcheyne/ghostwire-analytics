@@ -71,7 +71,6 @@ export function formatMetricLabel(type: string, value: string | null | undefined
     case 'browser':
       return BROWSERS[value] ?? capitalize(value);
     case 'device':
-    case 'os':
       return capitalize(value);
     default:
       return value;

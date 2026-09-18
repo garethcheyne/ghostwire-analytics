@@ -27,7 +27,7 @@ working reference for features and server logic (`reference/umami/`, see AGENTS.
 - [x] Branded split-screen login
 - [x] Docker: Dockerfile (standalone), compose (app :8770 + Postgres), migrate on start, first admin on start
 
-## Phase 1 — Core analytics
+## Phase 1 — Core analytics ✅
 
 - [x] Port `checkAuth` / `parseRequest` onto Better Auth sessions + API keys + share tokens
 - [x] Port server libs (`lib/`, `queries/`, `permissions/`) and API routes, Postgres path only, with their tests (617 passing)
@@ -38,10 +38,10 @@ working reference for features and server logic (`reference/umami/`, see AGENTS.
       referrers/channels, browsers/OS/devices, countries/regions/cities/languages, events), world map
 - [x] Date range picker (presets, custom, all time, prev/next) and click-to-filter with filter badges
 
-## Phase 2 — Traffic
+## Phase 2 — Traffic ✅
 
-- [ ] Events (+ event properties), Sessions (+ session detail, activity, properties), Realtime
-- [ ] Performance (web vitals), Compare, Breakdown
+- [x] Events (+ event properties), Sessions (+ session detail, activity, properties), Realtime
+- [x] Performance (web vitals), Compare, Breakdown
 
 ## Phase 3 — Behavior, audience, growth
 
