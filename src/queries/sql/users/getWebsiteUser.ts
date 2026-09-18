@@ -1,5 +1,6 @@
 import { EVENT_TYPE } from '@/lib/constants';
 import prisma from '@/lib/prisma';
+import { getUserErrors } from '@/queries/sql/errors/getErrors';
 
 const FUNCTION_NAME = 'getWebsiteUser';
 
@@ -44,6 +45,18 @@ export interface WebsiteUserDetail {
     referrerDomain: string | null;
     hostname: string | null;
   }[];
+  /** Browser and server errors for this user, newest first. */
+  errors: {
+    id: string;
+    groupId: string;
+    createdAt: string;
+    sessionId: string | null;
+    visitId: string | null;
+    type: string;
+    message: string;
+    urlPath: string | null;
+    source: 'browser' | 'server';
+  }[];
   replays: {
     id: string;
     sessionId: string;
@@ -65,7 +78,7 @@ export async function getWebsiteUser(
     select session_id from session_link
     where website_id = {{websiteId::uuid}} and distinct_id = {{distinctId}}`;
 
-  const [sessions, properties, activity, replays] = await Promise.all([
+  const [sessions, properties, activity, replays, errors] = await Promise.all([
     rawQuery(
       `
       select
@@ -152,9 +165,10 @@ export async function getWebsiteUser(
       params,
       FUNCTION_NAME,
     ),
+    getUserErrors(websiteId, distinctId),
   ]);
 
-  if (!sessions.length && !properties.length) {
+  if (!sessions.length && !properties.length && !errors.length) {
     return null;
   }
 
@@ -166,6 +180,7 @@ export async function getWebsiteUser(
       numberValue: property.numberValue === null ? null : Number(property.numberValue),
     })),
     activity,
+    errors,
     replays: replays.map((replay: any) => ({ ...replay, duration: Number(replay.duration) })),
   };
 }

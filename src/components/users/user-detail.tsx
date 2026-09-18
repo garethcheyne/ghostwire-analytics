@@ -1,6 +1,6 @@
 'use client';
 import { format, formatDistanceStrict, formatDistanceToNowStrict } from 'date-fns';
-import { ArrowLeft, Eye, Play, Zap } from 'lucide-react';
+import { ArrowLeft, Eye, Play, TriangleAlert, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { formatMetricLabel } from '@/components/analytics/metric-labels';
@@ -43,24 +43,91 @@ function describeSession(session: Session | undefined) {
     .join(' · ');
 }
 
+type UserError = WebsiteUserDetail['errors'][number];
+
+type TimelineItem =
+  | ({ kind: 'activity'; key: string } & Activity)
+  | ({ kind: 'error'; key: string } & UserError & { visitId: string; sessionId: string });
+
+function TimelineRow({ item }: { item: TimelineItem }) {
+  const website = useCurrentWebsite();
+
+  if (item.kind === 'error') {
+    return (
+      <li className="relative flex items-center gap-2 py-1.5 text-sm">
+        <span className="absolute -left-[21px] flex size-2.5 rounded-full border-2 border-background bg-destructive" />
+        <TriangleAlert className="size-4 shrink-0 text-destructive" aria-label="Error" />
+        <Link
+          href={`/websites/${website.id}/errors/${item.groupId}`}
+          className="min-w-0 flex-1 truncate text-destructive hover:underline"
+        >
+          <span className="font-medium">{item.type}</span>: {item.message}
+        </Link>
+        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+          {format(new Date(item.createdAt), 'h:mm:ss a')}
+        </span>
+      </li>
+    );
+  }
+
+  return (
+    <li className="relative flex items-center gap-2 py-1.5 text-sm">
+      <span className="absolute -left-[21px] flex size-2.5 rounded-full border-2 border-background bg-muted-foreground" />
+      {item.eventName ? (
+        <Zap className="size-4 shrink-0 text-chart-4" aria-label="Event" />
+      ) : (
+        <Eye className="size-4 shrink-0 text-muted-foreground" aria-label="Page view" />
+      )}
+      <span className="min-w-0 flex-1 truncate">
+        {item.eventName ? (
+          <>
+            <span className="font-medium">{item.eventName}</span>
+            <span className="text-muted-foreground"> on {item.urlPath}</span>
+          </>
+        ) : (
+          item.urlPath
+        )}
+        {item.referrerDomain && (
+          <span className="text-muted-foreground"> from {item.referrerDomain}</span>
+        )}
+      </span>
+      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+        {format(new Date(item.createdAt), 'h:mm:ss a')}
+      </span>
+    </li>
+  );
+}
+
 function Timeline({ user }: { user: WebsiteUserDetail }) {
   const website = useCurrentWebsite();
   const sessions = useMemo(() => new Map(user.sessions.map(s => [s.id, s])), [user.sessions]);
   const replays = useMemo(() => new Map(user.replays.map(r => [r.id, r])), [user.replays]);
 
-  // Newest visit first; actions inside a visit in time order.
+  // Newest visit first; actions (and browser errors, in the visit they happened in) in time order.
   const visits = useMemo(() => {
-    const groups = new Map<string, Activity[]>();
-
-    for (const item of user.activity) {
+    const groups = new Map<string, TimelineItem[]>();
+    const add = (item: TimelineItem) => {
       if (!groups.has(item.visitId)) groups.set(item.visitId, []);
       groups.get(item.visitId)!.push(item);
-    }
+    };
+
+    user.activity.forEach(item => add({ ...item, kind: 'activity', key: item.eventId }));
+    user.errors.forEach(error => {
+      if (error.visitId && error.sessionId) {
+        add({
+          ...error,
+          visitId: error.visitId,
+          sessionId: error.sessionId,
+          kind: 'error',
+          key: error.id,
+        });
+      }
+    });
 
     return [...groups.values()]
       .map(items => items.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt)))
       .sort((a, b) => +new Date(b[0].createdAt) - +new Date(a[0].createdAt));
-  }, [user.activity]);
+  }, [user.activity, user.errors]);
 
   if (!visits.length) {
     return <p className="text-sm text-muted-foreground">No page views or events recorded.</p>;
@@ -74,6 +141,8 @@ function Timeline({ user }: { user: WebsiteUserDetail }) {
         const end = new Date(items[items.length - 1].createdAt);
         const session = sessions.get(first.sessionId);
         const replay = replays.get(first.visitId);
+        const errorCount = items.filter(item => item.kind === 'error').length;
+        const actions = items.length - errorCount;
 
         return (
           <div key={first.visitId} className="flex flex-col gap-2">
@@ -92,7 +161,13 @@ function Timeline({ user }: { user: WebsiteUserDetail }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">
-                  {items.length} {items.length === 1 ? 'action' : 'actions'}
+                  {actions} {actions === 1 ? 'action' : 'actions'}
+                  {errorCount > 0 && (
+                    <span className="text-destructive">
+                      {' '}
+                      · {errorCount} {errorCount === 1 ? 'error' : 'errors'}
+                    </span>
+                  )}
                   {end > start && ` · ${formatDistanceStrict(end, start)}`}
                 </span>
                 {replay && (
@@ -107,36 +182,49 @@ function Timeline({ user }: { user: WebsiteUserDetail }) {
             </div>
             <ol className="flex flex-col border-l pl-4">
               {items.map(item => (
-                <li key={item.eventId} className="relative flex items-center gap-2 py-1.5 text-sm">
-                  <span className="absolute -left-[21px] flex size-2.5 rounded-full border-2 border-background bg-muted-foreground" />
-                  {item.eventName ? (
-                    <Zap className="size-4 shrink-0 text-chart-4" aria-label="Event" />
-                  ) : (
-                    <Eye className="size-4 shrink-0 text-muted-foreground" aria-label="Page view" />
-                  )}
-                  <span className="min-w-0 flex-1 truncate">
-                    {item.eventName ? (
-                      <>
-                        <span className="font-medium">{item.eventName}</span>
-                        <span className="text-muted-foreground"> on {item.urlPath}</span>
-                      </>
-                    ) : (
-                      item.urlPath
-                    )}
-                    {item.referrerDomain && (
-                      <span className="text-muted-foreground"> from {item.referrerDomain}</span>
-                    )}
-                  </span>
-                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                    {format(new Date(item.createdAt), 'h:mm:ss a')}
-                  </span>
-                </li>
+                <TimelineRow key={item.key} item={item} />
               ))}
             </ol>
           </div>
         );
       })}
     </div>
+  );
+}
+
+/** Recent errors (browser and server) for the user, linking to each error. */
+function UserErrors({ errors }: { errors: UserError[] }) {
+  const website = useCurrentWebsite();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Errors</CardTitle>
+        <CardDescription>What went wrong for them, newest first.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col">
+          {errors.slice(0, 10).map(error => (
+            <li key={error.id}>
+              <Link
+                href={`/websites/${website.id}/errors/${error.groupId}`}
+                className="flex flex-col gap-0.5 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+              >
+                <span className="truncate">
+                  <span className="font-medium text-destructive">{error.type}</span>
+                  <span className="text-muted-foreground">: {error.message}</span>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {error.source === 'server' ? 'Server' : 'Browser'}
+                  {error.urlPath && ` · ${error.urlPath}`} ·{' '}
+                  {formatDistanceToNowStrict(new Date(error.createdAt), { addSuffix: true })}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -206,6 +294,7 @@ export function UserDetail({ userId }: { userId: string }) {
           { label: 'Views', value: sum('views'), format: formatLongNumber },
           { label: 'Events', value: sum('events'), format: formatLongNumber },
           { label: 'Replays', value: user.replays.length, format: formatLongNumber },
+          { label: 'Errors', value: user.errors.length, format: formatLongNumber },
         ]}
       />
 
@@ -265,6 +354,8 @@ export function UserDetail({ userId }: { userId: string }) {
               </ul>
             </CardContent>
           </Card>
+
+          {user.errors.length > 0 && <UserErrors errors={user.errors} />}
         </div>
 
         <Card className="lg:col-span-2">

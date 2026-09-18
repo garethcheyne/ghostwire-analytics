@@ -68,6 +68,15 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
   `data-distinct-id`. Identifying starts a separate session (the ID is part of the session hash), so
   `/api/send` links both that session and the browser's anonymous session to the user in `session_link`.
   The Users pages (`src/queries/sql/users`) read everything through `session_link`.
+- **Error reporting**: `error_group` (one row per fingerprint) and `error_event` (occurrences). Browser errors
+  arrive through `/api/send` (type `error`); servers post to `/api/errors` with a per-website ingest key
+  (`gwe_…`, stored as a SHA-256 hash; Prisma omits `errorKeyHash` from website queries by default). Both need
+  `website.errorsEnabled`. Grouping, stack parsing and noise filtering live in `src/lib/errors.ts`.
+  **Capture must only observe**: never cancel, wrap or rethrow a site's errors, and never throw from capture code
+  (tracker, recorder and client libraries alike).
+- **Client libraries** live in `packages/<name>` (`react`, `node`; Python to follow). Each is self-contained
+  (own package.json, lockfile, tsup build, vitest tests), excluded from the app's tsconfig, tests and Docker image.
+  Run `npm install && npm test && npm run build` inside the package.
 - **Heatmap viewer frame**: the viewer loads the live page in an iframe named `ghostwire-heatmap`. There the
   tracker and recorder send nothing (so previews aren't counted as visits); the tracker instead posts
   `{ type: 'ghostwire:heatmap-frame', width, height }` to the parent so the viewer can size the preview.

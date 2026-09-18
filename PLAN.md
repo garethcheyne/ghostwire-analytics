@@ -60,6 +60,17 @@ extend with the original Ghostwire ideas:
 - [x] Extensions: rage/dead click detection, breakpoint grouping (mobile < 768, tablet < 1024, desktop),
       live-page iframe overlay with a `postMessage` handshake from the tracker
 
+## Phase 4b — Identified users and error reporting ✅
+
+- [x] Users: sites pass the logged-in username (`ghostwire.identify` / `data-distinct-id`); support looks
+      people up by username, email or name and sees every visit, error and replay
+- [x] Error reporting (Raygun-style), opt-in per site (`data-errors="true"` + a switch in settings):
+      grouping by fingerprint, Open/Resolved/Ignored with regression detection, stack traces for
+      JavaScript, Node, Python and .NET, breadcrumbs, replay at the moment of the error
+- [x] Server ingest (`POST /api/errors`) with per-website ingest keys
+- [x] Capture only observes: never cancels, wraps or rethrows a site's errors
+- [x] Client libraries in `packages/`: `@ghostwire/react`, `@ghostwire/node` (Python next)
+
 ## Phase 5 — Workspace features
 
 - [ ] Dashboard, Boards (create, design, share); restore `src/lib/boards.test.ts` from reference with the board component registry
