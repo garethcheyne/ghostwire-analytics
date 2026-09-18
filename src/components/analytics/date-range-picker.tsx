@@ -40,7 +40,8 @@ function rangeLabel(start: Date, end: Date) {
   return `${format(start, sameYear ? 'd MMM' : 'd MMM yyyy')} – ${format(end, 'd MMM yyyy')}`;
 }
 
-export function DateRangePicker({ websiteId }: { websiteId: string }) {
+/** Date range for reports. Without a websiteId (e.g. boards) there's no "All time" option. */
+export function DateRangePicker({ websiteId }: { websiteId?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

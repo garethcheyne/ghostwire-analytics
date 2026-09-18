@@ -40,6 +40,7 @@ export function useDefinitions<P>(websiteId: string, kind: DefinitionKind) {
     queryKey: keys.list(websiteId, kind),
     queryFn: () =>
       api.get<PageResult<Definition<P>>>(`/websites/${websiteId}/${kind}`, { pageSize: 100 }),
+    enabled: !!websiteId,
   });
 }
 
@@ -47,7 +48,15 @@ export function useSaveDefinition<P>(websiteId: string, kind: DefinitionKind) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, ...body }: { id?: string; name: string; description?: string; parameters: P }) =>
+    mutationFn: ({
+      id,
+      ...body
+    }: {
+      id?: string;
+      name: string;
+      description?: string;
+      parameters: P;
+    }) =>
       id
         ? api.post<Definition<P>>(`/websites/${websiteId}/${kind}/${id}`, body)
         : api.post<Definition<P>>(`/websites/${websiteId}/${kind}`, body),

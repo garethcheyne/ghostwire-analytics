@@ -5,7 +5,8 @@ import { useActiveVisitors } from '@/hooks/queries/analytics';
 import { DateRangePicker } from './date-range-picker';
 import { FilterControls } from './filter-controls';
 import { FilterBar } from './filter-bar';
-import { AppLink } from '@/components/share/share-context';
+import { AppLink, useShare } from '@/components/share/share-context';
+import { ExportButton } from './export-button';
 
 function LiveVisitors({ websiteId }: { websiteId: string }) {
   const { data } = useActiveVisitors(websiteId);
@@ -37,6 +38,7 @@ function LiveVisitors({ websiteId }: { websiteId: string }) {
 /** Title row for a website's analytics pages: name, live visitors, date range, filters. */
 export function WebsiteHeader({ title }: { title?: string }) {
   const website = useCurrentWebsite();
+  const share = useShare();
 
   return (
     <div className="flex flex-col gap-4">
@@ -63,6 +65,7 @@ export function WebsiteHeader({ title }: { title?: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <FilterControls websiteId={website.id} />
           <DateRangePicker websiteId={website.id} />
+          {!share && <ExportButton websiteId={website.id} name={website.name} />}
         </div>
       </div>
       <FilterBar websiteId={website.id} />

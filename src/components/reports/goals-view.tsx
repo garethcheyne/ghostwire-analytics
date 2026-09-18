@@ -4,7 +4,14 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { WebsiteHeader } from '@/components/analytics/website-header';
 import { Button } from '@/components/ui/button';
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -58,7 +65,11 @@ function GoalDialog({
     event.preventDefault();
 
     try {
-      await save.mutateAsync({ id: goal?.id, name: name.trim(), parameters: { type, value: value.trim() } });
+      await save.mutateAsync({
+        id: goal?.id,
+        name: name.trim(),
+        parameters: { type, value: value.trim() },
+      });
       toast.success(goal ? 'Goal updated' : 'Goal added');
       onOpenChange(false);
     } catch (e) {
@@ -115,7 +126,16 @@ function GoalDialog({
   );
 }
 
-function GoalCard({ websiteId, goal, onEdit }: { websiteId: string; goal: Goal; onEdit: () => void }) {
+/** One goal's conversion. Without onEdit (e.g. on a board) there's no edit/delete menu. */
+export function GoalCard({
+  websiteId,
+  goal,
+  onEdit,
+}: {
+  websiteId: string;
+  goal: Goal;
+  onEdit?: () => void;
+}) {
   const { data, isPending } = useAnalyticsQuery<{ num: number; total: number }>(
     websiteId,
     `goals/${goal.id}/stats`,
@@ -132,9 +152,17 @@ function GoalCard({ websiteId, goal, onEdit }: { websiteId: string; goal: Goal; 
           {goal.parameters.type === 'path' ? 'Viewed ' : 'Triggered '}
           <span className="font-mono">{goal.parameters.value}</span>
         </CardDescription>
-        <CardAction>
-          <DefinitionActions websiteId={websiteId} kind="goals" id={goal.id} name={goal.name} onEdit={onEdit} />
-        </CardAction>
+        {onEdit && (
+          <CardAction>
+            <DefinitionActions
+              websiteId={websiteId}
+              kind="goals"
+              id={goal.id}
+              name={goal.name}
+              onEdit={onEdit}
+            />
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {isPending ? (
@@ -165,7 +193,9 @@ export function GoalsView() {
     <div className="flex flex-col gap-6">
       <WebsiteHeader title="Goals" />
       <div className="flex items-center justify-between gap-4">
-        <p className="text-sm text-muted-foreground">Conversion rate of each goal for the selected period.</p>
+        <p className="text-sm text-muted-foreground">
+          Conversion rate of each goal for the selected period.
+        </p>
         {canUpdate && (
           <Button onClick={() => setEditing('new')}>
             <Plus data-icon="inline-start" />

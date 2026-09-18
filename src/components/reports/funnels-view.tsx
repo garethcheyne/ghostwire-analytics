@@ -4,7 +4,14 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { WebsiteHeader } from '@/components/analytics/website-header';
 import { Button } from '@/components/ui/button';
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +28,14 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field';
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
@@ -121,7 +135,9 @@ function FunnelDialog({
                 onChange={event => setWindow(Math.max(1, Number(event.target.value) || 1))}
                 className="w-32"
               />
-              <FieldDescription>How long a visitor has to go from the first step to the last.</FieldDescription>
+              <FieldDescription>
+                How long a visitor has to go from the first step to the last.
+              </FieldDescription>
             </Field>
             <FieldSet>
               <FieldLegend variant="label">Steps</FieldLegend>
@@ -181,8 +197,20 @@ function FunnelDialog({
   );
 }
 
-function FunnelCard({ websiteId, funnel, onEdit }: { websiteId: string; funnel: Funnel; onEdit: () => void }) {
-  const { data, isPending } = useAnalyticsQuery<StepResult[]>(websiteId, `funnels/${funnel.id}/stats`);
+/** One funnel's steps. Without onEdit (e.g. on a board) there's no edit/delete menu. */
+export function FunnelCard({
+  websiteId,
+  funnel,
+  onEdit,
+}: {
+  websiteId: string;
+  funnel: Funnel;
+  onEdit?: () => void;
+}) {
+  const { data, isPending } = useAnalyticsQuery<StepResult[]>(
+    websiteId,
+    `funnels/${funnel.id}/stats`,
+  );
   const first = Number(data?.[0]?.visitors ?? 0);
   const last = Number(data?.[data.length - 1]?.visitors ?? 0);
 
@@ -194,9 +222,17 @@ function FunnelCard({ websiteId, funnel, onEdit }: { websiteId: string; funnel: 
           {funnel.parameters.steps.length} steps within {funnel.parameters.window} minutes
           {data && first > 0 && ` · ${((last / first) * 100).toFixed(1)}% converted`}
         </CardDescription>
-        <CardAction>
-          <DefinitionActions websiteId={websiteId} kind="funnels" id={funnel.id} name={funnel.name} onEdit={onEdit} />
-        </CardAction>
+        {onEdit && (
+          <CardAction>
+            <DefinitionActions
+              websiteId={websiteId}
+              kind="funnels"
+              id={funnel.id}
+              name={funnel.name}
+              onEdit={onEdit}
+            />
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent>
         {isPending || !data ? (
@@ -206,7 +242,9 @@ function FunnelCard({ websiteId, funnel, onEdit }: { websiteId: string; funnel: 
             {data.map((step, index) => {
               const share = first ? (Number(step.visitors) / first) * 100 : 0;
               const fromPrevious =
-                index > 0 && Number(step.previous) ? (Number(step.visitors) / Number(step.previous)) * 100 : null;
+                index > 0 && Number(step.previous)
+                  ? (Number(step.visitors) / Number(step.previous)) * 100
+                  : null;
 
               return (
                 <li key={index} className="flex flex-col gap-1">
@@ -230,10 +268,14 @@ function FunnelCard({ websiteId, funnel, onEdit }: { websiteId: string; funnel: 
                       />
                       <div className="relative flex items-center gap-3 px-3 py-2 text-sm">
                         <span className="min-w-0 flex-1 truncate">
-                          <span className="text-muted-foreground">{step.type === 'path' ? 'Viewed ' : 'Triggered '}</span>
+                          <span className="text-muted-foreground">
+                            {step.type === 'path' ? 'Viewed ' : 'Triggered '}
+                          </span>
                           <span className="font-mono">{step.value}</span>
                         </span>
-                        <span className="font-medium tabular-nums">{formatLongNumber(Number(step.visitors))}</span>
+                        <span className="font-medium tabular-nums">
+                          {formatLongNumber(Number(step.visitors))}
+                        </span>
                         <span className="w-12 text-right text-xs text-muted-foreground tabular-nums">
                           {share.toFixed(0)}%
                         </span>
@@ -260,7 +302,9 @@ export function FunnelsView() {
     <div className="flex flex-col gap-6">
       <WebsiteHeader title="Funnels" />
       <div className="flex items-center justify-between gap-4">
-        <p className="text-sm text-muted-foreground">Where visitors drop out of a sequence of steps.</p>
+        <p className="text-sm text-muted-foreground">
+          Where visitors drop out of a sequence of steps.
+        </p>
         {canUpdate && (
           <Button onClick={() => setEditing('new')}>
             <Plus data-icon="inline-start" />
@@ -291,7 +335,12 @@ export function FunnelsView() {
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
           {funnels.map(funnel => (
-            <FunnelCard key={funnel.id} websiteId={id} funnel={funnel} onEdit={() => setEditing(funnel)} />
+            <FunnelCard
+              key={funnel.id}
+              websiteId={id}
+              funnel={funnel}
+              onEdit={() => setEditing(funnel)}
+            />
           ))}
         </div>
       )}

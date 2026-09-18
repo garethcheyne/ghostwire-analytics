@@ -24,7 +24,7 @@ export interface MetricRow {
 }
 
 /** Shared query parameters: date range + filters from the URL. */
-function useAnalyticsParams() {
+export function useAnalyticsParams() {
   const { params: dateParams, compare } = useDateRange();
   const { params: filterParams } = useFilters();
 
@@ -94,8 +94,9 @@ export function useActiveVisitors(websiteId: string) {
   });
 }
 
-export function useWebsiteDateRange(websiteId: string) {
+export function useWebsiteDateRange(websiteId?: string) {
   return useQuery({
+    enabled: !!websiteId,
     queryKey: ['analytics', websiteId, 'daterange'],
     queryFn: () =>
       api.get<{ startDate: string | null; endDate: string | null }>(
