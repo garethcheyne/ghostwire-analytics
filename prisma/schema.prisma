@@ -808,3 +808,18 @@ model AuditLog {
   @@index([action, createdAt])
   @@map("audit_log")
 }
+
+/// A user's scheduled email summary of their websites.
+model EmailReport {
+  id         String    @id() @map("email_report_id") @db.Uuid
+  userId     String    @unique() @map("user_id") @db.Uuid
+  /// weekly (Mondays) | monthly (the 1st)
+  frequency  String    @db.VarChar(20)
+  /// Websites to include; empty means all the user can see (up to 20).
+  websiteIds String[]  @map("website_ids") @db.Uuid
+  lastSentAt DateTime? @map("last_sent_at") @db.Timestamptz(6)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("email_report")
+}

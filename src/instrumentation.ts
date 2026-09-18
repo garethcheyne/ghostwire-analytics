@@ -16,5 +16,9 @@ export async function register() {
     // Error spike and traffic drop alerts, every 5 minutes.
     const { startAlertSchedule } = await import('@/lib/alerts');
     startAlertSchedule();
+
+    // Weekly and monthly email reports (checked hourly; only when SMTP is set up).
+    const { startEmailReportSchedule } = await import('@/lib/email-reports');
+    startEmailReportSchedule();
   }
 }

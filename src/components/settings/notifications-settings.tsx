@@ -70,6 +70,7 @@ import {
   useTestChannel,
 } from '@/hooks/queries/alerts';
 import { useActiveTeam } from '@/hooks/use-active-team';
+import { EmailReportCard } from './email-report-card';
 
 export const CHANNEL_META: Record<
   ChannelType,
@@ -425,6 +426,7 @@ export function NotificationsSettings() {
           canManage
         />
       )}
+      <EmailReportCard />
     </div>
   );
 }
