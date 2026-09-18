@@ -1,3 +1,4 @@
+import { log } from '@/lib/logger';
 import { auth } from '@/lib/better-auth';
 import { ROLES } from '@/lib/auth-roles';
 import { prisma } from '@/lib/prisma';
@@ -22,7 +23,10 @@ export async function ensureAdminUser() {
     body: { email, password, name: username, role: ROLES.admin, data: { username } },
   });
 
-  console.log(`Created admin user "${username}". Change its password after signing in.`);
+  log.info('setup.admin_created', {
+    username,
+    message: 'Change its password after signing in.',
+  });
 
   return true;
 }

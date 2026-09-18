@@ -2,6 +2,7 @@
  * Audit log: sign-ins, security changes and admin actions (who, what, when, from where).
  * Writing an entry never fails the action it records.
  */
+import { log } from '@/lib/logger';
 import { uuid } from '@/lib/crypto';
 import { getIpAddress } from '@/lib/ip';
 import prisma from '@/lib/prisma';
@@ -58,7 +59,7 @@ export async function writeAudit(
       },
     });
   } catch (e) {
-    console.error('Failed to write audit log:', e);
+    log.error('audit.write_failed', { action: entry.action, error: e });
   }
 }
 

@@ -12,6 +12,10 @@ services:
       # Required. Generate with: npx auth secret
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:8770}
+      # The app's own logs: JSON lines on stdout and daily files in the app-logs volume.
+      LOG_DIR: /app/logs
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-30}
       # Optional: delete raw replay/heatmap/error data older than N days (unset = keep all).
       DATA_RETENTION_DAYS: ${DATA_RETENTION_DAYS:-}
       REPLAY_RETENTION_DAYS: ${REPLAY_RETENTION_DAYS:-}
@@ -29,6 +33,13 @@ services:
       OIDC_AUTO_CREATE: ${OIDC_AUTO_CREATE:-}
       # Set to postgres when running more than one app container.
       RATE_LIMIT_STORE: ${RATE_LIMIT_STORE:-}
+    volumes:
+      - app-logs:/app/logs
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "5"
     depends_on:
       db:
         condition: service_healthy
@@ -91,3 +102,4 @@ services:
 
 volumes:
   db-data:
+  app-logs:

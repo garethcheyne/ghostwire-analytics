@@ -7,6 +7,8 @@
  *                     previous four weeks (only when that baseline is at least `minimum`)
  * The error alerts are sent right after the error is saved; the others run every 5 minutes.
  */
+import { count as metric } from '@/lib/metrics';
+import { log } from '@/lib/logger';
 import { after } from 'next/server';
 import { uuid } from '@/lib/crypto';
 import { appUrl, type Channel, type Notification, sendNotification } from '@/lib/notify';
@@ -88,6 +90,14 @@ export async function dispatch(rule: Rule, notification: Notification) {
       } catch (e) {
         error = (e instanceof Error ? e.message : String(e)).slice(0, 500);
       }
+
+      metric(error ? 'alerts.failed' : 'alerts.sent');
+      (error ? log.warn : log.info)('alert.delivery', {
+        type: rule.type,
+        websiteId: rule.websiteId,
+        channel: channel.type,
+        error: error ?? undefined,
+      });
 
       await prisma.client.alertLog.create({
         data: {
@@ -177,7 +187,7 @@ export async function notifyErrorSaved(error: SavedError) {
       data: { websiteId: error.websiteId, groupId: error.groupId, release: error.release },
     });
   } catch (e) {
-    console.error('Error alert failed:', e);
+    log.error('alert.error_alert_failed', { websiteId: error.websiteId, error: e });
   }
 }
 
@@ -263,7 +273,7 @@ export async function runScheduledAlerts(now = new Date()) {
       if (rule.type === 'error.spike') await checkSpike(rule, now);
       else await checkTrafficDrop(rule, now);
     } catch (e) {
-      console.error(`Alert check failed (${rule.type}, ${rule.websiteId}):`, e);
+      log.error('alert.check_failed', { type: rule.type, websiteId: rule.websiteId, error: e });
     }
   }
 }

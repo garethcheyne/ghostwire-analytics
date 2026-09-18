@@ -1,5 +1,6 @@
+import { log } from '@/lib/logger';
+import { count as metric } from '@/lib/metrics';
 import { isbot } from 'isbot';
-import { serializeError } from 'serialize-error';
 import { z } from 'zod';
 import { HEATMAP_EVENT_TYPE } from '@/lib/constants';
 import { corsPreflight, withCorsHeaders } from '@/lib/cors';
@@ -114,6 +115,7 @@ const allowForIp = createIpRateLimiter({ name: 'record', limit: 240, windowMs: 6
 export async function POST(request: Request) {
   try {
     if (!(await allowForIp(request))) {
+      metric('record.dropped.rate_limited');
       return withCorsHeaders(tooManyRequests());
     }
 
@@ -177,6 +179,7 @@ export async function POST(request: Request) {
     const { ip, userAgent } = await getClientInfo(request, {});
 
     if (!process.env.DISABLE_BOT_CHECK && isbot(userAgent)) {
+      metric('record.dropped.bot');
       return withCorsHeaders(json({ beep: 'boop' }));
     }
 
@@ -248,11 +251,13 @@ export async function POST(request: Request) {
         await saveHeatmapEvents(heatmapRows);
       }
     } catch (e) {
-      console.log('heatmap save failed', serializeError(e));
+      log.error('heatmap.save_failed', { error: e });
     }
 
+    metric('record.accepted');
     return withCorsHeaders(json({ ok: true }));
   } catch (e) {
+    metric('record.failed');
     return withCorsHeaders(serverError(e));
   }
 }

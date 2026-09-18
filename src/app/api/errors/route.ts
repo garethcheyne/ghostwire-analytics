@@ -1,3 +1,4 @@
+import { count as metric } from '@/lib/metrics';
 import { browserName, detectOS } from 'detect-browser';
 import { z } from 'zod';
 import { verifyErrorKey } from '@/lib/error-key';
@@ -117,6 +118,7 @@ export async function POST(request: Request) {
   }
 
   if (!(await allowForWebsite(website.id))) {
+    metric('errors.dropped.rate_limited');
     return tooManyRequests(60, { message: 'Too many errors; try again shortly.' });
   }
 
@@ -182,5 +184,6 @@ export async function POST(request: Request) {
     }),
   );
 
+  metric('errors.accepted.server');
   return Response.json({ ok: true, groupId: saved.groupId }, { status: 202 });
 }

@@ -47,3 +47,6 @@ packages/*/dist
 __pycache__/
 *.egg-info/
 .venv/
+
+# app logs (LOG_DIR)
+/logs

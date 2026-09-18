@@ -7,6 +7,7 @@
  *   ERROR_RETENTION_DAYS      error events (groups go once empty, unless ignored)
  * Page views, events and sessions aren't touched.
  */
+import { log } from '@/lib/logger';
 import prisma from '@/lib/prisma';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -119,10 +120,10 @@ export function startRetentionSchedule() {
     try {
       const removed = await runRetention(retention);
       if (Object.values(removed).some(Boolean)) {
-        console.log('Data retention removed', removed);
+        log.info('retention.removed', removed);
       }
     } catch (error) {
-      console.error('Data retention failed:', error);
+      log.error('retention.failed', { error });
     }
   };
 

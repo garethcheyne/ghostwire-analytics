@@ -3,6 +3,7 @@
  * can see: visitors, views, bounce rate and visit time against the period before, top pages and
  * sources, and errors. Sent after 07:00 UTC through SMTP (see lib/notify).
  */
+import { log } from '@/lib/logger';
 import { appUrl, isEmailConfigured, sendEmail } from '@/lib/notify';
 import prisma from '@/lib/prisma';
 import { getPageviewMetrics, getWebsiteStats } from '@/queries/sql';
@@ -242,8 +243,9 @@ export async function runEmailReports(now = new Date()) {
 
     try {
       await sendReport(report.userId, report.frequency as ReportFrequency, report.websiteIds);
+      log.info('email_report.sent', { userId: report.userId, frequency: report.frequency });
     } catch (e) {
-      console.error(`Email report for ${report.userId} failed:`, e);
+      log.error('email_report.failed', { userId: report.userId, error: e });
     }
   }
 }

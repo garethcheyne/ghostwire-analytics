@@ -1,3 +1,5 @@
+import { count as metric } from '@/lib/metrics';
+import { log } from '@/lib/logger';
 import { startOfHour } from 'date-fns';
 import { isbot } from 'isbot';
 import { z } from 'zod';
@@ -108,7 +110,11 @@ const schema = z.object({
 const allowForIp = createIpRateLimiter({ name: 'send', limit: 600, windowMs: 60_000 });
 
 // Per-minute caps, so an error loop in one browser (or a broken release) can't flood storage.
-const allowErrorForWebsite = createLimiter({ name: 'browser-errors', limit: 600, windowMs: 60_000 });
+const allowErrorForWebsite = createLimiter({
+  name: 'browser-errors',
+  limit: 600,
+  windowMs: 60_000,
+});
 const allowErrorForSession = createLimiter({ name: 'session-errors', limit: 20, windowMs: 60_000 });
 
 async function collectBrowserError({
@@ -169,9 +175,10 @@ async function collectBrowserError({
       breadcrumbs: error.breadcrumbs,
       extra: error.context,
     },
-  }).catch(e => console.error('Failed to save error:', e));
+  }).catch(e => log.error('error.save_failed', { websiteId, error: e }));
 
   if (saved) {
+    metric('errors.accepted.browser');
     afterResponse(() =>
       notifyErrorSaved({ ...saved, websiteId, source: 'browser', urlPath, release: rest.release }),
     );
@@ -181,12 +188,14 @@ async function collectBrowserError({
 export async function POST(request: Request) {
   try {
     if (!(await allowForIp(request))) {
+      metric('send.dropped.rate_limited');
       return tooManyRequests();
     }
 
     const { body, error } = await parseRequest(request, schema, { skipAuth: true });
 
     if (error) {
+      metric('send.dropped.invalid');
       return error();
     }
 
@@ -237,6 +246,7 @@ export async function POST(request: Request) {
         const website = await fetchWebsite(websiteId);
 
         if (!website) {
+          metric('send.dropped.unknown_website');
           return badRequest({ message: 'Website not found.' });
         }
       }
@@ -253,11 +263,13 @@ export async function POST(request: Request) {
 
     // Bot check
     if (!process.env.DISABLE_BOT_CHECK && isbot(userAgent)) {
+      metric('send.dropped.bot');
       return json({ beep: 'boop' });
     }
 
     // IP block
     if (hasBlockedIp(ip)) {
+      metric('send.dropped.blocked_ip');
       return forbidden();
     }
 
@@ -455,7 +467,7 @@ export async function POST(request: Request) {
             ]);
             sessionLinkId = newLinkId;
           } catch (e) {
-            console.error('Failed to save session link:', e);
+            log.error('session_link.save_failed', { websiteId, error: e });
           }
         }
       }
@@ -525,8 +537,10 @@ export async function POST(request: Request) {
       secret(),
     );
 
+    metric(`send.accepted.${type}`);
     return json({ cache: token, sessionId, visitId });
   } catch (e) {
+    metric('send.failed');
     return serverError(e);
   }
 }

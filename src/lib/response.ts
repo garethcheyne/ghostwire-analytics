@@ -1,3 +1,5 @@
+import { count } from '@/lib/metrics';
+import { log } from '@/lib/logger';
 import { serializeError } from 'serialize-error';
 
 export function ok() {
@@ -74,7 +76,10 @@ export function serviceUnavailable(error?: Record<string, any>) {
 
 export function serverError(error?: unknown) {
   if (error && typeof error !== 'string') {
-    console.log(serializeError(error));
+    count('http.server_error');
+    log.error('api.server_error', {
+      error: error instanceof Error ? error : serializeError(error),
+    });
   }
 
   return Response.json(

@@ -2,6 +2,7 @@
  * Releases: the versions a site reports (data-release on the tracker, `release` from the client
  * libraries) and deploys registered through the API.
  */
+import { log } from '@/lib/logger';
 import { uuid } from '@/lib/crypto';
 import prisma from '@/lib/prisma';
 
@@ -42,7 +43,7 @@ export async function recordRelease(
         environment = coalesce(release.environment, excluded.environment)`;
   } catch (e) {
     recent.delete(key);
-    console.error('Failed to record release:', e);
+    log.error('release.record_failed', { websiteId, version, error: e });
   }
 }
 

@@ -43,6 +43,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/geo ./geo
 COPY --chown=nextjs:nodejs scripts/start-docker.sh ./start-docker.sh
+# Log files (LOG_DIR), on a volume so they outlive the container.
+RUN mkdir -p /app/logs && chown nextjs:nodejs /app/logs
 
 USER nextjs
 EXPOSE 3000

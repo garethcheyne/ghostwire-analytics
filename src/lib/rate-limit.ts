@@ -1,3 +1,4 @@
+import { log } from '@/lib/logger';
 import { getIpAddress } from './ip';
 
 /**
@@ -78,7 +79,7 @@ export function createLimiter({ name, limit, windowMs }: LimiterOptions) {
     try {
       return (await sharedHit(`${name}:${key}`.slice(0, 200), windowMs, now)) <= limit;
     } catch (e) {
-      console.error('Rate limit store unavailable; allowing the request:', e);
+      log.error('rate_limit.store_unavailable', { error: e });
       return true;
     }
   };
