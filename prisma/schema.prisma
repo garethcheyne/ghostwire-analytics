@@ -785,3 +785,26 @@ model SupportLink {
   @@index([websiteId, distinctId])
   @@map("support_link")
 }
+
+/// Who did what: sign-ins, security changes and admin actions.
+model AuditLog {
+  id         String   @id() @map("audit_log_id") @db.Uuid
+  /// The acting user (null for failed sign-ins and API calls without a user).
+  userId     String?  @map("user_id") @db.Uuid
+  /// Username at the time, so entries stay readable after a user is deleted.
+  username   String?  @db.VarChar(255)
+  action     String   @db.VarChar(60)
+  targetType String?  @map("target_type") @db.VarChar(30)
+  targetId   String?  @map("target_id") @db.VarChar(255)
+  websiteId  String?  @map("website_id") @db.Uuid
+  teamId     String?  @map("team_id") @db.Uuid
+  details    Json?
+  ip         String?  @db.VarChar(64)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([websiteId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_log")
+}

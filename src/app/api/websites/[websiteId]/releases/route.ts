@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { normalizeRelease, registerDeploy } from '@/lib/releases';
 import { parseRequest } from '@/lib/request';
@@ -48,5 +49,12 @@ export async function POST(request: Request, { params }: Params) {
     deployedAt: deployedAt ? new Date(deployedAt) : undefined,
   });
 
+  await audit(request, null, {
+    action: 'release.deploy',
+    targetType: 'website',
+    targetId: websiteId,
+    websiteId,
+    details: { version: result.data.version, environment: rest.environment },
+  });
   return json(release);
 }

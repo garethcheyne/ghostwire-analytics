@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { parseRequest } from '@/lib/request';
 import { badRequest, json, unauthorized } from '@/lib/response';
@@ -31,6 +32,13 @@ export async function POST(
       userId,
       teamId: null,
     });
+    await audit(request, auth, {
+      action: 'website.transfer',
+      targetType: 'website',
+      targetId: websiteId,
+      websiteId,
+      details: { toUser: userId },
+    });
 
     return json(website);
   } else if (teamId) {
@@ -41,6 +49,13 @@ export async function POST(
     const website = await updateWebsite(websiteId, {
       userId: null,
       teamId,
+    });
+    await audit(request, auth, {
+      action: 'website.transfer',
+      targetType: 'website',
+      targetId: websiteId,
+      websiteId,
+      details: { toTeam: teamId },
     });
 
     return json(website);

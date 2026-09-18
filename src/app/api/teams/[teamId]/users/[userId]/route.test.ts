@@ -5,6 +5,8 @@ import { canDeleteTeamUser, canUpdateTeam } from '@/permissions';
 import { deleteTeamUser, getTeamUser, updateTeamUser } from '@/queries/prisma';
 import { DELETE, POST } from './route';
 
+vi.mock('@/lib/audit', () => ({ audit: vi.fn(), writeAudit: vi.fn() }));
+
 vi.mock('@/lib/request', () => ({
   parseRequest: vi.fn(),
 }));

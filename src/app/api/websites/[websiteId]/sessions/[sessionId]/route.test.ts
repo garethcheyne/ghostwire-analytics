@@ -6,6 +6,8 @@ import { deleteSession } from '@/queries/prisma';
 import { getLinkedDistinctIds, getLinkedSessionIds, getWebsiteSession } from '@/queries/sql';
 import { DELETE, GET } from './route';
 
+vi.mock('@/lib/audit', () => ({ audit: vi.fn(), writeAudit: vi.fn() }));
+
 vi.mock('@/lib/db', () => ({
   isRelationalOnly: vi.fn(),
 }));

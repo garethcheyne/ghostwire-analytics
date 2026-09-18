@@ -1,5 +1,6 @@
 import {
   Bell,
+  ScrollText,
   Bug,
   Rocket,
   AlignEndHorizontal,
@@ -140,6 +141,7 @@ export const adminNav: NavGroup[] = [
       { title: 'Websites', href: '/admin/websites', icon: Globe },
       { title: 'Teams', href: '/admin/teams', icon: Users },
       { title: 'Security', href: '/admin/security', icon: ShieldCheck },
+      { title: 'Audit log', href: '/admin/audit', icon: ScrollText },
     ],
   },
 ];

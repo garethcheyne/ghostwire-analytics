@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { ROLES } from '@/lib/constants';
 import { parseRequest } from '@/lib/request';
@@ -40,5 +41,11 @@ export async function POST(request: Request) {
 
   const user = await createTeamUser(auth.user.id, team.id, ROLES.teamMember);
 
+  await audit(request, auth, {
+    action: 'team.join',
+    targetType: 'team',
+    targetId: team.id,
+    teamId: team.id,
+  });
   return json(user);
 }

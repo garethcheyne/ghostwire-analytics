@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { normalizeRelease } from '@/lib/releases';
 import prisma from '@/lib/prisma';
 import { parseRequest } from '@/lib/request';
@@ -94,6 +95,13 @@ export async function POST(request: Request, { params }: Params) {
     }
   }
 
+  await audit(request, null, {
+    action: 'sourcemaps.upload',
+    targetType: 'website',
+    targetId: websiteId,
+    websiteId,
+    details: { release, files: saved.length },
+  });
   return json({ release, saved: saved.length, failed });
 }
 
@@ -109,6 +117,13 @@ export async function DELETE(request: Request, { params }: Params) {
   if (!release) return badRequest({ message: 'The release is required.' });
 
   await prisma.client.sourceMap.deleteMany({ where: { websiteId, release } });
+  await audit(request, null, {
+    action: 'sourcemaps.delete',
+    targetType: 'website',
+    targetId: websiteId,
+    websiteId,
+    details: { release },
+  });
 
   return ok();
 }

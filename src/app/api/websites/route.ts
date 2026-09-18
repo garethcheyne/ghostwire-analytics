@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { ENTITY_TYPE } from '@/lib/constants';
 import { uuid } from '@/lib/crypto';
 import { getQueryFilters, parseRequest } from '@/lib/request';
@@ -63,6 +64,13 @@ export async function POST(request: Request) {
       })
     : null;
 
+  await audit(request, auth, {
+    action: 'website.create',
+    targetType: 'website',
+    targetId: website.id,
+    websiteId: website.id,
+    details: { name: website.name, domain: website.domain },
+  });
   return json({
     ...website,
     shareId: share?.slug ?? null,

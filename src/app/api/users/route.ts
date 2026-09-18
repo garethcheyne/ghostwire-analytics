@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { ROLES } from '@/lib/constants';
 import { parseRequest } from '@/lib/request';
@@ -44,5 +45,11 @@ export async function POST(request: Request) {
     role: role ?? ROLES.user,
   });
 
+  await audit(request, auth, {
+    action: 'user.create',
+    targetType: 'user',
+    targetId: user?.id,
+    details: { username: user?.username, role: role ?? 'user' },
+  });
   return json(user);
 }

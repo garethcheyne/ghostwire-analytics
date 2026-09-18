@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { isRelationalOnly } from '@/lib/db';
 import { parseRequest } from '@/lib/request';
 import { badRequest, json, notFound, ok, unauthorized } from '@/lib/response';
@@ -91,6 +92,12 @@ export async function DELETE(
   }
 
   const deletedSession = await deleteSession(websiteId, sessionId);
+  await audit(request, auth, {
+    action: 'session.delete',
+    targetType: 'session',
+    targetId: sessionId,
+    websiteId,
+  });
 
   if (!deletedSession) {
     return notFound();

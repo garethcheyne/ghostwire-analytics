@@ -37,6 +37,7 @@ import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { useCurrentWebsite } from '@/components/websites/website-context';
+import { ForgetUserButton } from './forget-user-button';
 import {
   type WebsiteUserDetail,
   useCreateSupportLink,
@@ -256,6 +257,8 @@ export function SupportActions({
   websiteId: string;
   user: WebsiteUserDetail;
 }) {
+  const website = useCurrentWebsite();
+
   async function copySummary() {
     try {
       await navigator.clipboard.writeText(ticketSummary(user, websiteId, window.location.origin));
@@ -272,6 +275,7 @@ export function SupportActions({
         Copy for ticket
       </Button>
       <SupportLinkDialog user={user} />
+      {website.canDelete && <ForgetUserButton websiteId={websiteId} userId={user.id} />}
     </>
   );
 }

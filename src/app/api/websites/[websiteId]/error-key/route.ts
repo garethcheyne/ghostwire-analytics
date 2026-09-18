@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { createErrorKey } from '@/lib/error-key';
 import { parseRequest } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
@@ -24,6 +25,13 @@ export async function POST(
   const { key, hash, hint } = createErrorKey();
 
   await updateWebsite(websiteId, { errorKeyHash: hash, errorKeyHint: hint });
+  await audit(request, auth, {
+    action: 'website.server-key.create',
+    targetType: 'website',
+    targetId: websiteId,
+    websiteId,
+    details: { hint },
+  });
 
   return json({ key, hint });
 }
@@ -46,6 +54,12 @@ export async function DELETE(
   }
 
   await updateWebsite(websiteId, { errorKeyHash: null, errorKeyHint: null });
+  await audit(request, auth, {
+    action: 'website.server-key.revoke',
+    targetType: 'website',
+    targetId: websiteId,
+    websiteId,
+  });
 
   return json({ ok: true });
 }

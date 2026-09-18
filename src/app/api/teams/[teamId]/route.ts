@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { parseRequest } from '@/lib/request';
 import { json, notFound, ok, unauthorized } from '@/lib/response';
@@ -46,6 +47,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ tea
     return unauthorized({ message: 'You must be the owner/manager of this team.' });
   }
 
+  await audit(request, auth, {
+    action: 'team.update',
+    targetType: 'team',
+    targetId: teamId,
+    teamId,
+    details: { fields: Object.keys(body) },
+  });
   const team = await updateTeam(teamId, body);
 
   return json(team);
@@ -67,6 +75,12 @@ export async function DELETE(
     return unauthorized({ message: 'You must be the owner/manager of this team.' });
   }
 
+  await audit(request, auth, {
+    action: 'team.delete',
+    targetType: 'team',
+    targetId: teamId,
+    teamId,
+  });
   await deleteTeam(teamId, auth.user.id);
 
   return ok();

@@ -68,3 +68,15 @@ export function useRevokeSupportLink(websiteId: string, userId: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: supportKey(websiteId, userId) }),
   });
 }
+
+export function useForgetUser(websiteId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      api.del<{ sessions: number; errors: number }>(
+        `/websites/${websiteId}/users/${encodeURIComponent(userId)}`,
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users', websiteId] }),
+  });
+}

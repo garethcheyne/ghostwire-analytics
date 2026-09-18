@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import type { Prisma } from '@/generated/prisma/client';
 import { ENTITY_TYPE } from '@/lib/constants';
 import { uuid } from '@/lib/crypto';
@@ -99,6 +100,13 @@ export async function POST(
         })
       : await getShareByEntityId(websiteId);
 
+    await audit(request, auth, {
+      action: 'website.update',
+      targetType: 'website',
+      targetId: websiteId,
+      websiteId,
+      details: { fields: Object.keys(body) },
+    });
     return json({
       ...website,
       shareId: share?.slug ?? null,
@@ -128,6 +136,12 @@ export async function DELETE(
     return unauthorized();
   }
 
+  await audit(request, auth, {
+    action: 'website.delete',
+    targetType: 'website',
+    targetId: websiteId,
+    websiteId,
+  });
   await deleteWebsite(websiteId);
 
   return ok();

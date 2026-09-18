@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { parseRequest } from '@/lib/request';
 import { badRequest, json, notFound, ok, unauthorized } from '@/lib/response';
@@ -93,6 +94,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
 
   const updated = await updateUser(userId, data);
 
+  await audit(request, auth, {
+    action: 'user.update',
+    targetType: 'user',
+    targetId: userId,
+    details: {
+      fields: Object.keys(data).filter(key => key !== 'password'),
+      passwordChanged: 'password' in data,
+    },
+  });
   return json(updated);
 }
 
@@ -116,6 +126,7 @@ export async function DELETE(
     return badRequest({ message: 'You cannot delete yourself.' });
   }
 
+  await audit(request, auth, { action: 'user.delete', targetType: 'user', targetId: userId });
   await deleteUser(userId);
 
   return ok();

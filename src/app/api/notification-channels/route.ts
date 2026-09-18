@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { channelSchema, serializeChannel } from '@/lib/channels';
 import { uuid } from '@/lib/crypto';
@@ -58,5 +59,12 @@ export async function POST(request: Request) {
     },
   });
 
+  await audit(request, auth, {
+    action: 'channel.create',
+    targetType: 'channel',
+    targetId: created.id,
+    teamId: teamId ?? null,
+    details: { name: created.name, type: created.type },
+  });
   return json(serializeChannel(created));
 }

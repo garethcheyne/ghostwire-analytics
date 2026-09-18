@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
 import { parseRequest } from '@/lib/request';
 import { notFound, ok, unauthorized } from '@/lib/response';
@@ -18,6 +19,12 @@ export async function DELETE(
   if (!auth.user || !(await canUpdateWebsite(auth, link.websiteId))) return unauthorized();
 
   await prisma.client.supportLink.delete({ where: { id: link.id } });
+  await audit(request, auth, {
+    action: 'support-link.revoke',
+    targetType: 'user',
+    targetId: link.distinctId,
+    websiteId: link.websiteId,
+  });
 
   return ok();
 }

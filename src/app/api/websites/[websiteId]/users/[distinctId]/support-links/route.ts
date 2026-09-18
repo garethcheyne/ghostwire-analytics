@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { uuid } from '@/lib/crypto';
 import prisma from '@/lib/prisma';
@@ -62,5 +63,16 @@ export async function POST(request: Request, { params }: Params) {
     },
   });
 
+  await audit(request, auth, {
+    action: 'support-link.create',
+    targetType: 'user',
+    targetId: distinctId,
+    websiteId,
+    details: {
+      expiresAt: link.expiresAt.toISOString(),
+      includeReplays: link.includeReplays,
+      note: link.note,
+    },
+  });
   return json(link);
 }

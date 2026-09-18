@@ -126,3 +126,35 @@ export async function deleteSession(
     return session;
   });
 }
+
+/**
+ * Erases everything recorded about one identified user on a website (a data-protection request):
+ * every session linked to their ID with its events, replays, heatmap clicks and errors, their
+ * server-side errors, and any support links. Error groups remain, with this user's occurrences gone.
+ */
+export async function forgetUser(websiteId: string, distinctId: string) {
+  const [links, sessions] = await Promise.all([
+    prisma.client.sessionLink.findMany({
+      where: { websiteId, distinctId },
+      select: { sessionId: true },
+    }),
+    prisma.client.session.findMany({
+      where: { websiteId, distinctId },
+      select: { id: true },
+    }),
+  ]);
+  const sessionIds = [...new Set([...links.map(l => l.sessionId), ...sessions.map(s => s.id)])];
+
+  for (const sessionId of sessionIds) {
+    await deleteSession(websiteId, sessionId);
+  }
+
+  // A session can be gone already while its links remain.
+  await prisma.client.sessionLink.deleteMany({ where: { websiteId, distinctId } });
+  const { count: errors } = await prisma.client.errorEvent.deleteMany({
+    where: { websiteId, distinctId },
+  });
+  await prisma.client.supportLink.deleteMany({ where: { websiteId, distinctId } });
+
+  return { sessions: sessionIds.length, errors };
+}

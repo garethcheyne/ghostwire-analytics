@@ -1,0 +1,13 @@
+import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import { AdminAudit } from '@/components/admin/admin-audit';
+
+export const metadata: Metadata = { title: 'Audit log' };
+
+export default function AdminAuditPage() {
+  return (
+    <Suspense>
+      <AdminAudit />
+    </Suspense>
+  );
+}

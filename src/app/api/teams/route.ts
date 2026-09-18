@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { uuid } from '@/lib/crypto';
 import { getRandomChars } from '@/lib/generate';
@@ -56,5 +57,12 @@ export async function POST(request: Request) {
     teamOwnerId,
   );
 
+  await audit(request, auth, {
+    action: 'team.create',
+    targetType: 'team',
+    targetId: teamId,
+    teamId,
+    details: { name },
+  });
   return json(team);
 }

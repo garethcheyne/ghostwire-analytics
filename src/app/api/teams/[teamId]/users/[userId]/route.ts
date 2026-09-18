@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { ROLES, TEAM_ROLE_RANK } from '@/lib/constants';
 import { parseRequest } from '@/lib/request';
@@ -66,6 +67,13 @@ export async function POST(
 
   const user = await updateTeamUser(teamUser.id, body);
 
+  await audit(request, auth, {
+    action: 'team.member.update',
+    targetType: 'user',
+    targetId: userId,
+    teamId,
+    details: body,
+  });
   return json(user);
 }
 
@@ -106,6 +114,12 @@ export async function DELETE(
     }
   }
 
+  await audit(request, auth, {
+    action: 'team.member.remove',
+    targetType: 'user',
+    targetId: userId,
+    teamId,
+  });
   await deleteTeamUser(teamId, userId);
 
   return ok();

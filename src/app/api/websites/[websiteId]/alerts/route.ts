@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { ALERT_DEFAULTS, ALERT_TYPES } from '@/lib/alerts';
 import { canUseChannel, serializeChannel } from '@/lib/channels';
@@ -115,5 +116,12 @@ export async function POST(request: Request, { params }: Params) {
     update: { enabled: body.enabled, channelIds: body.channelIds, parameters },
   });
 
+  await audit(request, auth, {
+    action: 'alert.update',
+    targetType: 'website',
+    targetId: websiteId,
+    websiteId,
+    details: { type: body.type, enabled: body.enabled, channels: body.channelIds.length },
+  });
   return json(rule);
 }

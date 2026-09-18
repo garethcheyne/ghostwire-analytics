@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import z from 'zod';
 import { parseRequest } from '@/lib/request';
 import { json, notFound, ok, unauthorized } from '@/lib/response';
@@ -85,6 +86,12 @@ export async function DELETE(
   }
 
   await deleteShare(shareId);
+  await audit(request, auth, {
+    action: 'share.delete',
+    targetType: 'share',
+    targetId: shareId,
+    details: { slug: share.slug, entityId: share.entityId },
+  });
 
   return ok();
 }

@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { ENTITY_TYPE } from '@/lib/constants';
 import { uuid } from '@/lib/crypto';
@@ -65,5 +66,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ boa
     parameters: shareParameters,
   });
 
+  await audit(request, auth, {
+    action: 'share.create',
+    targetType: 'board',
+    targetId: boardId,
+    details: { name: share.name, slug: share.slug },
+  });
   return json(share);
 }

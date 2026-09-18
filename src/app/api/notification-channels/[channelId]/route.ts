@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { canManageChannel, channelSchema, serializeChannel } from '@/lib/channels';
 import prisma from '@/lib/prisma';
 import { parseRequest } from '@/lib/request';
@@ -15,13 +16,13 @@ async function load(request: Request, { params }: Params, schema?: any) {
   if (!channel) return { response: notFound() };
   if (!(await canManageChannel(auth, channel))) return { response: unauthorized() };
 
-  return { channel, body };
+  return { channel, body, auth };
 }
 
 export async function POST(request: Request, context: Params) {
   const result = await load(request, context, channelSchema);
   if ('response' in result) return result.response;
-  const { channel, body } = result;
+  const { channel, body, auth } = result;
 
   // Keep the existing webhook secret unless a new one is given.
   const previous = (channel.config ?? {}) as Record<string, unknown>;
@@ -35,15 +36,29 @@ export async function POST(request: Request, context: Params) {
     data: { name: body.name, type: body.type, config },
   });
 
+  await audit(request, auth, {
+    action: 'channel.update',
+    targetType: 'channel',
+    targetId: channel.id,
+    teamId: channel.teamId,
+    details: { name: updated.name, type: updated.type },
+  });
   return json(serializeChannel(updated));
 }
 
 export async function DELETE(request: Request, context: Params) {
   const result = await load(request, context);
   if ('response' in result) return result.response;
-  const { channel } = result;
+  const { channel, auth } = result;
 
   await prisma.client.notificationChannel.delete({ where: { id: channel.id } });
+  await audit(request, auth, {
+    action: 'channel.delete',
+    targetType: 'channel',
+    targetId: channel.id,
+    teamId: channel.teamId,
+    details: { name: channel.name },
+  });
 
   return ok();
 }

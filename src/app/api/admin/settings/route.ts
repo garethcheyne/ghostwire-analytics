@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { parseRequest } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
@@ -34,5 +35,9 @@ export async function POST(request: Request) {
 
   await setRequireTwoFactorForAll(body.requireTwoFactor);
 
+  await audit(request, auth, {
+    action: 'admin.settings.update',
+    details: { requireTwoFactor: body.requireTwoFactor },
+  });
   return json({ requireTwoFactor: body.requireTwoFactor });
 }

@@ -1,3 +1,4 @@
+import { audit } from '@/lib/audit';
 import { parseRequest } from '@/lib/request';
 import { ok, unauthorized } from '@/lib/response';
 import { canUpdateWebsite } from '@/permissions';
@@ -19,6 +20,12 @@ export async function POST(
     return unauthorized();
   }
 
+  await audit(request, auth, {
+    action: 'website.reset',
+    targetType: 'website',
+    targetId: websiteId,
+    websiteId,
+  });
   await resetWebsite(websiteId);
 
   return ok();
