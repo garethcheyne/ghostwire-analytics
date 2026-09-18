@@ -104,7 +104,7 @@ Folded into the client libraries rather than a separate `@ghostwire/next`:
 
 ## Phase 8 — Operations and support ✅
 
-- [x] Alerts: Slack, Discord, signed webhook and email channels (personal or team); new error, regression,
+- [x] Alerts: Slack, Discord, Telegram, signed webhook and email channels (personal or team); new error, regression,
       error spike and traffic drop rules per website, with delivery history
 - [x] Release tracking: `data-release`/`release`, crash-free sessions, new and regressed errors per release,
       deploy markers on the traffic chart, deploy API

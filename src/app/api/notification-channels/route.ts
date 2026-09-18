@@ -45,6 +45,10 @@ export async function POST(request: Request) {
     return unauthorized();
   }
 
+  if (channel.type === 'telegram' && !channel.config.secret) {
+    return badRequest({ message: 'Add the bot token from @BotFather.' });
+  }
+
   if (channel.type === 'email' && !isEmailConfigured()) {
     return badRequest({ message: 'Email is not set up on this server (SMTP_URL and SMTP_FROM).' });
   }

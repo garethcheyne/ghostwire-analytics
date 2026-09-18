@@ -88,6 +88,11 @@ export const CHANNEL_META: Record<
     placeholder: 'https://discord.com/api/webhooks/…',
     help: 'Channel settings → Integrations → Webhooks → Copy URL.',
   },
+  telegram: {
+    label: 'Telegram',
+    icon: Send,
+    help: 'Create a bot with @BotFather, add it to the chat, then paste its token and the chat ID.',
+  },
   webhook: {
     label: 'Webhook',
     icon: Webhook,
@@ -99,6 +104,7 @@ export const CHANNEL_META: Record<
 
 function describe(channel: Channel) {
   if (channel.type === 'email') return channel.config.emails?.join(', ') ?? '';
+  if (channel.type === 'telegram') return `Chat ${channel.config.chatId ?? ''}`;
   try {
     return new URL(channel.config.url ?? '').host;
   } catch {
@@ -135,10 +141,15 @@ function ChannelDialog({
               .split(/[,\s]+/)
               .filter(Boolean),
           }
-        : {
-            url: value('url'),
-            ...(type === 'webhook' && value('secret') && { secret: value('secret') }),
-          };
+        : type === 'telegram'
+          ? {
+              chatId: value('chatId'),
+              ...(value('secret') && { secret: value('secret') }),
+            }
+          : {
+              url: value('url'),
+              ...(type === 'webhook' && value('secret') && { secret: value('secret') }),
+            };
 
     try {
       await save.mutateAsync({ id: channel?.id, name: value('name'), type, config });
@@ -188,7 +199,9 @@ function ChannelDialog({
                 required
                 maxLength={100}
                 defaultValue={channel?.name}
-                placeholder={type === 'email' ? 'Support team' : '#alerts'}
+                placeholder={
+                  type === 'email' ? 'Support team' : type === 'telegram' ? 'Ops chat' : '#alerts'
+                }
               />
             </Field>
             {type === 'email' ? (
@@ -203,6 +216,39 @@ function ChannelDialog({
                 />
                 <FieldDescription>{meta.help}</FieldDescription>
               </Field>
+            ) : type === 'telegram' ? (
+              <>
+                <Field>
+                  <FieldLabel htmlFor="channel-token">Bot token</FieldLabel>
+                  <Input
+                    id="channel-token"
+                    name="secret"
+                    type="password"
+                    autoComplete="off"
+                    required={!channel?.config.hasSecret || channel.type !== 'telegram'}
+                    placeholder={
+                      channel?.type === 'telegram' && channel.config.hasSecret
+                        ? 'Leave blank to keep the current one'
+                        : '123456789:AA...'
+                    }
+                  />
+                  <FieldDescription>{meta.help}</FieldDescription>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="channel-chat">Chat ID</FieldLabel>
+                  <Input
+                    id="channel-chat"
+                    name="chatId"
+                    required
+                    defaultValue={channel?.type === 'telegram' ? channel.config.chatId : undefined}
+                    placeholder="-1001234567890 or @yourchannel"
+                  />
+                  <FieldDescription>
+                    Groups and channels start with -100. Send a message in the chat, then open
+                    api.telegram.org/bot&lt;token&gt;/getUpdates to find it.
+                  </FieldDescription>
+                </Field>
+              </>
             ) : (
               <Field>
                 <FieldLabel htmlFor="channel-url">Webhook URL</FieldLabel>

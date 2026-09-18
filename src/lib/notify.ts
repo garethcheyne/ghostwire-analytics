@@ -1,17 +1,19 @@
 /*
- * Delivers a notification to one channel: Slack, Discord, a generic webhook or email.
+ * Delivers a notification to one channel: Slack, Discord, Telegram, a generic webhook or email.
  * Email needs SMTP_URL (e.g. smtp://user:pass@mail.example.com:587) and SMTP_FROM.
  */
 import { createHmac } from 'node:crypto';
 
-export type ChannelType = 'email' | 'slack' | 'discord' | 'webhook';
+export type ChannelType = 'email' | 'slack' | 'discord' | 'telegram' | 'webhook';
 
-export const CHANNEL_TYPES: ChannelType[] = ['email', 'slack', 'discord', 'webhook'];
+export const CHANNEL_TYPES: ChannelType[] = ['email', 'slack', 'discord', 'telegram', 'webhook'];
 
 export interface ChannelConfig {
   url?: string;
-  /** Webhooks: signs the body (X-Ghostwire-Signature: sha256=<hex HMAC>). */
+  /** Webhooks: signs the body (X-Ghostwire-Signature: sha256=<hex HMAC>). Telegram: the bot token. */
   secret?: string;
+  /** Telegram: the chat (user, group or channel) to post to. */
+  chatId?: string;
   emails?: string[];
 }
 
@@ -63,7 +65,16 @@ async function post(url: string, body: unknown, headers: Record<string, string> 
   });
 
   if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`.trim());
+    // Services explain refusals in the body (Telegram: "Bad Request: chat not found").
+    const detail = await response
+      .json()
+      .then(json => json?.description ?? json?.message ?? json?.error)
+      .catch(() => null);
+    throw new Error(
+      [`${response.status} ${response.statusText}`.trim(), typeof detail === 'string' ? detail : '']
+        .filter(Boolean)
+        .join(': '),
+    );
   }
 }
 
@@ -89,6 +100,21 @@ function discordBody(n: Notification) {
       },
     ],
   };
+}
+
+/** Telegram's HTML flavour: bold title, the text, fields, and a link (4096 characters at most). */
+export function telegramBody(n: Notification, chatId: string) {
+  const lines = [
+    `<b>${escapeHtml(n.title)}</b>`,
+    escapeHtml(n.text),
+    ...(n.fields ?? []).map(f => `<b>${escapeHtml(f.name)}:</b> ${escapeHtml(f.value)}`),
+    ...(n.url ? [`<a href="${escapeHtml(n.url)}">Open in Ghostwire Analytics</a>`] : []),
+  ].filter(Boolean);
+
+  let text = lines.join('\n');
+  if (text.length > 4096) text = `${text.slice(0, 4000)}…`;
+
+  return { chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true };
 }
 
 function escapeHtml(value: string) {
@@ -139,6 +165,11 @@ export async function sendNotification(channel: Channel, notification: Notificat
       return post(config.url!, slackBody(notification));
     case 'discord':
       return post(config.url!, discordBody(notification));
+    case 'telegram':
+      return post(
+        `https://api.telegram.org/bot${config.secret}/sendMessage`,
+        telegramBody(notification, config.chatId!),
+      );
     case 'webhook': {
       const body = {
         event: notification.event,

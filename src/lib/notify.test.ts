@@ -86,6 +86,53 @@ describe('sendNotification', () => {
     ).rejects.toThrow('404');
   });
 
+  it('posts to Telegram with the bot token, chat ID and escaped HTML', async () => {
+    await sendNotification(
+      {
+        id: '1',
+        name: 't',
+        type: 'telegram',
+        config: { secret: '123456:ABCdefGHIjklMNOpqrSTUvwxYZ0123456789', chatId: '-1001234567890' },
+      },
+      { ...notification, text: 'x < y && "quoted"' },
+    );
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      'https://api.telegram.org/bot123456:ABCdefGHIjklMNOpqrSTUvwxYZ0123456789/sendMessage',
+    );
+    expect(sent()).toMatchObject({
+      chat_id: '-1001234567890',
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    });
+    expect(sent().text).toBe(
+      [
+        '<b>New error on Shop: TypeError</b>',
+        'x &lt; y &amp;&amp; &quot;quoted&quot;',
+        '<b>Release:</b> 2.4.1',
+        '<a href="https://gw.example.com/websites/1/errors/2">Open in Ghostwire Analytics</a>',
+      ].join('\n'),
+    );
+  });
+
+  it("includes the service's reason when it refuses a message", async () => {
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ ok: false, description: 'Bad Request: chat not found' }), {
+          status: 400,
+          statusText: 'Bad Request',
+        }),
+    );
+
+    await expect(
+      sendNotification(
+        { id: '1', name: 't', type: 'telegram', config: { secret: 'x', chatId: '1' } },
+        notification,
+      ),
+    ).rejects.toThrow('400 Bad Request: Bad Request: chat not found');
+  });
+
   it('refuses email when SMTP is not set up', async () => {
     await expect(
       sendNotification(

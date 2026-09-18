@@ -1,6 +1,7 @@
 /*
- * Notification channels: validation, access and the shape returned by the API (webhook secrets
- * are never sent back, only whether one is set).
+ * Notification channels: validation, access and the shape returned by the API. Secrets (webhook
+ * signing secrets, Telegram bot tokens, both kept in config.secret) are never sent back, only
+ * whether one is set.
  */
 import { z } from 'zod';
 import type { NotificationChannel } from '@/generated/prisma/client';
@@ -29,7 +30,27 @@ export const channelSchema = z.discriminatedUnion('type', [
     name: z.string().trim().min(1).max(100),
     config: z.object({ url: httpUrl, secret: z.string().max(200).optional() }),
   }),
+  z.object({
+    type: z.literal('telegram'),
+    name: z.string().trim().min(1).max(100),
+    config: z.object({
+      /** The bot token from @BotFather. Optional only when editing (the current one is kept). */
+      secret: z
+        .string()
+        .trim()
+        .regex(/^\d+:[\w-]{30,}$/, 'That is not a bot token (it looks like 123456:ABC-DEF...).')
+        .optional(),
+      /** A chat ID (e.g. -1001234567890) or a public channel's @username. */
+      chatId: z
+        .string()
+        .trim()
+        .regex(/^(-?\d{1,20}|@\w{5,32})$/, 'Use a numeric chat ID or @channelname.'),
+    }),
+  }),
 ]);
+
+/** Channel types whose secret is kept when an edit leaves it blank. */
+export const SECRET_CHANNEL_TYPES = ['webhook', 'telegram'];
 
 export type ChannelInput = z.infer<typeof channelSchema>;
 

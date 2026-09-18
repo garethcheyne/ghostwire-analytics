@@ -94,7 +94,7 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
   limit); errors 600/min per website and 20/min per session. In memory, or shared through the `rate_limit` table
   with `RATE_LIMIT_STORE=postgres` (fails open). Use `createLimiter`/`createIpRateLimiter` (async) in routes.
 - **Alerts** (`src/lib/alerts.ts`, delivery in `src/lib/notify.ts`): channels (`notification_channel`, per user or
-  team: email via SMTP_URL, Slack, Discord, signed webhooks) and one `alert_rule` per type per website.
+  team: email via SMTP_URL, Slack, Discord, Telegram, signed webhooks; secrets and bot tokens in config.secret) and one `alert_rule` per type per website.
   `error.new`/`error.regression` fire from the ingest routes via `afterResponse()` (Next `after`), using the
   `isNew`/`regressed` flags `saveError` returns; `error.spike`/`traffic.drop` run every 5 minutes. Rules are
   claimed through `last_triggered_at` so several containers don't double-send. Deliveries go to `alert_log`.

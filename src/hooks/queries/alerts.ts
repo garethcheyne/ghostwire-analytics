@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 
-export type ChannelType = 'email' | 'slack' | 'discord' | 'webhook';
+export type ChannelType = 'email' | 'slack' | 'discord' | 'telegram' | 'webhook';
 export type AlertType = 'error.new' | 'error.regression' | 'error.spike' | 'traffic.drop';
 
 export interface Channel {
@@ -11,7 +11,7 @@ export interface Channel {
   type: ChannelType;
   userId: string | null;
   teamId: string | null;
-  config: { url?: string; emails?: string[]; hasSecret?: boolean };
+  config: { url?: string; emails?: string[]; chatId?: string; hasSecret?: boolean };
   createdAt: string;
 }
 
@@ -36,7 +36,7 @@ export interface AlertLogEntry {
 export interface ChannelInput {
   name: string;
   type: ChannelType;
-  config: { url?: string; secret?: string; emails?: string[] };
+  config: { url?: string; secret?: string; emails?: string[]; chatId?: string };
 }
 
 const keys = {

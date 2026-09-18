@@ -1,5 +1,10 @@
 import { audit } from '@/lib/audit';
-import { canManageChannel, channelSchema, serializeChannel } from '@/lib/channels';
+import {
+  canManageChannel,
+  channelSchema,
+  SECRET_CHANNEL_TYPES,
+  serializeChannel,
+} from '@/lib/channels';
 import prisma from '@/lib/prisma';
 import { parseRequest } from '@/lib/request';
 import { json, notFound, ok, unauthorized } from '@/lib/response';
@@ -24,10 +29,10 @@ export async function POST(request: Request, context: Params) {
   if ('response' in result) return result.response;
   const { channel, body, auth } = result;
 
-  // Keep the existing webhook secret unless a new one is given.
+  // Keep the existing webhook secret or bot token unless a new one is given.
   const previous = (channel.config ?? {}) as Record<string, unknown>;
   const config =
-    body.type === 'webhook' && !body.config.secret && previous.secret
+    SECRET_CHANNEL_TYPES.includes(body.type) && !(body.config as any).secret && previous.secret
       ? { ...body.config, secret: previous.secret }
       : body.config;
 
