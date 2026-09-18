@@ -119,7 +119,8 @@ test('without data-errors, only manual ghostwire.error() calls are sent', async 
   await import('./index');
   await vi.waitFor(() => expect(sentOfType(fetchMock, 'event')).toHaveLength(1));
 
-  window.dispatchEvent(new ErrorEvent('error', { error: new Error('ignored') }));
+  // Message only: an ErrorEvent carrying an Error with no listener fails the run in Vitest.
+  window.dispatchEvent(new ErrorEvent('error', { message: 'ignored' }));
   await (window as any).ghostwire.error(new Error('payment failed'), { orderId: 7 });
 
   const errors = sentOfType(fetchMock, 'error');
