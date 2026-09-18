@@ -22,6 +22,10 @@ import { saveError } from '@/queries/sql/errors/saveError';
 import { POST } from './route';
 
 vi.mock('@/lib/alerts', () => ({ afterResponse: vi.fn(), notifyErrorSaved: vi.fn() }));
+vi.mock('@/lib/releases', () => ({
+  normalizeRelease: (value?: string) => value?.trim() || null,
+  recordRelease: vi.fn(),
+}));
 
 vi.mock('@/lib/detect', () => ({
   getClientInfo: vi.fn(),
@@ -268,6 +272,20 @@ describe('bot detection gate', () => {
     await expect(response.json()).resolves.not.toEqual({ beep: 'boop' });
     expect(saveEventMock).toHaveBeenCalledTimes(1);
     expect(isbotMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('releases', () => {
+  test('saves the release with the event', async () => {
+    isbotMock.mockReturnValue(false);
+
+    const response = await callPOST({
+      type: 'event',
+      payload: { website: WEBSITE_ID, url: '/', release: ' 2.4.1 ' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(saveEventMock).toHaveBeenCalledWith(expect.objectContaining({ release: '2.4.1' }));
   });
 });
 
