@@ -71,36 +71,40 @@ extend with the original Ghostwire ideas:
 - [x] Capture only observes: never cancels, wraps or rethrows a site's errors
 - [x] Client libraries in `packages/`: `@ghostwire/react`, `@ghostwire/node` (Python next)
 
-## Phase 5 — Workspace features
+## Phase 5 — Workspace features ✅
 
-- [ ] Dashboard, Boards (create, design, share); restore `src/lib/boards.test.ts` from reference with the board component registry
-- [ ] Links (short links, `/q/:slug`) and Pixels (`/p/:slug`)
-- [ ] Share pages (`/share/:slug`)
-- [ ] Teams: create, join by access code, members and roles
-- [ ] Settings: preferences, profile, security (password, 2FA), API keys
-- [ ] Admin: users, websites, teams, security (enforce 2FA)
-- [ ] Data export
+- [x] Dashboard (starter layout from your websites until customised) and Boards: create, design
+      (rows of up to 3 widgets: stats, charts, tables, map, goals, funnels, text), share read-only
+- [x] Links (short links, `/q/:slug`) and Pixels (`/p/:slug`)
+- [x] Share pages (`/share/:slug`) for websites and boards; share links never reveal identified users
+- [x] Teams: create, join by access code, members and roles
+- [x] Settings: preferences, profile, security (password, 2FA), API keys
+- [x] Admin: users, websites, teams, security (enforce 2FA)
+- [x] Data export (CSV zip for the current date range and filters)
 
-## Phase 6 — `@ghostwire/next` package
+## Phase 6 — Next.js integration ✅
 
-- [ ] `<Analytics siteId host />` client component that injects the tracker script
-- [ ] Track App Router navigations (`usePathname`, `useSearchParams`)
-- [ ] `track(event, data)` helper with types
-- [ ] First-party proxy helper for Next rewrites (`/_gw/*` → platform) to avoid ad blockers
-- [ ] Build with tsup (ESM + CJS + types), target under 5 kB; test in one real project, then publish
+Folded into the client libraries rather than a separate `@ghostwire/next`:
 
-## Phase 7 — Hardening
+- [x] `<GhostwireProvider host websiteId />` (`@ghostwire/react`) injects the tracker script
+- [x] App Router navigations are tracked by the tracker's `history` hooks (verified with `next/link`)
+- [x] `track(event, data)`, `identify`, `reportError` helpers with types
+- [x] First-party proxy: `withGhostwire(nextConfig, { host })` from `@ghostwire/node/next` rewrites
+      `/_gw/*` (tracker, recorder, ingest only) to the platform; verified in a real Next 16 app
+- [x] Built with tsup (ESM + CJS + types); `@ghostwire/react` is ~4 kB
+- [ ] Publish to npm (when you're ready)
 
-- [ ] Rate limiting on the ingest routes
-- [ ] Retention job for raw heatmap/replay data (e.g. keep 90 days)
-- [ ] Postgres backups (Proxmox backup job or `pg_dump` cron)
-- [ ] Reverse proxy and TLS via ghostwire-proxy
+## Phase 7 — Hardening ✅
+
+- [x] Rate limiting on the ingest routes (per IP for tracking/replays, per website for errors)
+- [x] Retention job for raw replay/heatmap/error data (`DATA_RETENTION_DAYS`, off unless set)
+- [x] Postgres backups: `docker compose --profile backup up -d` (daily `pg_dump`, rotated)
+- [x] Reverse proxy and TLS via ghostwire-proxy (documented; its `X-Real-IP` gives visitor locations)
 - [ ] Periodically review Umami releases (`git -C reference/umami pull`) for fixes worth porting
 
 ---
 
 ## Open questions
 
-- Monorepo (app + `packages/next`) or separate repo for the client package?
 - Keep a fully private instance, or eventually offer hosted Ghostwire Analytics to others?
 - Single sign-on across the Ghostwire suite later?

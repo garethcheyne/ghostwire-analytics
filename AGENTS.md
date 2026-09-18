@@ -82,6 +82,17 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
   `{ type: 'ghostwire:heatmap-frame', width, height }` to the parent so the viewer can size the preview.
 - **Heatmap event types**: click 1, scroll 2, dead click 3 (recorded by the recorder alongside the click).
   Rage clicks aren't stored; they're computed from click timestamps in `getHeatmap`.
+- **Share links and identified users**: requests authenticated only by a share token (`auth.user` null) never
+  see distinct IDs or identify traits. `parseRequest` drops `distinctId` filters and refuses `type=distinctId`;
+  session detail, session properties and session search hide them. Keep this for any new endpoint that returns
+  user identities, and put users, replays, errors and heatmaps behind `canViewAuthenticatedWebsite`.
+- **Boards**: widget metadata in `src/lib/board-components.ts` (Umami's type names), renderers in
+  `src/components/boards/widgets.tsx`. The personal dashboard is a board-shaped `parameters` object saved via
+  `/api/dashboard`. Board share responses include `names` for the widgets' entities (viewers can't list them).
+- **Ingest limits** (`src/lib/rate-limit.ts`, in memory): `/api/send` 600/min and `/api/record` 240/min per IP
+  (no IP, no limit); errors 600/min per website and 20/min per session.
+- **Retention** (`src/lib/retention.ts`, scheduled from instrumentation): off unless `DATA_RETENTION_DAYS` (or the
+  per-kind `REPLAY_`/`HEATMAP_`/`ERROR_RETENTION_DAYS`) is set. Never deletes page views, events or saved replays.
 - **First admin** is created on startup when there are no users (`src/instrumentation.ts` → `src/lib/setup.ts`):
   username `admin`, password `ADMIN_PASSWORD` (default `ghostwire`).
 
