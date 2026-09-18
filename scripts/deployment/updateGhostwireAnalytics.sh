@@ -12,7 +12,8 @@
 #  Settings (environment variables, all optional):
 #    REPO_DIR   where the code lives            (default /opt/ghostwire-analytics)
 #    BRANCH     branch to deploy                 (default main)
-#    BACKUPS    "true" keeps the daily backup service running (docker compose --profile backup)
+#    BACKUPS    "true" keeps the daily backup service running (docker compose --profile backup);
+#               defaults to BACKUPS in the .env
 #
 #  Deploy notifications go to Telegram when TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are set in
 #  the .env (TELEGRAM_NOTIFICATIONS_ENABLED=true).
@@ -71,6 +72,8 @@ if [ -f "$REPO_DIR/.env" ]; then
   TELEGRAM_CHAT_ID=$(env_value TELEGRAM_CHAT_ID)
   TELEGRAM_NOTIFICATIONS_ENABLED=$(env_value TELEGRAM_NOTIFICATIONS_ENABLED)
   APP_URL=$(env_value BETTER_AUTH_URL)
+  # The backup service choice made at install time, unless set for this run.
+  BACKUPS="${BACKUPS:-$(env_value BACKUPS)}"
 fi
 
 # Telegram helper (best-effort — never blocks a deploy)

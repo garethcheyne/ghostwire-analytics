@@ -51,3 +51,4 @@ __pycache__/
 # app logs (LOG_DIR)
 /logs
 /deploy-reports
+/install-report.txt

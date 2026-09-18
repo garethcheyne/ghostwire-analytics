@@ -6,7 +6,7 @@ services:
     build: .
     image: ghostwire-analytics:latest
     ports:
-      - "8770:3000"
+      - "${APP_PORT:-8770}:3000"
     environment:
       DATABASE_URL: postgresql://ghostwire:${POSTGRES_PASSWORD:-ghostwire}@db:5432/ghostwire_analytics
       # Required. Generate with: npx auth secret
@@ -94,7 +94,7 @@ services:
       POSTGRES_USER: ghostwire
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ghostwire}
     ports:
-      - "127.0.0.1:5436:5432"
+      - "127.0.0.1:${DB_PORT:-5436}:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     restart: unless-stopped
