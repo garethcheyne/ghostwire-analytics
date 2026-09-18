@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCurrentWebsite } from '@/components/websites/website-context';
 import { useActiveVisitors } from '@/hooks/queries/analytics';
 import { DateRangePicker } from './date-range-picker';
+import { FilterControls } from './filter-controls';
 import { FilterBar } from './filter-bar';
 
 function LiveVisitors({ websiteId }: { websiteId: string }) {
@@ -56,9 +57,12 @@ export function WebsiteHeader({ title }: { title?: string }) {
             </a>
           )}
         </div>
-        <DateRangePicker websiteId={website.id} />
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterControls websiteId={website.id} />
+          <DateRangePicker websiteId={website.id} />
+        </div>
       </div>
-      <FilterBar />
+      <FilterBar websiteId={website.id} />
     </div>
   );
 }

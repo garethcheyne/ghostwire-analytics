@@ -120,24 +120,28 @@ export async function getQueryFilters(
     await setWebsiteDate(websiteId, dateRange);
 
     if (params.segment) {
-      const segmentParams = (await getWebsiteSegment(websiteId, params.segment))
-        ?.parameters as Record<string, any>;
+      const segmentParams = (await getWebsiteSegment(websiteId, params.segment))?.parameters as
+        Record<string, any> | undefined;
 
-      Object.assign(filters, filtersArrayToObject(segmentParams.filters));
-      sessionPropertyFilters.push(...(segmentParams.sessionPropertyFilters ?? []));
+      // A stale or deleted segment id is ignored rather than failing every report.
+      Object.assign(filters, filtersArrayToObject(segmentParams?.filters ?? []));
+      sessionPropertyFilters.push(...(segmentParams?.sessionPropertyFilters ?? []));
 
-      if (segmentParams.match) {
+      if (segmentParams?.match) {
         match = segmentParams.match;
       }
     }
 
-    if (params.cohort) {
-      const cohortParams = (await getWebsiteSegment(websiteId, params.cohort))
-        ?.parameters as Record<string, any>;
+    const cohortParams = params.cohort
+      ? ((await getWebsiteSegment(websiteId, params.cohort))?.parameters as
+          Record<string, any> | undefined)
+      : undefined;
 
+    // Cohorts need an action (the defining page/event); skip incomplete ones.
+    if (cohortParams?.action?.type) {
       const { startDate, endDate } = parseDateRange(cohortParams.dateRange) ?? {};
 
-      const cohortFilters = cohortParams.filters.map(({ name, ...props }) => ({
+      const cohortFilters = (cohortParams.filters ?? []).map(({ name, ...props }) => ({
         ...props,
         name: `cohort_${name}`,
       }));

@@ -41,10 +41,17 @@ export function useFilters() {
     return result;
   }, [searchParams]);
 
-  // Raw params to forward to the API.
+  const segment = searchParams.get('segment');
+  const cohort = searchParams.get('cohort');
+
+  // Raw params to forward to the API (filters plus any applied segment/cohort).
   const params = useMemo(
-    () => Object.fromEntries(filters.map(({ key, operator, value }) => [key, `${operator}.${value}`])),
-    [filters],
+    () => ({
+      ...Object.fromEntries(filters.map(({ key, operator, value }) => [key, `${operator}.${value}`])),
+      ...(segment && { segment }),
+      ...(cohort && { cohort }),
+    }),
+    [filters, segment, cohort],
   );
 
   const update = useCallback(
@@ -70,9 +77,24 @@ export function useFilters() {
   const removeFilter = useCallback((key: string) => update(params => params.delete(key)), [update]);
 
   const clearFilters = useCallback(
-    () => update(params => filters.forEach(({ key }) => params.delete(key))),
+    () =>
+      update(params => {
+        filters.forEach(({ key }) => params.delete(key));
+        params.delete('segment');
+        params.delete('cohort');
+      }),
     [filters, update],
   );
 
-  return { filters, params, addFilter, removeFilter, clearFilters };
+  /** Apply a saved segment or cohort (null clears it). */
+  const setSegment = useCallback(
+    (type: 'segment' | 'cohort', id: string | null) =>
+      update(params => {
+        if (id) params.set(type, id);
+        else params.delete(type);
+      }),
+    [update],
+  );
+
+  return { filters, params, segment, cohort, addFilter, removeFilter, clearFilters, setSegment };
 }
