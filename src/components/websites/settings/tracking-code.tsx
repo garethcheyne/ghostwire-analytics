@@ -1,9 +1,11 @@
 'use client';
 import Link from 'next/link';
-import { useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { CopyButton } from '@/components/copy-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupTextarea } from '@/components/ui/input-group';
+import { Switch } from '@/components/ui/switch';
 import { useAppConfig } from '@/hooks/queries/config';
 import { useCurrentWebsite } from '../website-context';
 
@@ -67,6 +69,7 @@ export function TrackingCode() {
         </CardContent>
       </Card>
       <IdentifyUsers src={src} />
+      <ProxyInjection src={src} origin={`${origin}${process.env.basePath ?? ''}`} />
     </div>
   );
 }
@@ -127,6 +130,85 @@ ghostwire.identify('');`;
           </li>
           <li>Replays still mask inputs and text according to the recording settings.</li>
         </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** The OpenResty lines that make ghostwire-proxy add the tracker to every HTML page it serves. */
+export function proxyInjectionSnippet({
+  src,
+  origin,
+  websiteId,
+  errors,
+  replays,
+}: {
+  src: string;
+  origin: string;
+  websiteId: string;
+  errors: boolean;
+  replays: boolean;
+}) {
+  const tags = [
+    `<script defer src="${src}" data-website-id="${websiteId}"${errors ? ' data-errors="true"' : ''}></script>`,
+    ...(replays
+      ? [
+          `<script defer src="${origin}/recorder.js" data-website-id="${websiteId}" data-host-url="${origin}"></script>`,
+        ]
+      : []),
+  ].join('');
+
+  return [
+    '# Ghostwire Analytics: add the tracker to every HTML page.',
+    '# Ask the site for uncompressed HTML so the tag can be inserted.',
+    'proxy_set_header Accept-Encoding "";',
+    'sub_filter_types text/html;',
+    'sub_filter_once on;',
+    `sub_filter '</head>' '${tags}</head>';`,
+  ].join('\n');
+}
+
+function ProxyInjection({ src, origin }: { src: string; origin: string }) {
+  const website = useCurrentWebsite();
+  const [errors, setErrors] = useState(true);
+  const [replays, setReplays] = useState(false);
+  const snippet = proxyInjectionSnippet({ src, origin, websiteId: website.id, errors, replays });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Add it through ghostwire-proxy</CardTitle>
+        <CardDescription>
+          No changes to the site: paste this into the proxy host&apos;s{' '}
+          <span className="font-medium text-foreground">Advanced</span> config in ghostwire-proxy,
+          and every HTML page it serves gets the tracker.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <FieldGroup className="gap-3">
+          <Field orientation="horizontal">
+            <Switch id="inject-errors" checked={errors} onCheckedChange={setErrors} />
+            <FieldLabel htmlFor="inject-errors" className="font-normal">
+              Capture errors (also switch it on under Settings → Errors)
+            </FieldLabel>
+          </Field>
+          <Field orientation="horizontal">
+            <Switch id="inject-replays" checked={replays} onCheckedChange={setReplays} />
+            <FieldLabel htmlFor="inject-replays" className="font-normal">
+              Session replay and heatmaps (also switch them on under Replays &amp; heatmaps)
+            </FieldLabel>
+          </Field>
+        </FieldGroup>
+        <InputGroup>
+          <InputGroupTextarea value={snippet} readOnly rows={7} className="font-mono text-xs" />
+          <InputGroupAddon align="block-end" className="justify-end">
+            <CopyButton value={snippet} label="Copy proxy config" />
+          </InputGroupAddon>
+        </InputGroup>
+        <p className="text-sm text-muted-foreground">
+          If the site sends a Content-Security-Policy, allow {origin} in its script-src and
+          connect-src.
+        </p>
       </CardContent>
     </Card>
   );

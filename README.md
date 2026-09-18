@@ -23,8 +23,17 @@ Change the password straight away.
   proxy host pointing at port 8770, and set `BETTER_AUTH_URL` to the public `https://` address.
   The proxy's `X-Real-IP` / `X-Forwarded-For` headers are what give visitors their location.
 - **Track your sites** with the snippet from each website's settings, or with the client
-  libraries in [`packages/`](packages) (`@ghostwire/react`, `@ghostwire/node`). Next.js sites
-  can serve the tracker from their own domain with `withGhostwire` so ad blockers don't drop it.
+  libraries in [`packages/`](packages) (`@ghostwire/react`, `@ghostwire/node`, Python
+  `ghostwire-analytics`). Next.js sites can serve the tracker from their own domain with
+  `withGhostwire` so ad blockers don't drop it. Sites behind ghostwire-proxy can get the tracker
+  without code changes: paste the snippet from **Settings → Tracking code → Add it through
+  ghostwire-proxy** into the proxy host's Advanced config.
+- **Email** (optional): `SMTP_URL` and `SMTP_FROM` turn on email alert channels and the weekly or
+  monthly reports people choose under Settings → Notifications. `APP_URL` sets the links in them.
+- **Single sign-on** (optional): `OIDC_DISCOVERY_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and
+  `OIDC_NAME` add a "Sign in with …" button for any OpenID Connect provider (Authentik, Keycloak,
+  Entra ID). Existing users sign in when the provider's verified email matches theirs;
+  `OIDC_AUTO_CREATE=true` also creates accounts for new people.
 - **Backups**: `docker compose --profile backup up -d` writes a daily `pg_dump` to `./backups`
   and keeps `BACKUP_KEEP_DAYS` (default 14). Restore one into the running database with
   `docker compose exec -T db pg_restore -U ghostwire -d ghostwire_analytics --clean < backups/<file>.dump`.
