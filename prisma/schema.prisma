@@ -311,6 +311,8 @@ model WebsiteEvent {
   lifatid        String?   @map("li_fat_id") @db.VarChar(255)
   twclid         String?   @db.VarChar(255)
   eventType      Int       @default(1) @map("event_type") @db.Integer
+  /// The site's deployed version (data-release), when it sends one.
+  release        String?   @db.VarChar(100)
   eventName      String?   @map("event_name") @db.VarChar(50)
   tag            String?   @db.VarChar(50)
   hostname       String?   @db.VarChar(100)
@@ -337,6 +339,7 @@ model WebsiteEvent {
   @@index([websiteId, sessionId, createdAt])
   @@index([websiteId, visitId, createdAt])
   @@index([websiteId, createdAt, hostname])
+  @@index([websiteId, release, createdAt])
   @@map("website_event")
 }
 
@@ -627,6 +630,10 @@ model ErrorGroup {
   resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz(6)
   /// Set when a resolved error happens again.
   regressedAt DateTime? @map("regressed_at") @db.Timestamptz(6)
+  firstRelease String?  @map("first_release") @db.VarChar(100)
+  lastRelease  String?  @map("last_release") @db.VarChar(100)
+  /// The release in which a resolved error came back.
+  regressedRelease String? @map("regressed_release") @db.VarChar(100)
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -725,4 +732,23 @@ model AlertLog {
   @@index([websiteId, createdAt])
   @@index([ruleId, createdAt])
   @@map("alert_log")
+}
+
+/// A deployed version of a website: seen in tracking data, or registered by a deploy.
+model Release {
+  id          String    @id() @map("release_id") @db.Uuid
+  websiteId   String    @map("website_id") @db.Uuid
+  version     String    @db.VarChar(100)
+  environment String?   @db.VarChar(50)
+  commit      String?   @db.VarChar(100)
+  url         String?   @db.VarChar(500)
+  /// When a deploy registered it (null when only seen in tracking data).
+  deployedAt  DateTime? @map("deployed_at") @db.Timestamptz(6)
+  firstSeen   DateTime  @map("first_seen") @db.Timestamptz(6)
+  lastSeen    DateTime  @map("last_seen") @db.Timestamptz(6)
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([websiteId, version])
+  @@index([websiteId, firstSeen])
+  @@map("release")
 }

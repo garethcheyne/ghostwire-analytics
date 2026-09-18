@@ -1,4 +1,3 @@
-
 import { FIELD_LENGTH } from '@/lib/constants';
 import { uuid } from '@/lib/crypto';
 import { truncateString } from '@/lib/format';
@@ -59,6 +58,9 @@ export interface SaveEventArgs {
   cls?: number;
   fcp?: number;
   ttfb?: number;
+
+  /** The site's deployed version. */
+  release?: string | null;
 }
 
 export async function saveEvent(args: SaveEventArgs) {
@@ -97,6 +99,7 @@ async function relationalQuery({
   cls,
   fcp,
   ttfb,
+  release,
 }: SaveEventArgs) {
   const websiteEventId = uuid();
 
@@ -132,6 +135,7 @@ async function relationalQuery({
       cls,
       fcp,
       ttfb,
+      release: release ? release.slice(0, 100) : null,
       createdAt,
     },
   });

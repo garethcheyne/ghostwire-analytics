@@ -1,6 +1,7 @@
 import {
   Bell,
   Bug,
+  Rocket,
   AlignEndHorizontal,
   ChartPie,
   Clock,
@@ -91,6 +92,7 @@ export function websiteNav(websiteId: string): NavGroup[] {
         { title: 'Replays', href: path('/replays'), icon: Video },
         { title: 'Heatmaps', href: path('/heatmaps'), icon: Flame },
         { title: 'Errors', href: path('/errors'), icon: Bug },
+        { title: 'Releases', href: path('/releases'), icon: Rocket },
       ],
     },
     {

@@ -9,6 +9,7 @@ import { parseRequest } from '@/lib/request';
 import { forbidden, tooManyRequests, unauthorized } from '@/lib/response';
 import { saveError } from '@/queries/sql/errors/saveError';
 import { afterResponse, notifyErrorSaved } from '@/lib/alerts';
+import { recordRelease } from '@/lib/releases';
 
 /*
  * Error ingest for server-side clients (@ghostwire/node, Python, .NET, or plain HTTP).
@@ -157,6 +158,10 @@ export async function POST(request: Request) {
     },
     createdAt: body.timestamp ? new Date(body.timestamp) : undefined,
   });
+
+  if (body.release) {
+    afterResponse(() => recordRelease(website.id, body.release, new Date(), body.environment));
+  }
 
   afterResponse(() =>
     notifyErrorSaved({

@@ -18,6 +18,8 @@ export interface ErrorGroupSummary {
   firstSeen: string;
   lastSeen: string;
   regressedAt: string | null;
+  firstRelease: string | null;
+  lastRelease: string | null;
   /** All-time occurrences. */
   total: number;
   /** Occurrences and affected users in the date range. */
@@ -28,10 +30,17 @@ export interface ErrorGroupSummary {
 /** Error groups with occurrences in the date range, most recently seen first. */
 export async function getErrorGroups(
   websiteId: string,
-  filters: QueryFilters & { status?: ErrorStatus; search?: string },
+  filters: QueryFilters & {
+    status?: ErrorStatus;
+    search?: string;
+    /** Only occurrences in this release. */
+    release?: string;
+    /** Only errors that first appeared in `release`. */
+    newInRelease?: boolean;
+  },
 ): Promise<PageResult<ErrorGroupSummary[]>> {
   const { pagedRawQuery } = prisma;
-  const { startDate, endDate, status = 'open', search } = filters;
+  const { startDate, endDate, status = 'open', search, release, newInRelease } = filters;
 
   return pagedRawQuery(
     `
@@ -46,6 +55,8 @@ export async function getErrorGroups(
       g.first_seen as "firstSeen",
       g.last_seen as "lastSeen",
       g.regressed_at as "regressedAt",
+      g.first_release as "firstRelease",
+      g.last_release as "lastRelease",
       g.count as "total",
       count(*)::int as "events",
       count(distinct ${USER_KEY})::int as "users"
@@ -53,12 +64,21 @@ export async function getErrorGroups(
     join error_event e
       on e.error_group_id = g.error_group_id
       and e.created_at between {{startDate}} and {{endDate}}
+      ${release && !newInRelease ? 'and e.release = {{release}}' : ''}
     where g.website_id = {{websiteId::uuid}}
       and g.status = {{status}}
+      ${release && newInRelease ? 'and g.first_release = {{release}}' : ''}
       ${search ? 'and (g.message ilike {{search}} or g.type ilike {{search}} or g.culprit ilike {{search}})' : ''}
     group by g.error_group_id
     `,
-    { websiteId, startDate, endDate, status, search: search ? `%${search}%` : undefined },
+    {
+      websiteId,
+      startDate,
+      endDate,
+      status,
+      release,
+      search: search ? `%${search}%` : undefined,
+    },
     filters,
     FUNCTION_NAME,
     'max(e.created_at) desc',
@@ -171,7 +191,9 @@ export async function getErrorGroup(websiteId: string, groupId: string, filters:
       select
         error_group_id as "id", type, message, culprit, source, platform, status,
         first_seen as "firstSeen", last_seen as "lastSeen", resolved_at as "resolvedAt",
-        regressed_at as "regressedAt", count as "total"
+        regressed_at as "regressedAt", count as "total",
+        first_release as "firstRelease", last_release as "lastRelease",
+        regressed_release as "regressedRelease"
       from error_group
       where website_id = {{websiteId::uuid}} and error_group_id = {{groupId::uuid}}
       `,

@@ -251,6 +251,8 @@ type MetricEntry = PerformanceEntry & {
   const beforeSend = config('before-send');
   const distinctId = config('distinct-id') || undefined;
   const tag = config('tag') || undefined;
+  // The site's deployed version, e.g. data-release="2.4.1" or a commit SHA.
+  const release = config('release') || undefined;
   const autoTrack = config('auto-track') !== _false;
   const dnt = config('do-not-track') === _true;
   const excludeSearch = config('exclude-search') === _true;
@@ -298,6 +300,7 @@ type MetricEntry = PerformanceEntry & {
     url: currentUrl,
     referrer: stripOrigin(currentRef),
     tag,
+    release,
     id: identity ? identity : undefined,
   });
 

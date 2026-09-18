@@ -76,16 +76,21 @@ export async function saveError(args: SaveErrorArgs) {
     `
     insert into error_group (
       error_group_id, website_id, fingerprint, source, platform, type, message, culprit,
-      status, count, first_seen, last_seen, created_at, updated_at
+      status, count, first_seen, last_seen, first_release, last_release, created_at, updated_at
     )
     values (
       {{id::uuid}}, {{websiteId::uuid}}, {{fingerprint}}, {{source}}, {{platform}}, {{type}},
-      {{message}}, {{culprit}}, 'open', 1, {{createdAt}}, {{createdAt}}, now(), now()
+      {{message}}, {{culprit}}, 'open', 1, {{createdAt}}, {{createdAt}}, {{release}}, {{release}},
+      now(), now()
     )
     on conflict (website_id, fingerprint) do update set
       count = error_group.count + 1,
       last_seen = greatest(error_group.last_seen, excluded.last_seen),
       regressed_at = case when error_group.status = 'resolved' then now() else error_group.regressed_at end,
+      regressed_release = case when error_group.status = 'resolved' then excluded.last_release
+        else error_group.regressed_release end,
+      first_release = coalesce(error_group.first_release, excluded.first_release),
+      last_release = coalesce(excluded.last_release, error_group.last_release),
       status = case when error_group.status = 'resolved' then 'open' else error_group.status end,
       updated_at = now()
     returning error_group_id as "id", (xmax = 0) as "isNew",
@@ -100,6 +105,7 @@ export async function saveError(args: SaveErrorArgs) {
       type,
       message,
       culprit,
+      release: cut(args.release, 100),
       createdAt,
     },
     FUNCTION_NAME,

@@ -18,6 +18,14 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -30,6 +38,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentWebsite } from '@/components/websites/website-context';
 import { type ErrorStatus, useErrorGroups, useErrorStats } from '@/hooks/queries/errors';
+import { useReleases } from '@/hooks/queries/releases';
 import { useWebsite } from '@/hooks/queries/websites';
 import { formatLongNumber } from '@/lib/format';
 import { ErrorsChart } from './errors-chart';
@@ -77,10 +86,26 @@ function ErrorsNotice({ websiteId }: { websiteId: string }) {
   );
 }
 
-function ErrorGroupsTable({ status, search }: { status: ErrorStatus; search: string }) {
+function ErrorGroupsTable({
+  status,
+  search,
+  release,
+  newInRelease,
+}: {
+  status: ErrorStatus;
+  search: string;
+  release?: string;
+  newInRelease?: boolean;
+}) {
   const website = useCurrentWebsite();
   const [page, setPage] = useState(1);
-  const { data, isPending } = useErrorGroups(website.id, { status, search, page });
+  const { data, isPending } = useErrorGroups(website.id, {
+    status,
+    search,
+    page,
+    release,
+    newInRelease,
+  });
   const pageCount = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 1;
 
   if (isPending) return <Skeleton className="h-64 w-full" />;
@@ -136,6 +161,11 @@ function ErrorGroupsTable({ status, search }: { status: ErrorStatus; search: str
                   <span className="flex min-w-0 items-center gap-2">
                     <PlatformBadge platform={group.platform} />
                     {group.regressedAt && <Badge variant="destructive">Regressed</Badge>}
+                    {group.firstRelease && (
+                      <Badge variant="outline" className="font-mono">
+                        since {group.firstRelease}
+                      </Badge>
+                    )}
                     {group.culprit && (
                       <span className="truncate font-mono text-xs text-muted-foreground">
                         {group.culprit}
@@ -198,6 +228,9 @@ export function ErrorsView() {
       : 'open'
   ) as ErrorStatus;
   const [search, setSearch] = useState('');
+  const release = searchParams.get('release') ?? undefined;
+  const newInRelease = searchParams.get('new') === '1';
+  const { data: releases } = useReleases(website.id);
   const deferredSearch = useDeferredValue(search.trim());
   const { data: stats } = useErrorStats(website.id);
 
@@ -205,6 +238,15 @@ export function ErrorsView() {
     const params = new URLSearchParams(searchParams);
     if (value === 'open') params.delete('status');
     else params.set('status', value);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const setRelease = (value: string | null, onlyNew = false) => {
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set('release', value);
+    else params.delete('release');
+    if (value && onlyNew) params.set('new', '1');
+    else params.delete('new');
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -242,7 +284,36 @@ export function ErrorsView() {
               </TabsList>
             </Tabs>
           </CardTitle>
-          <CardAction>
+          <CardAction className="flex flex-wrap justify-end gap-2">
+            {!!releases?.length && (
+              <Select
+                value={release ?? 'all'}
+                onValueChange={value => setRelease(value === 'all' ? null : value, newInRelease)}
+              >
+                <SelectTrigger className="w-44" aria-label="Release">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">All releases</SelectItem>
+                    {releases.map(item => (
+                      <SelectItem key={item.version} value={item.version}>
+                        {item.version}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            )}
+            {release && (
+              <Button
+                variant={newInRelease ? 'secondary' : 'outline'}
+                aria-pressed={newInRelease}
+                onClick={() => setRelease(release, !newInRelease)}
+              >
+                New in this release
+              </Button>
+            )}
             <InputGroup className="w-56">
               <InputGroupInput
                 placeholder="Search errors"
@@ -258,9 +329,11 @@ export function ErrorsView() {
         </CardHeader>
         <CardContent>
           <ErrorGroupsTable
-            key={`${status}:${deferredSearch}`}
+            key={`${status}:${deferredSearch}:${release}:${newInRelease}`}
             status={status}
             search={deferredSearch}
+            release={release}
+            newInRelease={newInRelease}
           />
         </CardContent>
       </Card>

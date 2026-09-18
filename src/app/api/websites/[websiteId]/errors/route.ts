@@ -15,6 +15,8 @@ export async function GET(
     ...pagingParams,
     status: z.enum(ERROR_STATUSES).optional(),
     search: z.string().trim().max(200).optional(),
+    release: z.string().trim().max(100).optional(),
+    newInRelease: z.enum(['true', 'false']).optional(),
   });
 
   const { auth, query, error } = await parseRequest(request, schema);
@@ -32,6 +34,12 @@ export async function GET(
   const filters = await getQueryFilters(query, websiteId);
 
   return json(
-    await getErrorGroups(websiteId, { ...filters, status: query.status, search: query.search }),
+    await getErrorGroups(websiteId, {
+      ...filters,
+      status: query.status,
+      search: query.search,
+      release: query.release,
+      newInRelease: query.newInRelease === 'true',
+    }),
   );
 }

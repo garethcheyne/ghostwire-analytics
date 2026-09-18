@@ -38,6 +38,7 @@ export function Root() {
 | `user` | The signed-in user (`id` plus any fields you want to search by, like `email`). `null` when signed out: the visitor goes back to anonymous. |
 | `autoTrack` | Record page views automatically. Default `true`. |
 | `domains` | Only track on these hostnames. |
+| `release` | The deployed version (package version or commit SHA). Enables crash-free sessions and "new in this release" in Ghostwire. |
 | `scriptName` | The tracker's path on your server, if renamed. Default `script.js`. |
 
 The provider works with Vite, Create React App, Remix and Next.js (it's a client component).

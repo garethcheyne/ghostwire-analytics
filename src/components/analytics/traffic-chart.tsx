@@ -25,6 +25,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWebsitePageviews } from '@/hooks/queries/analytics';
 import { useAnnotations } from '@/hooks/queries/annotations';
+import { useReleases } from '@/hooks/queries/releases';
+import { useShare } from '@/components/share/share-context';
+import { useCurrentWebsite } from '@/components/websites/website-context';
 import { useDateRange } from '@/hooks/use-date-range';
 import { DATE_FORMATS, generateTimeSeries } from '@/lib/date';
 import { AnnotationsDialog, formatAnnotationDate, useShowAnnotation } from './annotations-dialog';
@@ -51,6 +54,10 @@ export function TrafficChart({ websiteId }: { websiteId: string }) {
     endAt: params.endAt,
   });
   const showAnnotation = useShowAnnotation();
+  const share = useShare();
+  const { kind = 'website' } = useCurrentWebsite();
+  // Releases need a signed-in viewer; share pages go without deploy markers.
+  const { data: releases } = useReleases(websiteId, !share && kind === 'website');
   const bucketFormat = DATE_FORMATS[unit as keyof typeof DATE_FORMATS] ?? DATE_FORMATS.day;
 
   const series = useMemo(() => {
@@ -77,6 +84,20 @@ export function TrafficChart({ websiteId }: { websiteId: string }) {
 
     return [...byBucket.entries()];
   }, [annotationData, timezone, bucketFormat]);
+
+  // Deploys (or first sightings) of releases within the range, labelled with the version.
+  const deploys = useMemo(() => {
+    const byBucket = new Map<string, string[]>();
+
+    (releases ?? []).forEach(release => {
+      const at = new Date(release.deployedAt ?? release.firstSeen);
+      if (at < startDate || at > endDate) return;
+      const bucket = format(toZonedTime(at, timezone), bucketFormat);
+      byBucket.set(bucket, [...(byBucket.get(bucket) ?? []), release.version]);
+    });
+
+    return [...byBucket.entries()];
+  }, [releases, startDate, endDate, timezone, bucketFormat]);
 
   const tickFormatter = (value: string) => {
     const date = parse(value, bucketFormat, new Date());
@@ -119,6 +140,19 @@ export function TrafficChart({ websiteId }: { websiteId: string }) {
               <ChartLegend content={<ChartLegendContent />} />
               <Bar dataKey="visitors" fill="var(--color-visitors)" radius={[3, 3, 0, 0]} />
               <Bar dataKey="views" fill="var(--color-views)" radius={[3, 3, 0, 0]} />
+              {deploys.map(([bucket, versions]) => (
+                <ReferenceLine
+                  key={`release-${bucket}`}
+                  x={bucket}
+                  stroke="var(--chart-3)"
+                  label={{
+                    value: versions.length > 1 ? `${versions.length} releases` : versions[0],
+                    position: 'insideTopRight',
+                    fill: 'var(--muted-foreground)',
+                    fontSize: 11,
+                  }}
+                />
+              ))}
               {markers.map(([bucket, count]) => (
                 <ReferenceLine
                   key={bucket}

@@ -22,6 +22,7 @@ import {
 } from '@/queries/sql';
 import { saveError } from '@/queries/sql/errors/saveError';
 import { afterResponse, notifyErrorSaved } from '@/lib/alerts';
+import { normalizeRelease, recordRelease } from '@/lib/releases';
 
 interface Cache {
   websiteId: string;
@@ -67,6 +68,7 @@ const schema = z.object({
       cls: z.number().nonnegative().max(100).optional(),
       fcp: z.number().nonnegative().max(60000).optional(),
       ttfb: z.number().nonnegative().max(60000).optional(),
+      release: z.string().max(100).optional(),
       error: z
         .object({
           type: z.string().max(200).optional(),
@@ -125,6 +127,7 @@ async function collectBrowserError({
   browser?: string;
   os?: string;
   device?: string;
+  release?: string | null;
   error: NonNullable<z.infer<typeof schema>['payload']['error']>;
   createdAt: Date;
 }) {
@@ -165,7 +168,9 @@ async function collectBrowserError({
   }).catch(e => console.error('Failed to save error:', e));
 
   if (saved) {
-    afterResponse(() => notifyErrorSaved({ ...saved, websiteId, source: 'browser', urlPath }));
+    afterResponse(() =>
+      notifyErrorSaved({ ...saved, websiteId, source: 'browser', urlPath, release: rest.release }),
+    );
   }
 }
 
@@ -205,6 +210,7 @@ export async function POST(request: Request) {
       ttfb,
       error: reportedError,
     } = payload;
+    const release = normalizeRelease(payload.release);
 
     const sourceId = websiteId || pixelId || linkId;
 
@@ -391,6 +397,8 @@ export async function POST(request: Request) {
         region,
         city,
 
+        release,
+
         // Events
         eventName: name,
         eventData: data,
@@ -482,8 +490,13 @@ export async function POST(request: Request) {
         cls,
         fcp,
         ttfb,
+        release,
         createdAt,
       });
+    }
+
+    if (websiteId && release) {
+      afterResponse(() => recordRelease(websiteId, release, createdAt));
     }
 
     if (type === COLLECTION_TYPE.error && websiteId && reportedError) {
@@ -498,6 +511,7 @@ export async function POST(request: Request) {
         os,
         device,
         error: reportedError,
+        release,
         createdAt,
       });
     }

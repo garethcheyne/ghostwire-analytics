@@ -45,6 +45,7 @@ describe('GhostwireProvider', () => {
           host="https://analytics.example.com/"
           websiteId={WEBSITE_ID}
           errors
+          release="2.4.1"
           domains={['example.com', 'www.example.com']}
         >
           <p>app</p>
@@ -61,6 +62,7 @@ describe('GhostwireProvider', () => {
     expect(script.dataset).toMatchObject({
       websiteId: WEBSITE_ID,
       errors: 'true',
+      release: '2.4.1',
       domains: 'example.com,www.example.com',
     });
     expect(screen.getByText('app')).toBeTruthy();

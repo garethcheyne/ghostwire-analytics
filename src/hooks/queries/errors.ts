@@ -47,10 +47,29 @@ export function useErrorStats(websiteId: string) {
 
 export function useErrorGroups(
   websiteId: string,
-  { status, search, page }: { status: ErrorStatus; search: string; page: number },
+  {
+    status,
+    search,
+    page,
+    release,
+    newInRelease,
+  }: {
+    status: ErrorStatus;
+    search: string;
+    page: number;
+    release?: string;
+    newInRelease?: boolean;
+  },
 ) {
   const { params } = useDateRange();
-  const query = { ...params, status, search, page, pageSize: 25 };
+  const query = {
+    ...params,
+    status,
+    search,
+    page,
+    pageSize: 25,
+    ...(release && { release, newInRelease: newInRelease ? 'true' : undefined }),
+  };
 
   return useQuery({
     queryKey: [...key(websiteId), 'groups', query],

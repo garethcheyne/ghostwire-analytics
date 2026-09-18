@@ -24,6 +24,11 @@ export interface GhostwireProviderProps {
   autoTrack?: boolean;
   /** Only track on these hostnames. */
   domains?: string[];
+  /**
+   * The deployed version (e.g. a package version or commit SHA). Page views and errors carry it,
+   * so Ghostwire can show crash-free sessions and new errors per release.
+   */
+  release?: string;
   /** Tracker script path on the host, if your server renames it. Default "script.js". */
   scriptName?: string;
   children?: ReactNode;
@@ -33,7 +38,15 @@ type ScriptOptions = Omit<GhostwireProviderProps, 'user' | 'children' | 'domains
   domains?: string;
 };
 
-function loadScript({ host, websiteId, errors, autoTrack, domains, scriptName }: ScriptOptions) {
+function loadScript({
+  host,
+  websiteId,
+  errors,
+  autoTrack,
+  domains,
+  scriptName,
+  release,
+}: ScriptOptions) {
   // Already on the page (added by this provider before, or by hand in the HTML head).
   const existing = document.querySelector<HTMLScriptElement>(
     // Website IDs are UUIDs; strip anything else so the selector is always valid.
@@ -53,6 +66,7 @@ function loadScript({ host, websiteId, errors, autoTrack, domains, scriptName }:
   if (errors) script.dataset.errors = 'true';
   if (autoTrack === false) script.dataset.autoTrack = 'false';
   if (domains) script.dataset.domains = domains;
+  if (release) script.dataset.release = release;
   script.addEventListener('load', flushQueue, { once: true });
   document.head.appendChild(script);
 }
@@ -70,17 +84,18 @@ export function GhostwireProvider({
   autoTrack,
   domains,
   scriptName,
+  release,
   children,
 }: GhostwireProviderProps) {
   const domainList = domains?.join(',');
 
   useEffect(() => {
     try {
-      loadScript({ host, websiteId, errors, autoTrack, domains: domainList, scriptName });
+      loadScript({ host, websiteId, errors, autoTrack, domains: domainList, scriptName, release });
     } catch {
       /* never break the app over analytics */
     }
-  }, [host, websiteId, errors, autoTrack, domainList, scriptName]);
+  }, [host, websiteId, errors, autoTrack, domainList, scriptName, release]);
 
   // Identify on sign-in and on changes to the user's details; go anonymous on sign-out.
   const userKey = user ? JSON.stringify(user) : '';
