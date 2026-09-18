@@ -27,6 +27,25 @@ Change the password straight away.
    when the database isn't).
 5. Sign in, change the admin password, turn on two-factor, then add your sites.
 
+### Installing and updating on a server
+
+`scripts/deployment/updateGhostwireAnalytics.sh` does both: it clones or pulls `main` into
+`/opt/ghostwire-analytics` (`REPO_DIR`), checks the `.env`, backs up the database to `backups/`,
+keeps the running image as `ghostwire-analytics:previous`, rebuilds, restarts the app (migrations
+run as it starts) and waits until `/api/health` is OK.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/garethcheyne/ghostwire-analytics/main/scripts/deployment/updateGhostwireAnalytics.sh -o /opt/updateGhostwireAnalytics.sh
+bash /opt/updateGhostwireAnalytics.sh             # first run clones, then asks you to create .env
+cp /opt/ghostwire-analytics/.env.example /opt/ghostwire-analytics/.env   # fill it in
+bash /opt/updateGhostwireAnalytics.sh --deploy    # install; run the same command for every update
+bash /opt/updateGhostwireAnalytics.sh --rollback  # back to the image before the last deploy
+```
+
+`BACKUPS=true` also keeps the daily backup service running. With `TELEGRAM_BOT_TOKEN` and
+`TELEGRAM_CHAT_ID` in `.env` (and `TELEGRAM_NOTIFICATIONS_ENABLED=true`) it reports each deploy to
+Telegram. Rolling back doesn't undo database migrations; restore the pre-deploy backup for that.
+
 ### Logs
 
 The app logs JSON lines, to `docker logs` and to daily files in the `app-logs` volume
