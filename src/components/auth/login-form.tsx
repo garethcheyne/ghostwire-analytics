@@ -38,16 +38,25 @@ export function LoginForm({
     setSsoPending(true);
     setError(null);
 
-    // Redirects to the identity provider; comes back to the callback URL.
-    const { error } = await authClient.signIn.social({
-      provider: 'oidc' as any,
-      callbackURL: safeNext(next),
-      errorCallbackURL: '/login',
-    });
+    try {
+      // Redirects to the identity provider; comes back to the callback URL.
+      const { error } = await authClient.signIn.social({
+        provider: 'oidc' as any,
+        callbackURL: safeNext(next),
+        errorCallbackURL: '/login',
+      });
 
-    if (error) {
+      if (error) {
+        setSsoPending(false);
+        setError(error.message || 'Single sign-on failed. Try again.');
+      }
+    } catch (cause) {
       setSsoPending(false);
-      setError(error.message || 'Single sign-on failed. Try again.');
+      setError(
+        cause instanceof Error && cause.message
+          ? `Single sign-on failed: ${cause.message}`
+          : 'Single sign-on failed. Try again.',
+      );
     }
   }
 
@@ -58,24 +67,36 @@ export function LoginForm({
     setPending(true);
     setError(null);
 
-    const { data, error } = await authClient.signIn.username({
-      username: String(form.get('username')),
-      password: String(form.get('password')),
-    });
+    try {
+      const { data, error } = await authClient.signIn.username({
+        username: String(form.get('username')),
+        password: String(form.get('password')),
+      });
 
-    if (error) {
+      if (error) {
+        setPending(false);
+        setError(error.message || 'Incorrect username or password.');
+        return;
+      }
+
+      if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
+        router.push(`/login/two-factor${next ? `?next=${encodeURIComponent(next)}` : ''}`);
+        return;
+      }
+
+      router.push(safeNext(next));
+      router.refresh();
+    } catch (cause) {
+      // Anything that throws rather than coming back as `error` (the server unreachable, a
+      // response that isn't JSON) would otherwise leave the button spinning with nothing on
+      // screen. Sign-in must always end in a message.
       setPending(false);
-      setError(error.message || 'Incorrect username or password.');
-      return;
+      setError(
+        cause instanceof Error && cause.message
+          ? `Could not sign in: ${cause.message}`
+          : 'Could not reach the server. Check that it is running, then try again.',
+      );
     }
-
-    if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
-      router.push(`/login/two-factor${next ? `?next=${encodeURIComponent(next)}` : ''}`);
-      return;
-    }
-
-    router.push(safeNext(next));
-    router.refresh();
   }
 
   return (

@@ -3,7 +3,7 @@
  * as an app. Build assets are cached (their names change with every build); pages and the API are
  * always fetched, falling back to a short "you're offline" page.
  */
-const CACHE = 'ghostwire-static-v1';
+const CACHE = 'ghostwire-static-v2';
 const SCOPE = new URL(self.registration.scope);
 const BASE = SCOPE.pathname.replace(/\/$/, '');
 const ICON = `${BASE}/icons/icon-192.png`;

@@ -117,7 +117,13 @@ export const auth = betterAuth({
     },
   },
   plugins: [
-    username(),
+    // An email address is a perfectly good username, so the plugin's defaults are widened:
+    // it otherwise allows only [a-zA-Z0-9_.] (no @, - or +) and caps length at 30, which
+    // rejects every email. 255 matches the limit our own /api/users routes accept.
+    username({
+      maxUsernameLength: 255,
+      usernameValidator: value => /^[a-zA-Z0-9_.+@-]+$/.test(value),
+    }),
     admin({
       ac: userAc,
       roles: userRoles,

@@ -63,8 +63,10 @@ compose() {
 }
 
 # ── Load only the .env values this script needs ──────────────────
+# Values may be quoted (install.sh single-quotes anything that could contain $ or #).
 env_value() {
-  grep -E "^$1=" "$REPO_DIR/.env" 2>/dev/null | tail -n1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'
+  grep -E "^$1=" "$REPO_DIR/.env" 2>/dev/null | tail -n1 | cut -d= -f2- \
+    | sed -e "s/^'\(.*\)'$/\1/" -e 's/^"\(.*\)"$/\1/'
 }
 
 if [ -f "$REPO_DIR/.env" ]; then

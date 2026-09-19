@@ -73,6 +73,13 @@ confirm() {
   case "$answer" in [nN]*) return 1 ;; *) return 0 ;; esac
 }
 
+# A value for the .env file, single-quoted. Compose's .env reader interpolates $... and treats
+# " #" as a comment in unquoted values, which silently mangles passwords; single-quoted values
+# are passed through literally. A single quote can't be escaped there, so it is not allowed.
+env_value() {
+  printf "'%s'" "$1"
+}
+
 # A random secret: letters and digits only, so it's safe in URLs and .env files.
 random_secret() {
   local length="$1"
@@ -137,6 +144,7 @@ say "✅" "Code is at $(git -C "$INSTALL_DIR" rev-parse --short HEAD)."
 ENV_FILE="$INSTALL_DIR/.env"
 WRITE_ENV=true
 GENERATED_PASSWORD=""
+CHOSEN_PASSWORD=""
 
 if [ -f "$ENV_FILE" ]; then
   header "Settings"
@@ -172,13 +180,41 @@ if [ "$WRITE_ENV" = true ]; then
   GW_DB_PORT="${GW_DB_PORT:-$(free_port 5436)}"
   ask GW_ADMIN_USERNAME "First admin's username" "admin"
   ask GW_ADMIN_EMAIL "First admin's email" "admin@$GW_DOMAIN"
-  ask GW_ADMIN_PASSWORD "First admin's password (Enter for a random one)" "" secret
-  if [ -z "$GW_ADMIN_PASSWORD" ]; then
-    GENERATED_PASSWORD=$(random_secret 20)
-    GW_ADMIN_PASSWORD="$GENERATED_PASSWORD"
-  elif [ ${#GW_ADMIN_PASSWORD} -lt 8 ]; then
-    fail "The admin password needs at least 8 characters."
-  fi
+  # Asked twice: it is typed blind, and a typo here would lock you out of the new install.
+  # One passed in as GW_ADMIN_PASSWORD was not typed blind, so it isn't confirmed.
+  PASSWORD_FROM_ENV=false
+  [ -n "$GW_ADMIN_PASSWORD" ] && PASSWORD_FROM_ENV=true
+  while :; do
+    ask GW_ADMIN_PASSWORD "First admin's password (Enter for a random one)" "" secret
+    if [ -z "$GW_ADMIN_PASSWORD" ]; then
+      GENERATED_PASSWORD=$(random_secret 20)
+      GW_ADMIN_PASSWORD="$GENERATED_PASSWORD"
+      break
+    fi
+    if [ ${#GW_ADMIN_PASSWORD} -lt 8 ]; then
+      say "⚠️" "The password needs at least 8 characters."
+      [ "$ASSUME_YES" = true ] && fail "GW_ADMIN_PASSWORD needs at least 8 characters."
+      PASSWORD_FROM_ENV=false; GW_ADMIN_PASSWORD=""; continue
+    fi
+    case "$GW_ADMIN_PASSWORD" in
+      *"'"*)
+        say "⚠️" "The password can't contain a single quote ' (the settings file can't hold one)."
+        [ "$ASSUME_YES" = true ] && fail "GW_ADMIN_PASSWORD can't contain a single quote."
+        PASSWORD_FROM_ENV=false; GW_ADMIN_PASSWORD=""; continue ;;
+    esac
+    if [ "$ASSUME_YES" = true ] || [ "$PASSWORD_FROM_ENV" = true ]; then
+      CHOSEN_PASSWORD="$GW_ADMIN_PASSWORD"
+      break
+    fi
+    GW_ADMIN_PASSWORD_AGAIN=""
+    ask GW_ADMIN_PASSWORD_AGAIN "Type it again to confirm" "" secret
+    if [ "$GW_ADMIN_PASSWORD" = "$GW_ADMIN_PASSWORD_AGAIN" ]; then
+      CHOSEN_PASSWORD="$GW_ADMIN_PASSWORD"
+      break
+    fi
+    say "⚠️" "The two passwords didn't match; let's try again."
+    GW_ADMIN_PASSWORD=""
+  done
   ask GW_BACKUPS "Daily database backups to $INSTALL_DIR/backups? (yes/no)" "yes"
   ask GW_RETENTION_DAYS "Delete replays, heatmaps and errors after how many days? (Enter keeps them)" ""
 
@@ -200,7 +236,7 @@ if [ "$WRITE_ENV" = true ]; then
 
 POSTGRES_PASSWORD=$(random_secret 32)
 BETTER_AUTH_SECRET=$(random_secret 48)
-BETTER_AUTH_URL=https://$GW_DOMAIN
+BETTER_AUTH_URL=$(env_value "https://$GW_DOMAIN")
 APP_PORT=$GW_PORT
 # The database is only reachable from this server, on this port.
 DB_PORT=$GW_DB_PORT
@@ -208,9 +244,9 @@ DB_PORT=$GW_DB_PORT
 BACKUPS=$(case "$GW_BACKUPS" in [yY]*) echo true ;; *) echo false ;; esac)
 
 # The first admin (only used while the database has no users).
-ADMIN_USERNAME=$GW_ADMIN_USERNAME
-ADMIN_EMAIL=$GW_ADMIN_EMAIL
-ADMIN_PASSWORD=$GW_ADMIN_PASSWORD
+ADMIN_USERNAME=$(env_value "$GW_ADMIN_USERNAME")
+ADMIN_EMAIL=$(env_value "$GW_ADMIN_EMAIL")
+ADMIN_PASSWORD=$(env_value "$GW_ADMIN_PASSWORD")
 
 # Delete raw replay, heatmap and error data after N days (blank keeps everything).
 DATA_RETENTION_DAYS=$GW_RETENTION_DAYS
@@ -229,7 +265,13 @@ export BACKUPS=$(grep -E '^BACKUPS=' "$ENV_FILE" | cut -d= -f2-)
 REPO_DIR="$INSTALL_DIR" bash "$INSTALL_DIR/scripts/deployment/updateGhostwireAnalytics.sh" --deploy
 
 # ── 5. Report ────────────────────────────────────────────────────
-setting() { grep -E "^$1=" "$ENV_FILE" | tail -n1 | cut -d= -f2-; }
+# Reads a value from .env, dropping the single quotes env_value writes around it.
+setting() {
+  local value
+  value=$(grep -E "^$1=" "$ENV_FILE" | tail -n1 | cut -d= -f2-)
+  case "$value" in "'"*"'") value=${value#\'}; value=${value%\'} ;; esac
+  echo "$value"
+}
 
 URL=$(setting BETTER_AUTH_URL)
 PORT=$(setting APP_PORT); PORT=${PORT:-8770}
@@ -244,8 +286,12 @@ REPORT_FILE="$INSTALL_DIR/install-report.txt"
 
 if [ -n "$GENERATED_PASSWORD" ]; then
   PASSWORD_NOTE="random; shown once on screen at the end of the install (also ADMIN_PASSWORD in .env)"
+  SHOWN_PASSWORD="$GENERATED_PASSWORD"
+  PASSWORD_LABEL="Admin password (random, shown only now)"
 else
   PASSWORD_NOTE="the one you chose (ADMIN_PASSWORD in .env)"
+  SHOWN_PASSWORD="$CHOSEN_PASSWORD"
+  PASSWORD_LABEL="Admin password (the one you typed)"
 fi
 if [ "$(setting BACKUPS)" = true ]; then
   BACKUP_NOTE="$INSTALL_DIR/backups: daily (14 kept), plus a copy before each update"
@@ -311,10 +357,11 @@ umask 022
 header "🎉  Ghostwire Analytics is installed"
 echo ""
 report | sed 's/^/  /'
-if [ -n "$GENERATED_PASSWORD" ]; then
+if [ -n "$SHOWN_PASSWORD" ]; then
   echo ""
   echo "  ┌────────────────────────────────────────────────────────────"
-  echo "  │  Admin password (random, shown only now):  $GENERATED_PASSWORD"
+  echo "  │  $PASSWORD_LABEL:"
+  echo "  │  $SHOWN_PASSWORD"
   echo "  └────────────────────────────────────────────────────────────"
 fi
 echo ""

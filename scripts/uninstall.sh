@@ -64,8 +64,10 @@ yes_no() {
   case "$answer" in [yY]*) return 0 ;; *) return 1 ;; esac
 }
 
+# Values may be quoted (install.sh single-quotes anything that could contain $ or #).
 env_value() {
-  grep -E "^$1=" "$INSTALL_DIR/.env" 2>/dev/null | tail -n1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'
+  grep -E "^$1=" "$INSTALL_DIR/.env" 2>/dev/null | tail -n1 | cut -d= -f2- \
+    | sed -e "s/^'\(.*\)'$/\1/" -e 's/^"\(.*\)"$/\1/'
 }
 
 # ── 1. What's here ───────────────────────────────────────────────

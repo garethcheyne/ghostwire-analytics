@@ -24,18 +24,28 @@ export function TwoFactorForm({ next }: { next?: string }) {
     setPending(true);
     setError(null);
 
-    const { error } = useBackupCode
-      ? await authClient.twoFactor.verifyBackupCode({ code: value, trustDevice })
-      : await authClient.twoFactor.verifyTotp({ code: value, trustDevice });
+    try {
+      const { error } = useBackupCode
+        ? await authClient.twoFactor.verifyBackupCode({ code: value, trustDevice })
+        : await authClient.twoFactor.verifyTotp({ code: value, trustDevice });
 
-    if (error) {
+      if (error) {
+        setPending(false);
+        setError(error.message || 'That code is not valid.');
+        return;
+      }
+
+      router.push(safeNext(next));
+      router.refresh();
+    } catch (cause) {
+      // As on the login form: a throw must not leave the form spinning in silence.
       setPending(false);
-      setError(error.message || 'That code is not valid.');
-      return;
+      setError(
+        cause instanceof Error && cause.message
+          ? `Could not verify that code: ${cause.message}`
+          : 'Could not reach the server. Check that it is running, then try again.',
+      );
     }
-
-    router.push(safeNext(next));
-    router.refresh();
   }
 
   return (
