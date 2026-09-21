@@ -47,5 +47,7 @@ claude mcp add ghostwire --transport http \
   --header "Authorization: Bearer gwa_..."
 ```
 
-Create the API key under Settings → API keys. For clients that cannot reach a
-remote MCP endpoint, `packages/mcp` bridges the same endpoint over stdio.
+Your instance has a page with the exact command, filled in with its own
+address and able to create the key for you: **Settings → AI agents (MCP)**.
+For clients that cannot reach a remote MCP endpoint, `packages/mcp` bridges
+the same endpoint over stdio.
