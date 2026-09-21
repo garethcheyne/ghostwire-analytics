@@ -20,7 +20,7 @@ Read at any time for conventions, theming, Docker setup and branding. Treat as r
 
 | Repo | Path | What it is |
 |------|------|------------|
-| Ghostwire | `C:\Apps\Projects\WebSites\ghostwire-suite\ghostwire` | Security monitoring suite (Next.js + FastAPI + PostgreSQL). See its `CLAUDE.md`, `DESIGN_SYSTEM.md`. |
+| Ghostwire Secure | `C:\Apps\Projects\WebSites\ghostwire-suite\ghostwire-secure` | Security monitoring suite (Next.js + FastAPI + PostgreSQL). See its `CLAUDE.md`, `DESIGN_SYSTEM.md`. |
 | Ghostwire Proxy | `C:\Apps\Projects\WebSites\ghostwire-suite\ghostwire-proxy` | Reverse proxy manager (OpenResty + Next.js + FastAPI). Source of our theme and app-shell look. |
 
 ## Tech Stack

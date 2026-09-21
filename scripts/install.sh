@@ -12,7 +12,8 @@
 #
 #  Answers can be given up front instead of typed (e.g. for automation, with --yes):
 #    GW_DOMAIN=analytics.example.com   GW_PORT=8770          GW_DIR=/opt/ghostwire-analytics
-#    GW_ADMIN_USERNAME=admin           GW_ADMIN_EMAIL=...    GW_ADMIN_PASSWORD=... (blank = random)
+#    GW_ADMIN_EMAIL=you@example.com    GW_ADMIN_USERNAME=... (blank = the email, which is fine to
+#                                      sign in with)        GW_ADMIN_PASSWORD=... (blank = random)
 #    GW_BACKUPS=yes                    GW_RETENTION_DAYS=... (blank = keep everything)
 #    GW_DB_PORT=5436 (the database's port on localhost)
 # ═══════════════════════════════════════════════════════════════════
@@ -178,8 +179,25 @@ if [ "$WRITE_ENV" = true ]; then
   done
   # The database only listens on localhost; pick a free port so it can't clash either.
   GW_DB_PORT="${GW_DB_PORT:-$(free_port 5436)}"
-  ask GW_ADMIN_USERNAME "First admin's username" "admin"
   ask GW_ADMIN_EMAIL "First admin's email" "admin@$GW_DOMAIN"
+  # The email is the default username: signing in as yourself is the common case. Whatever is
+  # chosen has to match what Better Auth accepts (src/lib/better-auth.ts), or the first admin
+  # is never created and the app comes up with no way to sign in.
+  while :; do
+    ask GW_ADMIN_USERNAME "Username to sign in with (Enter to use the email)" "$GW_ADMIN_EMAIL"
+    case "$GW_ADMIN_USERNAME" in
+      *[!a-zA-Z0-9_.+@-]*)
+        say "⚠️" "The username can only hold letters, digits and _ . + @ - (an email is fine)."
+        [ "$ASSUME_YES" = true ] && fail "GW_ADMIN_USERNAME has characters that sign-in rejects."
+        GW_ADMIN_USERNAME=""; continue ;;
+    esac
+    if [ ${#GW_ADMIN_USERNAME} -lt 3 ] || [ ${#GW_ADMIN_USERNAME} -gt 255 ]; then
+      say "⚠️" "The username needs between 3 and 255 characters."
+      [ "$ASSUME_YES" = true ] && fail "GW_ADMIN_USERNAME must be 3-255 characters."
+      GW_ADMIN_USERNAME=""; continue
+    fi
+    break
+  done
   # Asked twice: it is typed blind, and a typo here would lock you out of the new install.
   # One passed in as GW_ADMIN_PASSWORD was not typed blind, so it isn't confirmed.
   PASSWORD_FROM_ENV=false
@@ -284,6 +302,20 @@ HEALTH=$(curl -s -m 10 "http://127.0.0.1:$PORT/api/health" 2>/dev/null || true)
 VERSION=$(git -C "$INSTALL_DIR" rev-parse --short HEAD)
 REPORT_FILE="$INSTALL_DIR/install-report.txt"
 
+# The app creates the first admin on startup, but only logs it if that fails — which would leave
+# the install looking fine with no way to sign in. Check, giving startup a moment to finish.
+user_count() {
+  (cd "$INSTALL_DIR" && docker compose exec -T db \
+    psql -U ghostwire -d ghostwire_analytics -tAc 'select count(*) from "user"' 2>/dev/null) \
+    | tr -cd '0-9'
+}
+ADMIN_READY=""
+for _ in 1 2 3 4 5; do
+  COUNT=$(user_count)
+  if [ -n "$COUNT" ] && [ "$COUNT" != 0 ]; then ADMIN_READY=yes; break; fi
+  sleep 3
+done
+
 if [ -n "$GENERATED_PASSWORD" ]; then
   PASSWORD_NOTE="random; shown once on screen at the end of the install (also ADMIN_PASSWORD in .env)"
   SHOWN_PASSWORD="$GENERATED_PASSWORD"
@@ -311,7 +343,13 @@ report() {
   echo "SIGN IN"
   echo "  Username          ${ADMIN:-admin}"
   echo "  Password          $PASSWORD_NOTE"
-  echo "  First steps       change the password, turn on two-factor, then add your websites"
+  if [ "$ADMIN_READY" = yes ]; then
+    echo "  First steps       change the password, turn on two-factor, then add your websites"
+  else
+    echo "  ⚠️  PROBLEM       the account was NOT created, so you cannot sign in yet."
+    echo "                    Why:  docker compose logs app | grep setup."
+    echo "                    Then: docker compose restart app"
+  fi
   echo ""
   echo "HTTPS (needed for sign-in, installing the app on phones, and notifications)"
   echo "  1. DNS: point $DOMAIN at this server (${SERVER_IP:-its IP address})."
