@@ -7,6 +7,7 @@ import { FilterControls } from './filter-controls';
 import { FilterBar } from './filter-bar';
 import { AppLink, useShare } from '@/components/share/share-context';
 import { ExportButton } from './export-button';
+import { ReportButton } from './report-button';
 
 function LiveVisitors({ websiteId }: { websiteId: string }) {
   const { data } = useActiveVisitors(websiteId);
@@ -66,6 +67,7 @@ export function WebsiteHeader({ title }: { title?: string }) {
           <FilterControls websiteId={website.id} />
           <DateRangePicker websiteId={website.id} />
           {!share && <ExportButton websiteId={website.id} name={website.name} />}
+          {!share && <ReportButton websiteId={website.id} name={website.name} />}
         </div>
       </div>
       <FilterBar websiteId={website.id} />

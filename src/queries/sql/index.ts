@@ -56,6 +56,7 @@ export * from './sessions/getSessionDataValues';
 export * from './sessions/getSessionExpandedMetrics';
 export * from './sessions/getSessionMetrics';
 export * from './sessions/getSessionStats';
+export * from './sessions/getVisitorTypeStats';
 export * from './sessions/getWebsiteSession';
 export * from './sessions/getWebsiteSessionStats';
 export * from './sessions/getWebsiteSessions';
