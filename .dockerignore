@@ -12,6 +12,9 @@ public/script.js
 public/recorder.js
 # Client libraries are built and published separately.
 packages
+# Agent skills are shipped in the repo for people to copy into their own
+# projects; the running image has no use for them.
+skills
 backups
 logs
 deploy-reports
