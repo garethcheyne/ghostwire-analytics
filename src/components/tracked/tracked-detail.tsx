@@ -6,47 +6,37 @@ import { Suspense } from 'react';
 import { WebsiteOverview } from '@/components/analytics/website-overview';
 import { CopyButton } from '@/components/copy-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupTextarea,
-} from '@/components/ui/input-group';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WebsiteProvider } from '@/components/websites/website-context';
 import { api } from '@/lib/api-client';
+import { PixelEmbed } from './pixel-embed';
 import { KIND, type TrackedEntity, type TrackedKind, useTrackedUrl } from './tracked-entities';
 
 function HowToUse({ kind, entity }: { kind: TrackedKind; entity: TrackedEntity }) {
   const url = useTrackedUrl(kind, entity.slug);
-  const embed = `<img src="${url}" alt="" width="1" height="1" style="display:none" />`;
+
+  // Pixels get their own panel: pasting one into a signature needs real
+  // instructions, and the limits of what it measures need stating outright.
+  if (kind === 'pixels') {
+    return <PixelEmbed url={url} name={entity.name} />;
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{kind === 'links' ? 'Short link' : 'Embed'}</CardTitle>
+        <CardTitle>Short link</CardTitle>
         <CardDescription>
-          {kind === 'links'
-            ? `Share this instead of the destination; every click is counted, then redirected to ${entity.url}.`
-            : 'Add this image to an email or page. Each time it loads, a view is counted.'}
+          {`Share this instead of the destination; every click is counted, then redirected to ${entity.url}.`}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {kind === 'links' ? (
-          <InputGroup className="max-w-xl">
-            <InputGroupInput value={url} readOnly className="font-mono text-xs" />
-            <InputGroupAddon align="inline-end">
-              <CopyButton value={url} label="Copy link" />
-            </InputGroupAddon>
-          </InputGroup>
-        ) : (
-          <InputGroup>
-            <InputGroupTextarea value={embed} readOnly rows={2} className="font-mono text-xs" />
-            <InputGroupAddon align="block-end" className="justify-end">
-              <CopyButton value={embed} label="Copy embed code" />
-            </InputGroupAddon>
-          </InputGroup>
-        )}
+        <InputGroup className="max-w-xl">
+          <InputGroupInput value={url} readOnly className="font-mono text-xs" />
+          <InputGroupAddon align="inline-end">
+            <CopyButton value={url} label="Copy link" />
+          </InputGroupAddon>
+        </InputGroup>
       </CardContent>
     </Card>
   );
