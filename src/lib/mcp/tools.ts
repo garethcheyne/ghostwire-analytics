@@ -32,9 +32,6 @@ import {
 } from '@/queries/sql';
 import type { McpTool, ToolResult } from './protocol';
 
-/** Somewhere for the tools to point people at, for the tracker snippet. */
-export const appUrl = () =>
-  (process.env.APP_URL || process.env.BETTER_AUTH_URL || '').replace(/\/+$/, '');
 
 const text = (value: unknown): ToolResult => ({
   content: [{ type: 'text', text: JSON.stringify(value, null, 2) }],
@@ -46,9 +43,20 @@ const refuse = (message: string): ToolResult => ({
   isError: true,
 });
 
-/** The tags a site pastes in, built the same way the settings screen builds them. */
-function trackingSnippet(websiteId: string, { errors, replays }: { errors: boolean; replays: boolean }) {
-  const origin = appUrl() || 'https://your-ghostwire-host';
+/**
+ * The tags a site pastes in, built the same way the settings screen builds them.
+ *
+ * The origin comes from the request the agent made rather than from APP_URL,
+ * so the snippet always names the host the agent can actually reach. An
+ * instance behind a proxy with APP_URL unset would otherwise hand back a
+ * snippet pointing somewhere the browser cannot resolve, and nothing about it
+ * would look wrong.
+ */
+function trackingSnippet(
+  websiteId: string,
+  origin: string,
+  { errors, replays }: { errors: boolean; replays: boolean },
+) {
   const tags = [
     `<script defer src="${origin}/script.js" data-website-id="${websiteId}"${errors ? ' data-errors="true"' : ''} data-performance="true"></script>`,
   ];
@@ -114,7 +122,7 @@ async function readable(auth: Auth, websiteId: string) {
 
 const schema = (shape: z.ZodRawShape) => z.toJSONSchema(z.object(shape)) as Record<string, unknown>;
 
-export function buildTools(auth: Auth): McpTool[] {
+export function buildTools(auth: Auth, origin: string): McpTool[] {
   return [
     {
       name: 'ghostwire_list_websites',
@@ -177,11 +185,24 @@ export function buildTools(auth: Auth): McpTool[] {
 
         return text({
           ...websiteSummary(website),
-          trackingSnippet: trackingSnippet(website.id, {
+          trackingSnippet: trackingSnippet(website.id, origin, {
             errors: enableErrors,
             replays: enableReplays,
           }),
-          next: 'Paste the snippet into the site’s <head>. For a framework integration, ask for the ghostwire-analytics skill.',
+          next: [
+            'Put the snippet in the <head> of every page, via the shared layout or template.',
+            'If the app sets a Content-Security-Policy, add ' +
+              origin +
+              ' to BOTH script-src and connect-src. Missing connect-src loads the tracker and blocks every page view.',
+            'If the host or website ID is read at build time (a prerendered route, or NEXT_PUBLIC_/VITE_ inlining), it must be set at build, not only at runtime.',
+            ...(enableErrors
+              ? [
+                  'For errors thrown on the server, call ghostwire_create_error_key to issue the gwe_ ingest key.',
+                ]
+              : []),
+            'Then check it works: the tag is in the served HTML, a POST to /api/send returns 200, and the visit shows in Realtime.',
+            'The ghostwire-analytics skill has the per-framework detail if it is installed.',
+          ],
         });
       },
     },
@@ -198,7 +219,7 @@ export function buildTools(auth: Auth): McpTool[] {
 
         return text({
           ...websiteSummary(website),
-          trackingSnippet: trackingSnippet(website.id, {
+          trackingSnippet: trackingSnippet(website.id, origin, {
             errors: !!website.errorsEnabled,
             replays: !!website.recorderEnabled,
           }),

@@ -23,12 +23,32 @@ Two values, both from the Ghostwire instance:
 | Website ID | Settings → the site → Tracking code. A UUID. | No |
 | Error ingest key (`gwe_…`) | Settings → the site → Errors. Only for **server-side** error reporting. | **Yes** |
 
-If the project has a Ghostwire MCP server connected, call
-`ghostwire_list_websites` to find an existing site, or `ghostwire_create_website`
-to make one — it returns the ID and a ready-made snippet. Otherwise ask the
-user for the host and website ID; **do not invent a UUID**, because a tracker
-pointed at a non-existent website fails silently and looks exactly like a
-working install.
+**Do not invent a UUID.** A tracker pointed at a website that does not exist
+fails silently and looks exactly like a working install — no error in the
+console, no failed request, just no data ever appearing.
+
+### Setting up a brand new site
+
+With a Ghostwire MCP server connected (tools named `ghostwire_*`), you can do
+the whole thing yourself:
+
+1. `ghostwire_list_websites` — check it does not already exist. Creating a
+   duplicate splits the site's figures across two entries.
+2. `ghostwire_create_website` with the name and the bare hostname. Pass
+   `enableErrors: true` to accept error reports and `enableReplays: true` for
+   session replay and heatmaps — but ask the user about replay first, because
+   it records real sessions.
+3. It returns the website ID, a ready-made snippet with the correct host, and
+   the next steps. Use that ID — never a placeholder.
+4. `ghostwire_create_error_key` if the back end will report errors too. The
+   `gwe_` key it returns is shown once and is a secret; see `server.md`.
+5. Write the integration using the reference below that matches the project.
+6. Verify, as described at the end of this file. An agent that stops at step 5
+   has usually left something broken in a way nobody notices for a week.
+
+Without the MCP server, ask the user for the host and website ID from
+Settings → the site → Tracking code. They can create an API key for the MCP
+server from their profile page or Settings → API keys.
 
 ## Pick the integration
 

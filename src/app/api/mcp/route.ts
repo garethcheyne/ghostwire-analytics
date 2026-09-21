@@ -14,6 +14,7 @@
  * between requests and several app containers can serve the same client.
  */
 import { checkAuth } from '@/lib/auth';
+import { getBaseUrl } from '@/lib/get-base-url';
 import type { Auth } from '@/lib/types';
 import { log } from '@/lib/logger';
 import {
@@ -112,10 +113,17 @@ export async function POST(request: Request) {
   // checkAuth types username as nullable for API-key callers while Auth wants
   // a string; the tools only ever read user.id, so it is normalised here
   // rather than loosening the shared type.
-  const tools = buildTools({
-    ...auth,
-    user: { ...auth.user, username: auth.user.username ?? '' },
-  } as Auth);
+  // The origin the agent reached us on, so the snippets it is handed name a
+  // host it can actually get to — proxy headers included.
+  const origin = getBaseUrl(request.headers).origin;
+
+  const tools = buildTools(
+    {
+      ...auth,
+      user: { ...auth.user, username: auth.user.username ?? '' },
+    } as Auth,
+    origin,
+  );
 
   const response = await handleMessage(message, { tools, info: SERVER_INFO });
 
