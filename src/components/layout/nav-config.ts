@@ -1,5 +1,6 @@
 import {
   Bell,
+  Bot,
   ScrollText,
   Bug,
   Rocket,
@@ -129,6 +130,7 @@ export const settingsNav: NavGroup[] = [
       { title: 'Security', href: '/settings/security', icon: ShieldCheck },
       { title: 'Notifications', href: '/settings/notifications', icon: Bell },
       { title: 'API keys', href: '/settings/api-keys', icon: KeyRound },
+      { title: 'AI agents (MCP)', href: '/settings/mcp', icon: Bot },
     ],
   },
 ];

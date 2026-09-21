@@ -2,6 +2,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { KeyRound, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/page-header';
@@ -88,7 +89,12 @@ export function ApiKeysSettings() {
         <CardHeader>
           <CardTitle>Your keys</CardTitle>
           <CardDescription>
-            Send as <code className="font-mono">Authorization: Bearer gwa_…</code>.
+            Send as <code className="font-mono">Authorization: Bearer gwa_…</code>. To connect an
+            AI agent to this instance, see{' '}
+            <Link href="/settings/mcp" className="underline underline-offset-4">
+              AI agents (MCP)
+            </Link>
+            .
           </CardDescription>
           <CardAction>
             <CreateKey
