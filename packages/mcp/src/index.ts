@@ -1,6 +1,9 @@
-#!/usr/bin/env node
 /*
  * ghostwire-mcp — run a Ghostwire Analytics MCP endpoint over stdio.
+ *
+ * The shebang is added by tsup's banner at build time, not written here: with
+ * both, the built file carries it twice and the second one is a syntax error
+ * on line 2.
  *
  * For clients that cannot talk to a remote MCP endpoint. Where one can, point
  * it at https://<your-host>/api/mcp directly and skip this.
@@ -62,9 +65,8 @@ export function main() {
   });
 }
 
-// Only run when invoked as the command, so the module can be imported in tests.
-if (process.argv[1] && /ghostwire-mcp|mcp[\/](dist|src)[\/]index/.test(process.argv[1])) {
-  main();
-}
-
-export { forward, splitLines } from './bridge';
+// This file is the command; bridge.ts holds the logic and is what the tests
+// import. Guarding on argv[1] to decide whether to run looked tidier and was
+// silently broken: the bundler rewrote the path regex so Windows paths never
+// matched, and the command started up and did nothing at all.
+main();
