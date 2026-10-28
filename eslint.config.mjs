@@ -16,6 +16,11 @@ export default defineConfig([
       ],
     },
   },
+  {
+    // CommonJS scripts load their dependencies with require(); that is correct there.
+    files: ['**/*.cjs'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
   globalIgnores([
     '.next/**',
     'out/**',
