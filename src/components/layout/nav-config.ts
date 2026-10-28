@@ -16,7 +16,6 @@ import {
   KeyRound,
   LayoutDashboard,
   LinkIcon,
-  type LucideIcon,
   Magnet,
   Network,
   PanelsTopLeft,
@@ -36,19 +35,7 @@ import {
   Wallet,
   Zap,
 } from 'lucide-react';
-
-export interface NavItem {
-  title: string;
-  href: string;
-  icon: LucideIcon;
-  /** Match the href exactly instead of as a prefix. */
-  exact?: boolean;
-}
-
-export interface NavGroup {
-  title: string;
-  items: NavItem[];
-}
+import type { NavConfig, NavGroup, NavItem } from '@/components/app-shell';
 
 export const mainNav: NavGroup[] = [
   {
@@ -150,7 +137,7 @@ export const adminNav: NavGroup[] = [
 ];
 
 /** Picks the sidebar menu for the current page, like Umami's contextual side nav. */
-export function getNavForPath(pathname: string): { groups: NavGroup[]; back?: NavItem } {
+export function getNavForPath(pathname: string): NavConfig {
   const websiteMatch = pathname.match(/^\/websites\/([0-9a-f-]{36})/);
 
   if (websiteMatch) {
@@ -171,8 +158,13 @@ export function getNavForPath(pathname: string): { groups: NavGroup[]; back?: Na
   return { groups: mainNav };
 }
 
-export function isNavItemActive(item: NavItem, pathname: string) {
-  return item.exact
-    ? pathname === item.href
-    : pathname === item.href || pathname.startsWith(`${item.href}/`);
-}
+/**
+ * The phone bottom bar: home and the three sections used most. Everything else stays behind
+ * "More", which opens the sidebar sheet.
+ */
+export const mobileTabs: NavItem[] = [
+  { title: 'Home', href: '/dashboard', icon: PanelsTopLeft, exact: true },
+  { title: 'Websites', href: '/websites', icon: Globe },
+  { title: 'Boards', href: '/boards', icon: LayoutDashboard },
+  { title: 'Links', href: '/links', icon: LinkIcon },
+];

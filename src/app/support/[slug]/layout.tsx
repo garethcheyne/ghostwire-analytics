@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { ThemeToggle } from '@/components/app-shell';
 import { ShareFooter } from '@/components/share/share-view';
 
 export const metadata: Metadata = {

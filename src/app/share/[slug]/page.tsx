@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import { Suspense } from 'react';
 import { ShareFooter, ShareView } from '@/components/share/share-view';
-import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { ThemeToggle } from '@/components/app-shell';
 
 export const metadata: Metadata = {
   title: 'Shared analytics',

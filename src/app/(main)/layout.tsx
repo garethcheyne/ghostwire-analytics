@@ -1,9 +1,7 @@
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { TwoFactorGate } from '@/components/auth/two-factor-gate';
-import { AppHeader } from '@/components/layout/app-header';
-import { AppSidebar } from '@/components/layout/app-sidebar';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { Shell } from '@/components/layout/shell';
 import { auth } from '@/lib/better-auth';
 import { ROLES } from '@/lib/auth-roles';
 import { isTwoFactorRequired } from '@/lib/two-factor-policy';
@@ -17,25 +15,25 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   }
 
   const { user } = session;
+  // The shell's SIDEBAR_COOKIE. Spelled out: a value imported from a 'use client' module is only a
+  // client reference on the server, not the string.
   const sidebarOpen = (await cookies()).get('sidebar_state')?.value !== 'false';
   const mustSetUpTwoFactor = !user.twoFactorEnabled && (await isTwoFactorRequired(user));
 
   return (
-    <SidebarProvider defaultOpen={sidebarOpen}>
-      <AppSidebar version={pkg.version} />
-      <SidebarInset>
-        <AppHeader
-          user={{
-            name: user.name,
-            username: user.displayUsername ?? user.username,
-            email: user.email,
-            image: user.image,
-            isAdmin: user.role === ROLES.admin,
-          }}
-        />
-        <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6">{children}</main>
-        <TwoFactorGate required={mustSetUpTwoFactor} />
-      </SidebarInset>
-    </SidebarProvider>
+    <Shell
+      user={{
+        name: user.name,
+        username: user.displayUsername ?? user.username,
+        email: user.email,
+        image: user.image,
+        isAdmin: user.role === ROLES.admin,
+      }}
+      version={pkg.version}
+      defaultOpen={sidebarOpen}
+    >
+      {children}
+      <TwoFactorGate required={mustSetUpTwoFactor} />
+    </Shell>
   );
 }
