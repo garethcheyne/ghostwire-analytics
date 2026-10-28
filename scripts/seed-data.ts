@@ -10,10 +10,10 @@
  *   - Demo SaaS: Average traffic (~500 sessions/day)
  *
  * Usage:
- *   npm run db:seed --              # Generate 30 days of data
- *   npm run db:seed -- --days 90    # Generate 90 days of data
- *   npm run db:seed -- --clear      # Clear existing demo data first
- *   npm run db:seed -- --verbose    # Show detailed progress
+ *   pnpm db:seed              # Generate 30 days of data
+ *   pnpm db:seed --days 90    # Generate 90 days of data
+ *   pnpm db:seed --clear      # Clear existing demo data first
+ *   pnpm db:seed --verbose    # Show detailed progress
  */
 
 import { type SeedConfig, seed } from './seed/index.js';
@@ -63,7 +63,7 @@ Ghostwire Analytics sample data generator
 Generates realistic analytics data for local development and testing.
 
 Usage:
-  npm run db:seed -- [options]
+  pnpm db:seed [options]
 
 Options:
   --days <number>    Number of days of data to generate (default: 30)
@@ -72,10 +72,10 @@ Options:
   --help, -h         Show this help message
 
 Examples:
-  npm run db:seed --                 # Generate 30 days of data
-  npm run db:seed -- --days 90       # Generate 90 days of data
-  npm run db:seed -- --clear         # Clear existing demo data first
-  npm run db:seed -- --days 7 -v     # Generate 7 days with verbose output
+  pnpm db:seed                 # Generate 30 days of data
+  pnpm db:seed --days 90       # Generate 90 days of data
+  pnpm db:seed --clear         # Clear existing demo data first
+  pnpm db:seed --days 7 -v     # Generate 7 days with verbose output
 
 Generated Sites:
   - Demo Blog:  Low traffic (~90 sessions/month)

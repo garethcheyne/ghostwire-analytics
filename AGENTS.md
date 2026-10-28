@@ -31,11 +31,11 @@ Read at any time for conventions, theming, Docker setup and branding. Treat as r
 | Data | PostgreSQL 17, Prisma 7 (`prisma-client` generator → `src/generated/prisma`, `@prisma/adapter-pg`) |
 | Auth | Better Auth 1.7: username, admin, organization (teams), twoFactor, `@better-auth/api-key` |
 | Client data | TanStack Query |
-| Package manager | npm |
+| Package manager | pnpm 10 (pinned via `packageManager`; each `packages/*` client has its own lockfile, no workspace) |
 
 TypeScript is pinned to 6.x because TS 7 (native compiler) isn't yet supported by Next's build-time type check.
-The Dockerfile uses `npm install` rather than `npm ci`: lockfiles written by npm < 11.19 miss optional wasm deps that
-the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm ci`.
+Dependency build scripts are allow-listed in `pnpm.onlyBuiltDependencies` in package.json (pnpm 10 skips any that
+are not listed); add a package there if an install warns about ignored build scripts.
 
 ## Theming and UI rules
 - Theme tokens in `src/app/globals.css` match ghostwire-proxy exactly (sky primary `199 89% 48%`, slate surfaces,
@@ -43,7 +43,7 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
 - Active sidebar items use the proxy's cyan→purple gradient; this lives in `src/components/ui/sidebar.tsx`.
 - Follow the shadcn skill rules: semantic colours, `gap-*` not `space-*`, `size-*`, `FieldGroup`/`Field` for forms,
   `Empty`, `Skeleton`, `Alert`, `sonner` toasts, `data-icon` on button icons.
-- Add components with `npx shadcn@latest add <name>`. Class merging uses the `cn` package via `@/lib/utils`.
+- Add components with `pnpm dlx shadcn@latest add <name>`. Class merging uses the `cn` package via `@/lib/utils`.
 - English only; strings are written inline (no i18n layer).
 
 ## Architecture decisions
@@ -76,8 +76,8 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
   (tracker, recorder and client libraries alike).
 - **Client libraries** live in `packages/<name>`: `react`, `node` (also the `ghostwire` CLI for releases and source
   maps, and `withGhostwire` for Next) and `python` (`ghostwire-analytics`, stdlib only). Each is self-contained
-  (own manifest, tests), excluded from the app's tsconfig, tests and Docker image. JS: `npm install && npm test &&
-  npm run build` inside the package; Python: `python -m unittest discover -s tests`.
+  (own manifest, tests), excluded from the app's tsconfig, tests and Docker image. JS: `pnpm install && pnpm test &&
+  pnpm build` inside the package; Python: `python -m unittest discover -s tests`.
 - **Heatmap viewer frame**: the viewer loads the live page in an iframe named `ghostwire-heatmap`. There the
   tracker and recorder send nothing (so previews aren't counted as visits); the tracker instead posts
   `{ type: 'ghostwire:heatmap-frame', width, height }` to the parent so the viewer can size the preview.
@@ -142,10 +142,10 @@ the image's newer npm requires. With npm >= 11.19 locally it can go back to `npm
 ## Commands
 ```bash
 docker compose up -d db      # Postgres on localhost:5436
-npm run dev                  # http://localhost:3000 (env in .env.local, see .env.example)
-npm run db:migrate:dev       # create/apply a migration after editing the schema
-npm run typecheck            # next typegen + tsc
-npm test                     # vitest
+pnpm dev                     # http://localhost:3000 (env in .env.local, see .env.example)
+pnpm db:migrate:dev          # create/apply a migration after editing the schema
+pnpm typecheck               # next typegen + tsc
+pnpm test                    # vitest
 docker compose up -d --build # full stack on http://localhost:8770
 ```
 

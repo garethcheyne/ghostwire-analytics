@@ -43,7 +43,8 @@ in step, because the protocol lives in the app.
 
 Provisioning: `ghostwire_list_websites`, `ghostwire_create_website`,
 `ghostwire_get_website`, `ghostwire_update_website`,
-`ghostwire_create_error_key`.
+`ghostwire_create_error_key`, `ghostwire_create_read_key` (a `gwa_` key that
+can only read one site's aggregate analytics, for another app's dashboard).
 
 Reading: `ghostwire_get_stats`, `ghostwire_get_metrics`,
 `ghostwire_get_timeseries`, `ghostwire_get_active_visitors`.
@@ -57,5 +58,5 @@ how to write the integration once it has created the site.
 ## Develop
 
 ```bash
-npm install && npm test && npm run build
+pnpm install && pnpm test && pnpm build
 ```

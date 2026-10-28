@@ -4,13 +4,14 @@ ARG PRISMA_VERSION=7.10.0
 
 FROM ${NODE_IMAGE} AS deps
 RUN apk add --no-cache libc6-compat
+# pnpm via corepack; the version comes from "packageManager" in package.json.
+RUN corepack enable
 WORKDIR /app
-COPY package.json package-lock.json ./
-# npm install (not ci): lockfiles written by npm < 11.19 omit optional wasm deps that newer npm
-# expects, which makes npm ci fail. install still uses the locked versions.
-RUN npm install --no-audit --no-fund
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 FROM ${NODE_IMAGE} AS builder
+RUN corepack enable
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -21,7 +22,7 @@ ENV BETTER_AUTH_SECRET=build-time-placeholder-not-used-at-runtime
 # geo/ always exists so the COPY below works even with SKIP_BUILD_GEO set.
 ARG SKIP_BUILD_GEO
 ENV SKIP_BUILD_GEO=$SKIP_BUILD_GEO
-RUN mkdir -p geo && npm run build
+RUN mkdir -p geo && pnpm build
 
 FROM ${NODE_IMAGE} AS runner
 ARG PRISMA_VERSION
@@ -31,7 +32,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
-# Prisma CLI for `migrate deploy` on start, kept apart from the app bundle.
+# Prisma CLI for `migrate deploy` on start, kept apart from the app bundle. This is a throwaway,
+# single-package install into the runtime image, so it uses the npm that ships with the Node image
+# rather than pulling pnpm into the runner.
 WORKDIR /app/migrate
 RUN npm init -y >/dev/null && npm install --omit=dev prisma@${PRISMA_VERSION} dotenv
 COPY --from=builder /app/prisma ./prisma

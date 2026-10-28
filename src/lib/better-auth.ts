@@ -158,6 +158,8 @@ export const auth = betterAuth({
       },
       // Umami had no per-key limits; the plugin default is 10 requests per day.
       rateLimit: { enabled: false },
+      // Website read keys keep their scope in metadata (see lib/read-key).
+      enableMetadata: true,
     }),
     ...(sso
       ? [

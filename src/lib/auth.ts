@@ -10,6 +10,7 @@ import {
 import { secret } from '@/lib/crypto';
 import { parseToken } from '@/lib/jwt';
 import prisma from '@/lib/prisma';
+import { parseReadKeyScope, readKeyAllows } from '@/lib/read-key';
 import { ensureArray } from '@/lib/utils';
 
 /**
@@ -97,6 +98,14 @@ async function checkApiKeyAuth(request: Request, key: string) {
     return null;
   }
 
+  // A website read key only works inside its scope: GET requests for one site's aggregates.
+  const scope = parseReadKeyScope(result.key.metadata);
+
+  if (scope && !readKeyAllows(scope, request.method, pathname)) {
+    log('Read key outside its scope', request.method, pathname);
+    return null;
+  }
+
   const user = await loadUser(result.key.referenceId);
 
   if (!user) {
@@ -108,7 +117,7 @@ async function checkApiKeyAuth(request: Request, key: string) {
     token: key,
     user,
     authType: 'api-key' as const,
-    apiKey: { id: result.key.id, name: result.key.name },
+    apiKey: { id: result.key.id, name: result.key.name, ...(scope ? { scope } : {}) },
   };
 }
 

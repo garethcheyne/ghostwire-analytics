@@ -2,7 +2,8 @@
  * The tools the MCP endpoint exposes.
  *
  * Two jobs, matching what an agent is actually asked to do: set a site up so
- * it starts reporting, and answer "how is it doing?". Everything else —
+ * it starts reporting (including the keys another app needs to report errors
+ * or read its numbers), and answer "how is it doing?". Everything else —
  * teams, users, alerts, deletion — is deliberately absent, so a bad prompt
  * cannot do lasting damage through this door.
  *
@@ -13,6 +14,7 @@
 import { z } from 'zod';
 import type { Auth } from '@/lib/types';
 import { createErrorKey } from '@/lib/error-key';
+import { READ_KEY_KIND, READ_KEY_ROUTES } from '@/lib/read-key';
 import { DOMAIN_REGEX } from '@/lib/constants';
 import {
   canCreateWebsite,
@@ -287,6 +289,61 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
           websiteId,
           errorKey: key,
           note: 'Store this as GHOSTWIRE_ERROR_KEY on the server. It is not shown again.',
+        });
+      },
+    },
+
+    {
+      name: 'ghostwire_create_read_key',
+      title: 'Issue a read-only key for one site',
+      description:
+        "Issue a gwa_ API key that can only read one website's aggregate analytics over the REST API: stats, page views, breakdowns (metrics), active visitors, date range and performance. It cannot see other sites, raw sessions, replays or exports, cannot change anything, and cannot use this MCP endpoint. For showing a site's numbers in another app's dashboard. Shown once; revoke it under Settings → API keys.",
+      inputSchema: schema({
+        websiteId: z.uuid().describe('The website ID.'),
+        name: z
+          .string()
+          .min(1)
+          .max(32)
+          .describe('What to call the key in Settings → API keys, e.g. "Acme admin dashboard".')
+          .optional(),
+        expiresInDays: z
+          .number()
+          .int()
+          .min(1)
+          .max(365)
+          .describe('Expire the key after this many days. Default: never.')
+          .optional(),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+      handler: async ({ websiteId, name, expiresInDays }) => {
+        if (!auth.user) return refuse('Sign in with an API key to issue keys.');
+        // A key must never be able to mint a broader (or another) key.
+        if (auth.apiKey?.scope) return refuse('A read-only key cannot issue keys.');
+        if (!(await canUpdateWebsite(auth, websiteId))) {
+          return refuse(`You may not manage website ${websiteId}.`);
+        }
+
+        const website = await getWebsite(websiteId);
+        if (!website) return refuse(`No website ${websiteId}.`);
+
+        const { auth: betterAuth } = await import('@/lib/better-auth');
+        const created = await betterAuth.api.createApiKey({
+          body: {
+            userId: auth.user.id,
+            name: (name ?? `Read: ${website.name}`).slice(0, 32),
+            metadata: { kind: READ_KEY_KIND, websiteId },
+            ...(expiresInDays ? { expiresIn: expiresInDays * 24 * 60 * 60 } : {}),
+          },
+        });
+
+        return text({
+          websiteId,
+          keyId: created.id,
+          name: created.name,
+          key: created.key,
+          expiresAt: created.expiresAt ?? null,
+          allows: READ_KEY_ROUTES.map(route => `GET ${origin}/api/websites/${websiteId}/${route}`),
+          note: 'Send it as "Authorization: Bearer <key>". It is shown once and is a secret: store it server-side (for example GHOSTWIRE_API_KEY), never in browser code. Revoke it under Settings → API keys.',
         });
       },
     },

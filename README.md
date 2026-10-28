@@ -137,9 +137,9 @@ start (`config.auth_secret`, `config.auth_url`). `LOG_LEVEL=debug` adds more det
 ```bash
 docker compose up -d db           # PostgreSQL on localhost:5436
 cp .env.example .env.local        # set BETTER_AUTH_SECRET
-npm install
-npm run db:migrate
-npm run dev                       # http://localhost:3000
+pnpm install
+pnpm db:migrate
+pnpm dev                          # http://localhost:3000
 ```
 
 See [AGENTS.md](AGENTS.md) for architecture and conventions, and [PLAN.md](PLAN.md) for the roadmap.

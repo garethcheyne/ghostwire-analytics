@@ -1,6 +1,7 @@
 {
   "name": "@ghostwire/node",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.34.6",
   "description": "Server-side error reporting, releases and source maps for Ghostwire Analytics (Node, Express, Next.js).",
   "license": "MIT",
   "type": "module",
@@ -51,5 +52,10 @@
   ],
   "bin": {
     "ghostwire": "./dist/cli.js"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

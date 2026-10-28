@@ -103,7 +103,7 @@ Calls made before the tracker has loaded are queued. During server rendering the
 ## Develop
 
 ```bash
-npm install
-npm test
-npm run build
+pnpm install
+pnpm test
+pnpm build
 ```

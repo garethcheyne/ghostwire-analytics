@@ -42,6 +42,10 @@ the whole thing yourself:
    the next steps. Use that ID — never a placeholder.
 4. `ghostwire_create_error_key` if the back end will report errors too. The
    `gwe_` key it returns is shown once and is a secret; see `server.md`.
+   If the project also shows the site's numbers in its own admin area, issue
+   `ghostwire_create_read_key` instead of asking for a full API key: the `gwa_`
+   key it returns can only read that one site's aggregates (stats, page views,
+   metrics, active visitors). Store it server-side, never in browser code.
 5. Write the integration using the reference below that matches the project.
 6. Verify, as described at the end of this file. An agent that stops at step 5
    has usually left something broken in a way nobody notices for a week.

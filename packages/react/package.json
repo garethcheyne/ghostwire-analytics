@@ -1,6 +1,7 @@
 {
   "name": "@ghostwire/react",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.34.6",
   "description": "React bindings for Ghostwire Analytics: page views, identified users and error reporting.",
   "license": "MIT",
   "type": "module",
@@ -47,5 +48,10 @@
     "error-reporting",
     "react",
     "ghostwire"
-  ]
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }

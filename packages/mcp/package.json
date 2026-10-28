@@ -1,6 +1,7 @@
 {
   "name": "@ghostwire/mcp",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.34.6",
   "description": "Run a Ghostwire Analytics MCP endpoint over stdio, for clients that cannot reach a remote MCP server.",
   "license": "MIT",
   "type": "module",
@@ -45,5 +46,10 @@
     "model-context-protocol",
     "analytics",
     "ghostwire"
-  ]
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }

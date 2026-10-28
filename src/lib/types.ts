@@ -1,3 +1,4 @@
+import type { ReadKeyScope } from '@/lib/read-key';
 import type { UseQueryOptions } from '@tanstack/react-query';
 import type { Board as PrismaBoard } from '@/generated/prisma/client';
 import type { DATA_TYPE, OPERATORS, ROLES } from './constants';
@@ -24,6 +25,8 @@ export interface Auth {
   apiKey?: {
     id: string;
     name: string;
+    /** Set for website read keys (see lib/read-key): the one site it may read. */
+    scope?: ReadKeyScope;
   };
   /** How the request was authenticated. Undefined for legacy callers that build Auth manually. */
   authType?: AuthType;

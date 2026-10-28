@@ -1,5 +1,5 @@
 # Ghostwire Analytics: app + PostgreSQL.
-# Dev: `docker compose up -d db`, then `npm run dev`.
+# Dev: `docker compose up -d db`, then `pnpm dev`.
 # Full stack: `docker compose up -d --build`.
 services:
   app:

@@ -159,7 +159,7 @@ curl -X POST https://analytics.example.com/api/errors \
 ## Develop
 
 ```bash
-npm install
-npm test
-npm run build
+pnpm install
+pnpm test
+pnpm build
 ```
