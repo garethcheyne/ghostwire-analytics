@@ -6,6 +6,7 @@ import { auth } from '@/lib/better-auth';
 import { ROLES } from '@/lib/auth-roles';
 import { isTwoFactorRequired } from '@/lib/two-factor-policy';
 import pkg from '../../../package.json';
+import { SIDEBAR_COOKIE } from '@/components/app-shell/types';
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -15,9 +16,8 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   }
 
   const { user } = session;
-  // The shell's SIDEBAR_COOKIE. Spelled out: a value imported from a 'use client' module is only a
-  // client reference on the server, not the string.
-  const sidebarOpen = (await cookies()).get('sidebar_state')?.value !== 'false';
+  // The sidebar's collapsed state, so the first render matches.
+  const sidebarOpen = (await cookies()).get(SIDEBAR_COOKIE)?.value !== 'false';
   const mustSetUpTwoFactor = !user.twoFactorEnabled && (await isTwoFactorRequired(user));
 
   return (
