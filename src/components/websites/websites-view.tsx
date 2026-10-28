@@ -68,8 +68,9 @@ export function WebsitesView() {
   const pageCount = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 1;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <PageHeader
+        icon={Globe}
         title="Websites"
         description={team ? `Websites shared with ${team.name}.` : 'Websites you track.'}
       >

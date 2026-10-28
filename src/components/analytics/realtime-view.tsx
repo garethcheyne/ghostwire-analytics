@@ -2,10 +2,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { format, subMinutes } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { Eye, UserPlus, Zap } from 'lucide-react';
+import { Clock, Eye, UserPlus, Zap } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   type ChartConfig,
@@ -174,19 +175,25 @@ export function RealtimeView() {
   }, [data, timezone]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
-          Realtime
-          <span className="relative flex size-2.5">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-status-online opacity-75" />
-            <span className="relative inline-flex size-2.5 rounded-full bg-status-online" />
+    <div className="space-y-6">
+      <PageHeader
+        icon={Clock}
+        title={
+          <span className="flex items-center gap-3">
+            Realtime
+            <span className="relative flex size-2.5">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-status-online opacity-75" />
+              <span className="relative inline-flex size-2.5 rounded-full bg-status-online" />
+            </span>
           </span>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {website.name} · last {REALTIME_RANGE} minutes, updates every {REALTIME_INTERVAL / 1000} seconds
-        </p>
-      </div>
+        }
+        description={
+          <>
+            {website.name} · last {REALTIME_RANGE} minutes, updates every{' '}
+            {REALTIME_INTERVAL / 1000} seconds
+          </>
+        }
+      />
 
       <StatCards
         loading={isPending}

@@ -1,4 +1,5 @@
 'use client';
+import { Tag } from 'lucide-react';
 import { BarList } from '@/components/analytics/bar-list';
 import { WebsiteHeader } from '@/components/analytics/website-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,8 +44,8 @@ export function UtmView() {
   const { id } = useCurrentWebsite();
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="UTM" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Tag} title="UTM" />
       <p className="text-sm text-muted-foreground">
         Page views from links tagged with UTM parameters, e.g.{' '}
         <code className="font-mono text-xs">?utm_source=newsletter&amp;utm_campaign=launch</code>.

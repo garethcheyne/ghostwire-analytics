@@ -469,8 +469,9 @@ export function NotificationsSettings() {
   const { data } = useChannels(null);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <PageHeader
+        icon={Bell}
         title="Notifications"
         description="Where alerts are sent. Choose which alerts go where in each website's settings."
       />

@@ -1,7 +1,7 @@
 'use client';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { Search, ShieldAlert } from 'lucide-react';
+import { Globe, Search, ShieldAlert, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useDeferredValue, useState } from 'react';
 import { toast } from 'sonner';
@@ -116,8 +116,8 @@ interface AdminWebsite {
 
 export function AdminWebsites() {
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Websites" description="Every website on this Ghostwire." />
+    <div className="space-y-6">
+      <PageHeader icon={Globe} title="Websites" description="Every website on this Ghostwire." />
       <ListCard<AdminWebsite>
         path="websites"
         placeholder="Search websites"
@@ -166,8 +166,8 @@ interface AdminTeam {
 
 export function AdminTeams() {
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Teams" description="Every team on this Ghostwire." />
+    <div className="space-y-6">
+      <PageHeader icon={Users} title="Teams" description="Every team on this Ghostwire." />
       <ListCard<AdminTeam>
         path="teams"
         placeholder="Search teams"
@@ -230,8 +230,8 @@ export function AdminSecurity() {
   const withoutTwoFactor = (users?.data ?? []).filter(user => !user.twoFactorEnabled);
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Security" description="Sign-in rules for everyone." />
+    <div className="space-y-6">
+      <PageHeader icon={ShieldCheck} title="Security" description="Sign-in rules for everyone." />
       <Card>
         <CardHeader>
           <CardTitle>Two-factor authentication</CardTitle>

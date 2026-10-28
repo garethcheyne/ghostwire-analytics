@@ -1,5 +1,5 @@
 'use client';
-import { Globe, Info, Pencil, Save, X } from 'lucide-react';
+import { Globe, Info, PanelsTopLeft, Pencil, Save, X } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -83,8 +83,8 @@ export function DashboardView() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Dashboard" description="Your numbers at a glance.">
+    <div className="space-y-6">
+      <PageHeader icon={PanelsTopLeft} title="Dashboard" description="Your numbers at a glance.">
         {editing ? (
           <>
             <Button

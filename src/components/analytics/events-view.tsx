@@ -1,4 +1,5 @@
 'use client';
+import { Zap } from 'lucide-react';
 import { useCurrentWebsite } from '@/components/websites/website-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -39,8 +40,8 @@ export function EventsView() {
   const { id } = useCurrentWebsite();
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Events" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Zap} title="Events" />
       <EventStatsBar websiteId={id} />
       <Tabs defaultValue="chart">
         <TabsList>

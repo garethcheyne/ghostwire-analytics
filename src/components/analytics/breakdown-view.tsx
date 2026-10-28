@@ -1,5 +1,5 @@
 'use client';
-import { Check, ChevronsUpDown, X } from 'lucide-react';
+import { Check, ChevronsUpDown, Table2, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -106,8 +106,8 @@ export function BreakdownView() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Breakdown" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Table2} title="Breakdown" />
 
       <Card>
         <CardHeader>

@@ -123,8 +123,9 @@ export function BoardsView() {
   const { data, isPending } = useBoards();
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <PageHeader
+        icon={LayoutDashboard}
         title="Boards"
         description="Custom dashboards across your websites, links and pixels."
       >
@@ -221,10 +222,70 @@ export function BoardDetail({
     }
   }
 
+  const actions = editing ? (
+    <>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Delete board">
+            <Trash2 />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {board.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Only the board is deleted; your analytics data isn&apos;t affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={async () => {
+                await remove.mutateAsync(board.id);
+                toast.success('Board deleted');
+                router.push('/boards');
+              }}
+            >
+              Delete board
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setDraft(null);
+          setWantsEdit(false);
+        }}
+      >
+        <X data-icon="inline-start" />
+        Cancel
+      </Button>
+      <Button onClick={handleSave} disabled={save.isPending || !current.name.trim()}>
+        {save.isPending ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <Save data-icon="inline-start" />
+        )}
+        Save
+      </Button>
+    </>
+  ) : (
+    <>
+      <DateRangePicker />
+      <BoardShareButton boardId={board.id} name={board.name} />
+      <Button variant="outline" onClick={() => setWantsEdit(true)}>
+        <Pencil data-icon="inline-start" />
+        Edit
+      </Button>
+    </>
+  );
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        {editing ? (
+    <div className="space-y-6">
+      {editing ? (
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex w-full max-w-xl flex-col gap-2">
             <Input
               value={current.name}
@@ -242,82 +303,22 @@ export function BoardDetail({
               maxLength={500}
             />
           </div>
-        ) : (
-          <div className="flex min-w-0 flex-col gap-1">
-            <Link
-              href="/boards"
-              className="w-fit text-sm text-muted-foreground hover:text-foreground"
-            >
-              Boards
-            </Link>
-            <h1 className="truncate text-2xl font-semibold tracking-tight">{board.name}</h1>
-            {board.description && (
-              <p className="text-sm text-muted-foreground">{board.description}</p>
-            )}
-          </div>
-        )}
-        <div className="flex flex-wrap items-center gap-2">
-          {editing ? (
-            <>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Delete board">
-                    <Trash2 />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete {board.name}?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Only the board is deleted; your analytics data isn&apos;t affected.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      variant="destructive"
-                      onClick={async () => {
-                        await remove.mutateAsync(board.id);
-                        toast.success('Board deleted');
-                        router.push('/boards');
-                      }}
-                    >
-                      Delete board
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setDraft(null);
-                  setWantsEdit(false);
-                }}
-              >
-                <X data-icon="inline-start" />
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={save.isPending || !current.name.trim()}>
-                {save.isPending ? (
-                  <Spinner data-icon="inline-start" />
-                ) : (
-                  <Save data-icon="inline-start" />
-                )}
-                Save
-              </Button>
-            </>
-          ) : (
-            <>
-              <DateRangePicker />
-              <BoardShareButton boardId={board.id} name={board.name} />
-              <Button variant="outline" onClick={() => setWantsEdit(true)}>
-                <Pencil data-icon="inline-start" />
-                Edit
-              </Button>
-            </>
-          )}
+          <div className="flex flex-wrap items-center gap-2">{actions}</div>
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <Link href="/boards" className="w-fit text-sm text-muted-foreground hover:text-foreground">
+            Boards
+          </Link>
+          <PageHeader
+            icon={LayoutDashboard}
+            title={board.name}
+            description={board.description || undefined}
+          >
+            {actions}
+          </PageHeader>
+        </div>
+      )}
 
       {!editing && !(current.parameters.rows ?? []).length ? (
         <Empty className="border">

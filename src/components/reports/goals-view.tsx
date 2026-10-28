@@ -190,8 +190,8 @@ export function GoalsView() {
   const goals = data?.data ?? [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Goals" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Target} title="Goals" />
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
           Conversion rate of each goal for the selected period.

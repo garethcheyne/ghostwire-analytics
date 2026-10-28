@@ -1,4 +1,5 @@
 'use client';
+import { Settings2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useMemo, useSyncExternalStore } from 'react';
 import { PRESETS } from '@/components/analytics/date-range-picker';
@@ -39,8 +40,8 @@ export function PreferencesSettings() {
   }, [timezone]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Preferences" description="Saved in this browser." />
+    <div className="space-y-6">
+      <PageHeader icon={Settings2} title="Preferences" description="Saved in this browser." />
       <Card>
         <CardHeader>
           <CardTitle>Display</CardTitle>

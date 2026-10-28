@@ -1,4 +1,5 @@
 'use client';
+import { Eye, Grid2x2, LinkIcon } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCurrentWebsite } from '@/components/websites/website-context';
@@ -14,11 +15,12 @@ const WorldMap = dynamic(() => import('./world-map').then(m => m.WorldMap), {
 });
 
 export function WebsiteOverview() {
-  const { id } = useCurrentWebsite();
+  const { id, kind = 'website' } = useCurrentWebsite();
+  const icon = kind === 'link' ? LinkIcon : kind === 'pixel' ? Grid2x2 : Eye;
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader />
+    <div className="space-y-6">
+      <WebsiteHeader icon={icon} />
       <StatsBar websiteId={id} />
       <TrafficChart websiteId={id} />
       <div className="grid gap-6 lg:grid-cols-2">

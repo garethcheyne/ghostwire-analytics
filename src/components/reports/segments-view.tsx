@@ -32,6 +32,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -265,8 +266,8 @@ export function SegmentsView({ type }: { type: SegmentType }) {
   const segments = data?.data ?? [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title={copy.title} />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Icon} title={copy.title} />
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">{copy.intro}</p>
         {canUpdate && (
@@ -342,6 +343,9 @@ export function SegmentsView({ type }: { type: SegmentType }) {
                                     <Pencil />
                                     Edit
                                   </DropdownMenuItem>
+                                </DropdownMenuGroup>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuGroup>
                                   <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(segment)}>
                                     <Trash2 />
                                     Delete

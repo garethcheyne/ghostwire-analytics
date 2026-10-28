@@ -1,7 +1,9 @@
 'use client';
 import { parseISO } from 'date-fns';
+import { Gauge } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts';
+import { StatCard } from '@/components/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   type ChartConfig,
@@ -89,8 +91,8 @@ export function PerformanceView() {
   const hasData = (stats.data?.count ?? 0) > 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Performance" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Gauge} title="Performance" />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
@@ -117,24 +119,21 @@ export function PerformanceView() {
           return stats.isPending ? (
             <Skeleton key={key} className="h-28" />
           ) : (
-            <button
+            <StatCard
               key={key}
-              type="button"
+              title={name}
+              value={hasData ? formatValue(key, value) : '–'}
               onClick={() => setMetric(key)}
-              className={cn(
-                'flex flex-col gap-1 rounded-xl border bg-card p-4 text-left transition-colors hover:bg-muted/40',
-                metric === key && 'border-primary ring-1 ring-primary',
-              )}
-            >
-              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{name}</span>
-              <span className="text-2xl font-semibold tabular-nums">
-                {hasData ? formatValue(key, value) : '–'}
-              </span>
-              <span className={cn('text-xs font-medium', hasData ? rate.className : 'text-muted-foreground')}>
-                {hasData ? rate.label : 'No data'}
-              </span>
-              <span className="text-[11px] text-muted-foreground">{description}</span>
-            </button>
+              active={metric === key}
+              description={
+                <>
+                  <span className={cn('block font-medium', hasData ? rate.className : 'text-muted-foreground')}>
+                    {hasData ? rate.label : 'No data'}
+                  </span>
+                  <span className="block text-[11px]">{description}</span>
+                </>
+              }
+            />
           );
         })}
       </div>

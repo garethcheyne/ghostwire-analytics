@@ -1,7 +1,7 @@
 'use client';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Search, Trash2, User } from 'lucide-react';
 import { useDeferredValue, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/page-header';
@@ -249,8 +249,8 @@ export function AdminUsers() {
   const pageCount = data ? Math.max(1, Math.ceil(data.count / 25)) : 1;
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Users" description="Everyone who can sign in to this Ghostwire.">
+    <div className="space-y-6">
+      <PageHeader icon={User} title="Users" description="Everyone who can sign in to this Ghostwire.">
         <UserDialog
           trigger={
             <Button>

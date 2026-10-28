@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -43,9 +44,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { authClient } from '@/lib/auth-client';
+import { parseReadKeyScope } from '@/lib/read-key';
 import { CreateKey, NewKeyAlert, unwrap } from './create-api-key';
 
 interface ApiKeyRow {
+  metadata?: unknown;
   id: string;
   name: string | null;
   start: string | null;
@@ -79,8 +82,9 @@ export function ApiKeysSettings() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <PageHeader
+        icon={KeyRound}
         title="API keys"
         description="Use the Ghostwire API from scripts and other tools."
       />
@@ -132,7 +136,19 @@ export function ApiKeysSettings() {
               <TableBody>
                 {keys.map(key => (
                   <TableRow key={key.id}>
-                    <TableCell className="font-medium">{key.name || 'Unnamed'}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="flex flex-wrap items-center gap-2">
+                        {key.name || 'Unnamed'}
+                        {parseReadKeyScope(key.metadata) ? (
+                          <Badge
+                            variant="secondary"
+                            title={`Can only read aggregate analytics for website ${parseReadKeyScope(key.metadata)?.websiteId}`}
+                          >
+                            Read-only · one site
+                          </Badge>
+                        ) : null}
+                      </span>
+                    </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {key.start ?? key.prefix ?? 'gwa_'}…
                     </TableCell>

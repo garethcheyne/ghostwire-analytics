@@ -262,7 +262,7 @@ export function FunnelCard({
                     </span>
                     <div className="relative min-w-0 flex-1 overflow-hidden rounded-md bg-muted/50">
                       <div
-                        className="absolute inset-y-0 left-0 bg-linear-to-r from-cyan-500/40 to-purple-500/40"
+                        className="absolute inset-y-0 left-0 bg-primary/20"
                         style={{ width: `${share}%` }}
                         aria-hidden
                       />
@@ -299,8 +299,8 @@ export function FunnelsView() {
   const funnels = data?.data ?? [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Funnels" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Filter} title="Funnels" />
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
           Where visitors drop out of a sequence of steps.

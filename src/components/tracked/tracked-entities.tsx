@@ -378,8 +378,9 @@ export function TrackedEntitiesView({ kind }: { kind: TrackedKind }) {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <PageHeader
+        icon={Icon}
         title={title}
         description={team ? `${title} shared with ${team.name}. ${description}` : description}
       >

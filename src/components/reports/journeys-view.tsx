@@ -1,5 +1,5 @@
 'use client';
-import { ChevronRight, Eye, Zap } from 'lucide-react';
+import { ChevronRight, Eye, Route, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { WebsiteHeader } from '@/components/analytics/website-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,8 +51,8 @@ export function JourneysView() {
   const top = Math.max(1, ...journeys.map(j => j.count));
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Journeys" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Route} title="Journeys" />
       <Card>
         <CardHeader>
           <CardTitle>Journeys</CardTitle>

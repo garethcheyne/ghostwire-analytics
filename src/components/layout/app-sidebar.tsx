@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
 import {
   Sidebar,
   SidebarContent,
@@ -38,7 +39,7 @@ export function AppSidebar({ version }: { version: string }) {
                   className="size-8 object-contain"
                 />
                 <div className="flex flex-col leading-tight">
-                  <span className="text-brand-gradient text-lg font-bold">Ghostwire</span>
+                  <span className="text-brand-gradient text-xl leading-tight font-bold">Ghostwire</span>
                   <span className="text-[10px] tracking-wider text-muted-foreground uppercase">
                     Analytics
                   </span>
@@ -70,20 +71,24 @@ export function AppSidebar({ version }: { version: string }) {
             <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map(item => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isNavItemActive(item, pathname)}
-                      tooltip={item.title}
-                    >
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {group.items.map(item => {
+                  const active = isNavItemActive(item, pathname);
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        tooltip={item.title}
+                        className={cn(active ? 'nav-active' : 'text-muted-foreground hover:text-brand')}
+                      >
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

@@ -1,5 +1,6 @@
 'use client';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, type LucideIcon } from 'lucide-react';
+import { PageHeader } from '@/components/page-header';
 import { useCurrentWebsite } from '@/components/websites/website-context';
 import { useActiveVisitors } from '@/hooks/queries/analytics';
 import { DateRangePicker } from './date-range-picker';
@@ -37,39 +38,37 @@ function LiveVisitors({ websiteId }: { websiteId: string }) {
 }
 
 /** Title row for a website's analytics pages: name, live visitors, date range, filters. */
-export function WebsiteHeader({ title }: { title?: string }) {
+export function WebsiteHeader({ icon, title }: { icon: LucideIcon; title?: string }) {
   const website = useCurrentWebsite();
   const share = useShare();
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">
-              {title ?? website.name}
-            </h1>
-            <LiveVisitors websiteId={website.id} />
-          </div>
-          {website.domain && (
+      <PageHeader
+        icon={icon}
+        title={title ?? website.name}
+        description={
+          website.domain && (
             <a
               href={`https://${website.domain}`}
               target="_blank"
               rel="noreferrer"
-              className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              className="inline-flex w-fit items-center gap-1 hover:text-foreground"
             >
               {title ? `${website.name} · ${website.domain}` : website.domain}
               <ExternalLink className="size-3" />
             </a>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <FilterControls websiteId={website.id} />
-          <DateRangePicker websiteId={website.id} />
-          {!share && <ExportButton websiteId={website.id} name={website.name} />}
-          {!share && <ReportButton websiteId={website.id} name={website.name} />}
-        </div>
-      </div>
+          )
+        }
+        // Several controls: stay stacked until there is room for them beside the title.
+        className="sm:flex-col sm:items-stretch lg:flex-row lg:items-center"
+      >
+        <LiveVisitors websiteId={website.id} />
+        <FilterControls websiteId={website.id} />
+        <DateRangePicker websiteId={website.id} />
+        {!share && <ExportButton websiteId={website.id} name={website.name} />}
+        {!share && <ReportButton websiteId={website.id} name={website.name} />}
+      </PageHeader>
       <FilterBar websiteId={website.id} />
     </div>
   );

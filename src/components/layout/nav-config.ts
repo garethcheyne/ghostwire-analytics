@@ -54,7 +54,8 @@ export const mainNav: NavGroup[] = [
   {
     title: 'Overview',
     items: [
-      { title: 'Dashboard', href: '/dashboard', icon: PanelsTopLeft },
+      // The home page is the parent of every page, so it's only active on itself.
+      { title: 'Dashboard', href: '/dashboard', icon: PanelsTopLeft, exact: true },
       { title: 'Boards', href: '/boards', icon: LayoutDashboard },
     ],
   },

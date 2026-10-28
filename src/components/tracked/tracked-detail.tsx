@@ -60,7 +60,7 @@ export function TrackedDetail({ kind, id }: { kind: TrackedKind; id: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <Link
         href={`/${kind}`}
         className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"

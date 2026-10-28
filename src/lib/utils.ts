@@ -1,3 +1,6 @@
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
 export function hook(
   _this: { [x: string]: any },
   method: string | number,
@@ -45,4 +48,6 @@ export function ensureArray(arr?: any) {
   return [arr];
 }
 
-export { cn } from 'cn';
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}

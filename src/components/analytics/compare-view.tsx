@@ -1,7 +1,7 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { AlignEndHorizontal, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,8 +83,8 @@ export function CompareView() {
     `${format(start, 'd MMM yyyy')} – ${format(end, 'd MMM yyyy')}`;
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Compare" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={AlignEndHorizontal} title="Compare" />
 
       <div className="flex flex-wrap items-center gap-3">
         <ToggleGroup type="single" variant="outline" value={compare} onValueChange={v => v && setCompare(v)}>

@@ -175,8 +175,9 @@ export function UsersView() {
   }, [value, search, searchParams, pathname, router]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <PageHeader
+        icon={UserSearch}
         title="Users"
         description={`People ${website.name} identified after they logged in. Find someone from a support ticket to see what they did.`}
       />

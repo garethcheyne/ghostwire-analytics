@@ -1,6 +1,6 @@
 'use client';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { StatCard } from '@/components/stat-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +14,7 @@ export interface Stat {
   lowerIsBetter?: boolean;
 }
 
-function Change({ stat }: { stat: Stat }) {
+function change(stat: Stat) {
   const { value, previous, lowerIsBetter } = stat;
 
   if (previous === undefined || !previous || !Number.isFinite(previous)) {
@@ -35,7 +35,7 @@ function Change({ stat }: { stat: Stat }) {
     <span
       className={cn(
         'flex items-center gap-0.5 text-xs font-medium',
-        good ? 'text-status-online' : 'text-destructive',
+        good ? 'text-green-600 dark:text-green-400' : 'text-destructive',
       )}
     >
       <Icon className="size-3.5" />
@@ -62,7 +62,7 @@ export function StatCards({ stats, loading }: { stats?: Stat[]; loading?: boolea
       <div className="@container">
         <div className={grid}>
           {Array.from({ length: count }, (_, i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-24 sm:h-32" />
           ))}
         </div>
       </div>
@@ -73,15 +73,12 @@ export function StatCards({ stats, loading }: { stats?: Stat[]; loading?: boolea
     <div className="@container">
       <div className={grid}>
         {stats.map(stat => (
-          <Card key={stat.label} className="gap-2 py-4">
-            <CardContent className="flex flex-col gap-1 px-4">
-              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {stat.label}
-              </span>
-              <span className="text-2xl font-semibold tabular-nums">{stat.format(stat.value)}</span>
-              <Change stat={stat} />
-            </CardContent>
-          </Card>
+          <StatCard
+            key={stat.label}
+            title={stat.label}
+            value={stat.format(stat.value)}
+            description={change(stat)}
+          />
         ))}
       </div>
     </div>

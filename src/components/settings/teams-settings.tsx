@@ -140,8 +140,8 @@ export function TeamsSettings() {
   const { data: session } = authClient.useSession();
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Teams" description="Teams share websites, links and pixels.">
+    <div className="space-y-6">
+      <PageHeader icon={Users} title="Teams" description="Teams share websites, links and pixels.">
         <TeamDialog mode="join" />
         <TeamDialog mode="create" />
       </PageHeader>

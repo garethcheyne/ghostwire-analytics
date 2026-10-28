@@ -251,8 +251,8 @@ export function ErrorsView() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Errors" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Bug} title="Errors" />
       <ErrorsNotice websiteId={website.id} />
       <StatCards
         loading={!stats}

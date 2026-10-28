@@ -1,4 +1,5 @@
 'use client';
+import { Network } from 'lucide-react';
 import { useState } from 'react';
 import { BarList } from '@/components/analytics/bar-list';
 import { StatCards } from '@/components/analytics/stat-cards';
@@ -49,8 +50,8 @@ export function AttributionView() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Attribution" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Network} title="Attribution" />
       <Card>
         <CardHeader>
           <CardTitle>Conversion</CardTitle>

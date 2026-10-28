@@ -259,8 +259,8 @@ export function ReplaysView() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Replays" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Video} title="Replays" />
       <RecordingNotice websiteId={id} kind="replays" />
       <Tabs
         value={tab}

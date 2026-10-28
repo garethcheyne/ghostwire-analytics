@@ -280,8 +280,8 @@ export function HeatmapsView() {
       : data?.pages[0]?.urlPath;
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Heatmaps" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Flame} title="Heatmaps" />
       <RecordingNotice websiteId={id} kind="heatmaps" />
       <Card>
         <CardContent className="flex flex-col gap-4">

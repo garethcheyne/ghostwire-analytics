@@ -1,5 +1,6 @@
 'use client';
 import { parse } from 'date-fns';
+import { Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { BarList } from '@/components/analytics/bar-list';
@@ -103,8 +104,8 @@ export function RevenueView() {
   const money = (value: number) => formatCurrency(value, currency);
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Revenue" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Wallet} title="Revenue" />
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
           From events sent with <code className="font-mono text-xs">revenue</code> and{' '}

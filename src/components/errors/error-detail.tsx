@@ -2,6 +2,7 @@
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import {
   ArrowLeft,
+  Bug,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -19,6 +20,7 @@ import { StatCards } from '@/components/analytics/stat-cards';
 import { formatMetricLabel } from '@/components/analytics/metric-labels';
 import { DateRangePicker } from '@/components/analytics/date-range-picker';
 import { userHref } from '@/components/users/users-view';
+import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -374,8 +376,8 @@ export function ErrorDetail({ groupId }: { groupId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2">
         <Link
           href={`/websites/${website.id}/errors`}
           className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -383,27 +385,25 @@ export function ErrorDetail({ groupId }: { groupId: string }) {
           <ArrowLeft className="size-3.5" />
           Errors
         </Link>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 flex-col gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight break-words">
-              {group.type}
-              <span className="font-normal text-muted-foreground">: {group.message}</span>
-            </h1>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <PlatformBadge platform={group.platform} />
-              {group.status !== 'open' && (
-                <Badge variant="secondary" className="capitalize">
-                  {group.status}
-                </Badge>
-              )}
-              {group.regressedAt && <Badge variant="destructive">Regressed</Badge>}
-              {group.culprit && <span className="font-mono text-xs">{group.culprit}</span>}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusActions group={group} />
-            <DateRangePicker websiteId={website.id} />
-          </div>
+        <PageHeader
+          icon={Bug}
+          title={group.type}
+          description={<span className="break-words">{group.message}</span>}
+          className="sm:flex-col sm:items-stretch lg:flex-row lg:items-center"
+        >
+          <StatusActions group={group} />
+          <DateRangePicker websiteId={website.id} />
+        </PageHeader>
+        {/* Lined up with the title, past the icon tile. */}
+        <div className="flex flex-wrap items-center gap-2 pl-13 text-sm text-muted-foreground">
+          <PlatformBadge platform={group.platform} />
+          {group.status !== 'open' && (
+            <Badge variant="secondary" className="capitalize">
+              {group.status}
+            </Badge>
+          )}
+          {group.regressedAt && <Badge variant="destructive">Regressed</Badge>}
+          {group.culprit && <span className="font-mono text-xs">{group.culprit}</span>}
         </div>
       </div>
 

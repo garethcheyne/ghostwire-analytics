@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/input-group';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { KeyRound } from 'lucide-react';
+import { Bot, KeyRound } from 'lucide-react';
 import { CreateKey, NewKeyAlert } from './create-api-key';
 
 /**
@@ -49,6 +49,7 @@ const TOOLS = [
   ['ghostwire_get_website', 'One site, with its snippet and settings'],
   ['ghostwire_update_website', 'Rename, change domain, toggle errors and replay'],
   ['ghostwire_create_error_key', 'Issue the gwe_ key for server-side errors'],
+  ['ghostwire_create_read_key', 'Issue a read-only gwa_ key for one site’s numbers'],
   ['ghostwire_get_stats', 'Visitors, views, bounce rate, with the period before'],
   ['ghostwire_get_metrics', 'Top pages, referrers, countries, browsers, channels'],
   ['ghostwire_get_timeseries', 'Traffic per hour, day or month'],
@@ -94,8 +95,9 @@ export function McpSettings() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <PageHeader
+        icon={Bot}
         title="AI agents (MCP)"
         description="Let an agent in your editor set up a site and read how it is doing, against this instance."
       />

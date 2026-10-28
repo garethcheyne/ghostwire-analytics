@@ -1,6 +1,6 @@
 'use client';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { Monitor, Smartphone, Tablet } from 'lucide-react';
+import { Monitor, Smartphone, Tablet, User } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -139,8 +139,8 @@ export function SessionsView() {
   const { id } = useCurrentWebsite();
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Sessions" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={User} title="Sessions" />
       <SessionStatsBar websiteId={id} />
       <WeeklyTraffic websiteId={id} />
       <Card>

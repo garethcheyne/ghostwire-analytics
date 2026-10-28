@@ -1,4 +1,5 @@
 'use client';
+import { Settings } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -31,8 +32,12 @@ export function WebsiteSettingsView() {
     : 'general';
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Settings" description={`${website.name} · ${website.domain ?? ''}`} />
+    <div className="space-y-6">
+      <PageHeader
+        icon={Settings}
+        title="Settings"
+        description={`${website.name} · ${website.domain ?? ''}`}
+      />
       <Tabs
         value={tab}
         onValueChange={value => router.replace(`${pathname}?tab=${value}`, { scroll: false })}

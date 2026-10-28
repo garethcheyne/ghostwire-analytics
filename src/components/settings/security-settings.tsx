@@ -471,8 +471,12 @@ export function SecuritySettings({ twoFactorRequired }: { twoFactorRequired?: bo
   const enabled = !!(session?.user as { twoFactorEnabled?: boolean } | undefined)?.twoFactorEnabled;
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Security" description="Your password, two-factor and signed-in devices." />
+    <div className="space-y-6">
+      <PageHeader
+        icon={ShieldCheck}
+        title="Security"
+        description="Your password, two-factor and signed-in devices."
+      />
       {twoFactorRequired && !enabled && (
         <Alert variant="destructive">
           <ShieldAlert />

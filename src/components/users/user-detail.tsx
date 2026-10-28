@@ -1,12 +1,13 @@
 'use client';
 import { format, formatDistanceStrict, formatDistanceToNowStrict } from 'date-fns';
-import { ArrowLeft, Eye, Play, TriangleAlert, Zap } from 'lucide-react';
+import { ArrowLeft, Eye, Play, TriangleAlert, UserSearch, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { createContext, useContext, useMemo } from 'react';
 import { formatMetricLabel } from '@/components/analytics/metric-labels';
 import { DeviceIcon } from '@/components/analytics/sessions-view';
 import { StatCards } from '@/components/analytics/stat-cards';
 import { CopyButton } from '@/components/copy-button';
+import { PageHeader } from '@/components/page-header';
 import { formatReplayLength } from '@/components/replays/replays-view';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -326,33 +327,37 @@ export function UserDetailView({
 
   return (
     <UserLinksContext.Provider value={links}>
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex min-w-0 flex-col gap-1">
-            {back && (
-              <Link
-                href={back.href}
-                className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="size-3.5" />
-                {back.label}
-              </Link>
-            )}
-            <h1 className="truncate text-2xl font-semibold tracking-tight">{name || user.id}</h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="font-mono">{user.id}</span>
-                <CopyButton value={user.id} label="Copy user ID" />
-              </span>
-              {email && <span>{email}</span>}
-              {lastSeen && (
-                <span>
-                  Last seen {formatDistanceToNowStrict(new Date(lastSeen), { addSuffix: true })}
+      <div className="space-y-6">
+        <div className="flex flex-col gap-2">
+          {back && (
+            <Link
+              href={back.href}
+              className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="size-3.5" />
+              {back.label}
+            </Link>
+          )}
+          <PageHeader
+            icon={UserSearch}
+            title={name || user.id}
+            description={
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="flex items-center gap-1">
+                  <span className="font-mono">{user.id}</span>
+                  <CopyButton value={user.id} label="Copy user ID" />
                 </span>
-              )}
-            </div>
-          </div>
-          {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+                {email && <span>{email}</span>}
+                {lastSeen && (
+                  <span>
+                    Last seen {formatDistanceToNowStrict(new Date(lastSeen), { addSuffix: true })}
+                  </span>
+                )}
+              </span>
+            }
+          >
+            {actions}
+          </PageHeader>
         </div>
 
         <StatCards

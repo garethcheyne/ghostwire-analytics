@@ -1,5 +1,5 @@
 'use client';
-import { ArrowLeft, RefreshCw, Trash2, UserMinus } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Trash2, UserMinus, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -132,8 +133,8 @@ export function TeamDetail({ teamId }: { teamId: string }) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2">
         <Link
           href="/settings/teams"
           className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -141,7 +142,7 @@ export function TeamDetail({ teamId }: { teamId: string }) {
           <ArrowLeft className="size-3.5" />
           Teams
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{team.name}</h1>
+        <PageHeader icon={Users} title={team.name} />
       </div>
 
       {canManage && (

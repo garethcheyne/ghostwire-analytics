@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { EventsChart } from '@/components/analytics/events-chart';
 import { MetricsCard } from '@/components/analytics/metrics-card';
 import { StatsBar } from '@/components/analytics/stats-bar';
+import { StatCard } from '@/components/stat-card';
 import { TrafficChart } from '@/components/analytics/traffic-chart';
 import { WeeklyTraffic } from '@/components/analytics/weekly-traffic';
 import { FunnelCard } from '@/components/reports/funnels-view';
@@ -52,15 +53,7 @@ function ActiveVisitors({ id, title }: { id: string; title: string }) {
   const { data } = useActiveVisitors(id);
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>Right now</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <span className="text-4xl font-semibold tabular-nums">{data?.visitors ?? '–'}</span>
-      </CardContent>
-    </Card>
+    <StatCard className="h-full" title={title} value={data?.visitors ?? '–'} description="Right now" />
   );
 }
 

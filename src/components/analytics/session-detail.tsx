@@ -1,7 +1,7 @@
 'use client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, formatDistanceStrict } from 'date-fns';
-import { ArrowLeft, Eye, Play, Trash2, Zap } from 'lucide-react';
+import { ArrowLeft, Eye, Play, Trash2, User, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -227,22 +228,26 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
     .join(', ');
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <Link
-            href={`/websites/${website.id}/sessions`}
-            className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-3.5" />
-            Sessions
-          </Link>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <DeviceIcon device={session.device} />
-            <span className="font-mono">{session.id.slice(0, 8)}</span>
-          </h1>
-        </div>
-        {session.canDelete && <DeleteSession sessionId={session.id} />}
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2">
+        <Link
+          href={`/websites/${website.id}/sessions`}
+          className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-3.5" />
+          Sessions
+        </Link>
+        <PageHeader
+          icon={User}
+          title={
+            <span className="flex items-center gap-2">
+              <DeviceIcon device={session.device} />
+              <span className="font-mono">{session.id.slice(0, 8)}</span>
+            </span>
+          }
+        >
+          {session.canDelete && <DeleteSession sessionId={session.id} />}
+        </PageHeader>
       </div>
 
       <StatCards

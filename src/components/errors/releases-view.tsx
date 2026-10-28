@@ -189,8 +189,8 @@ export function ReleasesView() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <WebsiteHeader title="Releases" />
+    <div className="space-y-6">
+      <WebsiteHeader icon={Rocket} title="Releases" />
       {isPending ? (
         <Skeleton className="h-64 w-full" />
       ) : !data?.length ? (

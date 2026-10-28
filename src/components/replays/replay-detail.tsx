@@ -1,12 +1,13 @@
 'use client';
 import { format } from 'date-fns';
-import { ArrowLeft, Bookmark, BookmarkCheck, Eye, Zap } from 'lucide-react';
+import { ArrowLeft, Bookmark, BookmarkCheck, Eye, Video, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { formatMetricLabel } from '@/components/analytics/metric-labels';
 import { DeviceIcon } from '@/components/analytics/sessions-view';
+import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
@@ -147,27 +148,29 @@ export function ReplayDetail({ replayId }: { replayId: string }) {
     .join(', ');
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <Link
-            href={`/websites/${website.id}/replays`}
-            className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-3.5" />
-            Replays
-          </Link>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <DeviceIcon device={session?.device ?? null} />
-            Replay
-            {replay.startedAt && (
-              <span className="text-base font-normal text-muted-foreground">
-                {format(new Date(replay.startedAt), 'd MMM yyyy, h:mm a')}
-              </span>
-            )}
-          </h1>
-        </div>
-        <SaveReplayButton replayId={replayId} />
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2">
+        <Link
+          href={`/websites/${website.id}/replays`}
+          className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-3.5" />
+          Replays
+        </Link>
+        <PageHeader
+          icon={Video}
+          title={
+            <span className="flex items-center gap-2">
+              <DeviceIcon device={session?.device ?? null} />
+              Replay
+            </span>
+          }
+          description={
+            replay.startedAt && format(new Date(replay.startedAt), 'd MMM yyyy, h:mm a')
+          }
+        >
+          <SaveReplayButton replayId={replayId} />
+        </PageHeader>
       </div>
 
       {at && (

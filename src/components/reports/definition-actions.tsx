@@ -18,6 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { type DefinitionKind, useDeleteDefinition } from '@/hooks/queries/definitions';
@@ -53,6 +54,9 @@ export function DefinitionActions({
               <Pencil />
               Edit
             </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
             <DropdownMenuItem variant="destructive" onSelect={() => setConfirm(true)}>
               <Trash2 />
               Delete

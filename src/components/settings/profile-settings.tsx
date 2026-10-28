@@ -1,4 +1,5 @@
 'use client';
+import { UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -57,8 +58,12 @@ export function ProfileSettings() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Profile" description="How you appear in Ghostwire and how you sign in." />
+    <div className="space-y-6">
+      <PageHeader
+        icon={UserCircle}
+        title="Profile"
+        description="How you appear in Ghostwire and how you sign in."
+      />
       <Card>
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           <CardHeader>
