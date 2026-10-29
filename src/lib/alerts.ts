@@ -143,7 +143,7 @@ export function afterResponse(task: () => Promise<unknown>) {
   try {
     after(task);
   } catch {
-    void task().catch(() => {});
+    void task().catch(error => log.error('after_response.failed', { error }));
   }
 }
 
