@@ -1,6 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { Ghost, LinkIcon } from 'lucide-react';
+import { Ghost, LayoutDashboard, LinkIcon } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { ComponentType } from 'react';
 import { BreakdownView } from '@/components/analytics/breakdown-view';
@@ -12,6 +12,7 @@ import { SessionsView } from '@/components/analytics/sessions-view';
 import { WebsiteOverview } from '@/components/analytics/website-overview';
 import { DateRangePicker } from '@/components/analytics/date-range-picker';
 import { BoardCanvas } from '@/components/boards/board-canvas';
+import { PageHeader } from '@/components/page-header';
 import { AttributionView } from '@/components/reports/attribution-view';
 import { FunnelsView } from '@/components/reports/funnels-view';
 import { GoalsView } from '@/components/reports/goals-view';
@@ -214,15 +215,13 @@ function SharedBoard({
   return (
     <ShareProvider value={{ slug, sections: {}, allowFilter: false }}>
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">{board.name}</h1>
-            {board.description && (
-              <p className="text-sm text-muted-foreground">{board.description}</p>
-            )}
-          </div>
+        <PageHeader
+          icon={LayoutDashboard}
+          title={board.name}
+          description={board.description || undefined}
+        >
           <DateRangePicker />
-        </div>
+        </PageHeader>
         <BoardCanvas
           parameters={board.parameters ?? { rows: [] }}
           editing={false}
