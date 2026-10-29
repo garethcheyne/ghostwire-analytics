@@ -1,17 +1,17 @@
-ARG NODE_IMAGE=node:24-alpine
+ARG NODE_IMAGE=node:26-alpine
 # Keep in sync with prisma in package.json.
 ARG PRISMA_VERSION=7.10.0
 
 FROM ${NODE_IMAGE} AS deps
 RUN apk add --no-cache libc6-compat
-# pnpm via corepack; the version comes from "packageManager" in package.json.
-RUN corepack enable
+# pnpm via corepack (Node 25+ no longer bundles it); the version comes from "packageManager" in package.json.
+RUN npm install -g corepack@0.36.0 && corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 FROM ${NODE_IMAGE} AS builder
-RUN corepack enable
+RUN npm install -g corepack@0.36.0 && corepack enable
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
