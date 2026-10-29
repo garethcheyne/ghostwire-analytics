@@ -82,6 +82,17 @@ export async function deleteWebsiteDependentData(tx: any, websiteId: string) {
   await tx.session.deleteMany({
     where: { websiteId },
   });
+
+  // System monitoring (OpenTelemetry): spans, metric rollups, cumulative totals and services.
+  for (const model of [
+    'monitorSpan',
+    'monitorMetricMinute',
+    'monitorMetricHour',
+    'monitorCumulative',
+    'monitorService',
+  ]) {
+    await tx[model].deleteMany({ where: { websiteId } });
+  }
 }
 
 export async function findWebsite(criteria: Prisma.WebsiteFindUniqueArgs) {

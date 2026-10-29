@@ -42,6 +42,10 @@ export async function register() {
     const { startRetentionSchedule } = await import('@/lib/retention');
     startRetentionSchedule();
 
+    // System monitoring: hourly rollups every 5 minutes, retention hourly.
+    const { startMonitoringSchedule } = await import('@/lib/monitoring/schedule');
+    startMonitoringSchedule();
+
     // Error spike and traffic drop alerts, every 5 minutes.
     const { startAlertSchedule } = await import('@/lib/alerts');
     startAlertSchedule();

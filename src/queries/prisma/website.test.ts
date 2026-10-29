@@ -119,6 +119,31 @@ function createDeleteTx(calls: string[]) {
         calls.push('share');
       }),
     },
+    monitorSpan: {
+      deleteMany: vi.fn(async () => {
+        calls.push('monitorSpan');
+      }),
+    },
+    monitorMetricMinute: {
+      deleteMany: vi.fn(async () => {
+        calls.push('monitorMetricMinute');
+      }),
+    },
+    monitorMetricHour: {
+      deleteMany: vi.fn(async () => {
+        calls.push('monitorMetricHour');
+      }),
+    },
+    monitorCumulative: {
+      deleteMany: vi.fn(async () => {
+        calls.push('monitorCumulative');
+      }),
+    },
+    monitorService: {
+      deleteMany: vi.fn(async () => {
+        calls.push('monitorService');
+      }),
+    },
     website: {
       delete: vi.fn(async () => {
         calls.push('websiteDelete');
@@ -180,6 +205,11 @@ describe('website delete dependencies', () => {
       'sessionLink',
       'websiteEvent',
       'session',
+      'monitorSpan',
+      'monitorMetricMinute',
+      'monitorMetricHour',
+      'monitorCumulative',
+      'monitorService',
       'report',
       'alertRule',
       'alertLog',
@@ -227,6 +257,11 @@ describe('website delete dependencies', () => {
       'sessionLink',
       'websiteEvent',
       'session',
+      'monitorSpan',
+      'monitorMetricMinute',
+      'monitorMetricHour',
+      'monitorCumulative',
+      'monitorService',
       'websiteUpdate',
     ]);
   });
