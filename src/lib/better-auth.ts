@@ -6,7 +6,7 @@ import { nextCookies } from 'better-auth/next-js';
 import { admin, genericOAuth, organization, twoFactor, username } from 'better-auth/plugins';
 import { ROLES, TEAM_ROLES, teamAc, teamRoles, userAc, userRoles } from '@/lib/auth-roles';
 import { writeAudit } from '@/lib/audit';
-import { API_KEY_PREFIX } from '@/lib/constants';
+import { API_KEY_PREFIX, PERMISSIONS, ROLE_PERMISSIONS } from '@/lib/constants';
 import { getSsoConfig, SSO_PROVIDER_ID, usernameFromProfile } from '@/lib/sso';
 import prisma from '@/lib/prisma';
 
@@ -134,6 +134,13 @@ export const auth = betterAuth({
       ac: teamAc,
       roles: teamRoles,
       creatorRole: TEAM_ROLES.owner,
+      // Same rule as canCreateTeam (POST /api/teams), so /api/auth/organization/create can't be
+      // used to get around it (the plugin otherwise lets any user, viewers included, create one).
+      allowUserToCreateOrganization: user => {
+        const role = typeof user.role === 'string' ? user.role : '';
+
+        return role === ROLES.admin || !!ROLE_PERMISSIONS[role]?.includes(PERMISSIONS.teamCreate);
+      },
       // No mail server: members are added directly or join with an access code.
       schema: {
         organization: {

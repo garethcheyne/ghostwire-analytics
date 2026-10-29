@@ -52,8 +52,18 @@ export async function getTeams(
   );
 }
 
+/**
+ * The access code lets anyone who has it join as a member, so only the team's owners and managers
+ * (who can replace it) are shown it. A viewer could otherwise leave and rejoin with more rights.
+ */
+export function hideAccessCode<T extends { accessCode?: string | null }>(team: T, canSeeCode: boolean): T {
+  return canSeeCode ? team : { ...team, accessCode: null };
+}
+
+const MANAGES_TEAM: string[] = [ROLES.teamOwner, ROLES.teamManager];
+
 export async function getUserTeams(userId: string, filters: QueryFilters = {}) {
-  return getTeams(
+  const result = await getTeams(
     {
       where: {
         members: {
@@ -84,6 +94,16 @@ export async function getUserTeams(userId: string, filters: QueryFilters = {}) {
     },
     filters,
   );
+
+  return {
+    ...result,
+    data: result.data.map(team => {
+      const members = (team as Team & { members?: Member[] }).members ?? [];
+      const role = members.find(member => member.userId === userId)?.role ?? '';
+
+      return hideAccessCode(team, MANAGES_TEAM.includes(role));
+    }),
+  };
 }
 
 export async function getAllUserTeams(userId: string) {
