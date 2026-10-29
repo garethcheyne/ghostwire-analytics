@@ -104,7 +104,7 @@ are not listed); add a package there if an install warns about ignored build scr
   limit); errors 600/min per website and 20/min per session. In memory, or shared through the `rate_limit` table
   with `RATE_LIMIT_STORE=postgres` (fails open). Use `createLimiter`/`createIpRateLimiter` (async) in routes.
   Body sizes (`src/lib/body-limit.ts`, checked before parsing, chunked uploads read only up to the limit):
-  `/api/send` 128 KB, `/api/batch` 5 MB, `/api/errors` 256 KB, `/api/record` 1 MB.
+  `/api/send` 128 KB, `/api/batch` 5 MB, `/api/errors` 256 KB, `/api/record` 1 MB, `/v1/*` 10 MB.
 - **Alerts** (`src/lib/alerts.ts`, delivery in `src/lib/notify.ts`): channels (`notification_channel`, per user or
   team: email via SMTP_URL, Slack, Discord, Telegram, signed webhooks; secrets and bot tokens in config.secret) and one `alert_rule` per type per website.
   `error.new`/`error.regression` fire from the ingest routes via `afterResponse()` (Next `after`), using the
@@ -148,6 +148,63 @@ are not listed); add a package there if an install warns about ignored build scr
   Next's own server errors are logged by `onRequestError` in `src/instrumentation.ts`. In Docker the logs are in
   the `app-logs` volume (`/app/logs`); inspect with `docker compose exec app sh -c 'tail /app/logs/app-*.log'`.
   `/api/health` checks the database (503 when it's down); `/api/heartbeat` is the container liveness check.
+- **System monitoring** (OpenTelemetry; spec `ghostwire-suite/docs/analytics-reporting.md`):
+  - *Ingest* `POST /v1/metrics`, `/v1/traces` (`src/app/v1/*` → `src/lib/otlp/http.ts`, public in
+    `src/proxy.ts`): protobuf (decoded with protobufjs against `src/lib/otlp/otlp-proto.json`, built
+    from the vendored opentelemetry-proto by `scripts/build-otlp-proto.mjs`) or JSON, gzip/deflate.
+    The `gwe_` key finds the website by `error_key_hash` (indexed); monitoring doesn't need
+    `errorsEnabled`. 10 MB body, 40 MB decompressed, 1200 requests/min per site, 20,000 points and
+    10,000 spans per request. Answers are OTLP: `partial_success` for refused items, a
+    google.rpc.Status body on errors, 429/503 retryable. Everything goes through `ingestSignal()`,
+    which self monitoring calls in process. A request is a few batched statements
+    (`jsonb_to_recordset`), never one per point.
+  - *Data model*: `monitor_service` (website + `service.namespace` + `service.name`; last seen, last
+    metrics, last heartbeat, learned export interval), `monitor_metric_minute` / `_hour` (one row
+    per service, metric, attribute set and bucket: count, sum, min, max, last, explicit histogram
+    `bounds`/`buckets`; kind 1 counter = total in the bucket, 2 gauge = readings, 3 histogram),
+    `monitor_cumulative` (last running total per original stream, for deltas), `monitor_span`
+    (one row per span, capped attributes and events, sanitized `db_statement`, `is_entry` for the
+    trace list, `error_group_id`). SQL helpers in the migration: `monitor_array_add` and the
+    aggregate `monitor_sum_buckets` (element-wise bucket sums). The three partial indexes on
+    `monitor_span` are hand-written in the migration: if `migrate dev` proposes dropping them, keep them.
+  - *Normalizing*: older semantic-convention names are read as current ones
+    (`http.server.duration` → `http.server.request.duration`, `http.method` →
+    `http.request.method`...). Duration histograms (`*.duration`) are stored in ms whatever their
+    unit. Cumulative counters/histograms become deltas per stream (first point a baseline unless the
+    stream started in the last 10 minutes; a new start time or a drop is a restart). Non-monotonic
+    sums (memory in use) are readings. Histograms with different bounds are different series
+    (`attrs_hash` covers the bounds), so stored buckets always line up; queries group by bounds and
+    merge in code (`src/lib/monitoring/histograms.ts`, percentiles in `src/lib/otlp/percentile.ts`).
+  - *Cardinality* (`src/lib/otlp/attributes.ts`): each metric family keeps only its listed
+    attributes (http.server.*: route, method, status code, error.type; http.client.*: method,
+    status, server.address, error.type; db.client.*: db.system, operation, collection,
+    server.address; ghostwire.job.*: job, outcome; container.*: container.name (from the resource),
+    direction, operation; system.*: host.name, state, direction, mountpoint, type). Others keep up
+    to 6 attributes not matching the deny list (URLs, paths, queries, IPs, user agents, ids,
+    users, sessions, tokens). Past 500 attribute sets per service and metric, new ones fold into
+    `{otel.metric.overflow: true}`; past 400 metric names per site, new names are refused (both per
+    process, on `globalThis`). Spans keep 64 attributes (8 KB JSON), 16 events (exceptions first),
+    drop credentials and the raw statement, and strip query strings from URLs.
+  - *Status* (`src/lib/monitoring/status.ts`): down after 3 learned intervals (min 2 min) without
+    metrics, or without a heartbeat once one was seen; trace-only services go idle, never down.
+  - *Reads*: `src/queries/sql/system/*` behind `/api/websites/[id]/system/*` (all
+    `canViewAuthenticatedWebsite`), minute rollups up to 2 days, hourly beyond
+    (`src/lib/monitoring/resolution.ts`). Table names and bucket sizes written into SQL are checked.
+  - *Schedule* (`src/lib/monitoring/schedule.ts`): hourly rollups every 5 minutes (current and
+    previous hour, caught up from the `monitor_hour_rollup` watermark); retention hourly from each
+    website's `monitor_span_days` (7), `monitor_minute_days` (30), `monitor_hour_days` (396).
+    Website delete/reset removes monitoring data too.
+  - *Alerts* `system.*` (`src/lib/monitoring/alerts.ts`), with the 5-minute scheduled checks:
+    latency, error_rate, down, job_failure, cpu, memory; one alert per cooldown (6 h for down, 1 h
+    otherwise), claimed through `last_triggered_at`.
+  - *Self monitoring* (`src/lib/monitoring/self.ts`, `self-telemetry.ts`): app settings
+    `self_monitoring` and `self_monitoring_website_id`; the site is created once (named after the
+    instance's host, error reporting on). The SDK is registered first thing in instrumentation
+    (never fatal) with in-process exporters (OTLP JSON serializer → `ingestSignal`, tracing
+    suppressed), Next's own request spans (they carry `http.route`; the request metric is recorded
+    from them) plus undici and `@prisma/instrumentation`. The http and pg instrumentations aren't
+    used: Next covers incoming requests, pg is loaded as ESM by the Prisma adapter, and
+    instrumentation-http can't load in the standalone image (`forwarded-parse` isn't traced).
 - **First admin** is created on startup when there are no users (`src/instrumentation.ts` → `src/lib/setup.ts`):
   username `admin`, password `ADMIN_PASSWORD` (default `ghostwire`).
 

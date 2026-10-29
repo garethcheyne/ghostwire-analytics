@@ -48,6 +48,9 @@ services:
       TRACKER_SCRIPT_NAME: ${TRACKER_SCRIPT_NAME:-}
       COLLECT_API_ENDPOINT: ${COLLECT_API_ENDPOINT:-}
       ALLOWED_FRAME_URLS: ${ALLOWED_FRAME_URLS:-}
+      # Optional: self monitoring (Administration → Settings). true = never start its OpenTelemetry SDK.
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-}
+      DEPLOYMENT_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT:-}
     volumes:
       - app-logs:/app/logs
     logging:

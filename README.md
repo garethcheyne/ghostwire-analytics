@@ -2,7 +2,8 @@
 
 Self-hosted, privacy-first web analytics, part of the Ghostwire suite. Cookie-free visitor
 tracking, events, funnels, journeys, retention, heatmaps and session replay, on your own
-PostgreSQL.
+PostgreSQL. It is also the suite's system monitoring backend: the other Ghostwire apps send it
+OpenTelemetry metrics and traces, and it shows how each stack is running.
 
 Built with Next.js 16, shadcn/ui, Prisma 7 and Better Auth. Based on
 [Umami](https://github.com/umami-software/umami) (MIT).
@@ -135,6 +136,42 @@ start (`config.auth_secret`, `config.auth_url`). `LOG_LEVEL=debug` adds more det
 - **At scale**: the reports query raw events with Umami's indexes. At around 200,000 events a
   30-day overview takes about 50 ms. Past tens of millions of events, look at partitioning
   `website_event` by month and a retention policy for old events before adding hardware.
+
+## System monitoring
+
+Every Ghostwire app can report its whole stack here (the spec is
+`ghostwire-suite/docs/analytics-reporting.md`): requests, latency and errors per endpoint,
+traces, database and outside calls, background jobs and workers, containers and the host, and
+whether each service is up. Each website gets a **System** section (Overview, Endpoints,
+Traces, Dependencies, Jobs and workers, Infrastructure).
+
+- **Receiving**: standard OTLP/HTTP at `POST /v1/metrics` and `POST /v1/traces` (under
+  `BASE_PATH` if set), protobuf or JSON, optionally gzip, with the website's ingest key:
+  `Authorization: Bearer gwe_…` (Settings → the site → Errors / Ingest; the same key as server
+  error reports). Any OpenTelemetry SDK or Collector works: give its OTLP/HTTP exporter this
+  app's URL as the endpoint and the header. Limits: 10 MB per request (40 MB decompressed),
+  1200 requests a minute per site, bounded attributes; refusals come back as an OTLP
+  `partial_success`.
+- **What to send**: resource attributes `service.name`, `service.namespace` (the app),
+  `service.version`, `deployment.environment(.name)`. Requests come from the
+  `http.server.request.duration` histogram (`http.route`, `http.request.method`,
+  `http.response.status_code`); outside calls from client spans and the client duration
+  metrics; jobs from `ghostwire.job.duration`, `ghostwire.job.runs` (`job`, `outcome`) and
+  `ghostwire.heartbeat`; containers and the host from the Collector's `docker_stats` and
+  `host_metrics` receivers. Exceptions recorded on spans are filed under Errors (when error
+  reports are on for the site), linked to their trace.
+- **Up or down**: a service is down when it misses three of its usual metric exports (at least
+  two minutes), or when its heartbeat stops.
+- **Alerts**: Settings → Alerts → System monitoring: slow responses (p95), server errors, a
+  service down, failing jobs, high CPU or memory, through the usual notification channels.
+- **Retention** per site (Settings → Data): spans 7 days, per-minute metrics 30 days, hourly
+  metrics 396 days (about 13 months) by default.
+- **Self monitoring**: Administration → Settings → Self monitoring makes this instance monitor
+  itself (its requests, Prisma queries and outbound calls) into its own site, created the first
+  time. No URL or key: the data goes straight to the ingest code. `OTEL_SDK_DISABLED=true`
+  keeps the OpenTelemetry SDK from starting at all.
+- **AI agents**: the MCP tools `ghostwire_get_services_status`, `ghostwire_get_endpoint_stats`
+  and `ghostwire_get_slow_traces` read it.
 
 ## Develop
 
