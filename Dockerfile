@@ -1,6 +1,6 @@
 ARG NODE_IMAGE=node:26-alpine
-# Keep in sync with prisma in package.json.
-ARG PRISMA_VERSION=7.10.0
+# Keep in sync with prisma (and dotenv below) in package.json.
+ARG PRISMA_VERSION=7.10.1
 
 FROM ${NODE_IMAGE} AS deps
 RUN apk add --no-cache libc6-compat
@@ -36,7 +36,7 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 # single-package install into the runtime image, so it uses the npm that ships with the Node image
 # rather than pulling pnpm into the runner.
 WORKDIR /app/migrate
-RUN npm init -y >/dev/null && npm install --omit=dev prisma@${PRISMA_VERSION} dotenv
+RUN npm init -y >/dev/null && npm install --omit=dev prisma@${PRISMA_VERSION} dotenv@18.0.9
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
