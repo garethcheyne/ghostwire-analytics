@@ -33,17 +33,23 @@ Read at any time for conventions, theming, Docker setup and branding. Treat as r
 | Client data | TanStack Query |
 | Package manager | pnpm 10 (pinned via `packageManager`; each `packages/*` client has its own lockfile, no workspace) |
 
-TypeScript is pinned to 6.x because TS 7 (native compiler) isn't yet supported by Next's build-time type check.
+TypeScript is held at 6.0.3 exactly (below 6.1 until typescript-eslint supports it), ESLint at 9 and Prisma at 7: see the
+suite's `CONVENTIONS.md` for the versions every Ghostwire app shares.
 Dependency build scripts are allow-listed in `pnpm.onlyBuiltDependencies` in package.json (pnpm 10 skips any that
 are not listed); add a package there if an install warns about ignored build scripts.
 
 ## Theming and UI rules
-- Theme tokens in `src/app/globals.css` match ghostwire-proxy exactly (sky primary `199 89% 48%`, slate surfaces,
-  `--radius: 0.5rem`). Brand extras: `ghost-*` palette, `status-*` colours, `text-brand-gradient` utility.
-- Active sidebar items use the proxy's cyan→purple gradient; this lives in `src/components/ui/sidebar.tsx`.
+- The look comes from the suite's `@ghostwire` shadcn registry (`../ui/README.md`, rules in `../design/README.md`):
+  the theme `src/styles/ghostwire.css` (imported by `src/app/globals.css`, which holds only this app's additions),
+  `src/components/ui/*`, `src/components/app-shell/*`, `page-header.tsx`, `stat-card.tsx`, `hooks/use-mobile.ts`.
+  These are copies: never edit them here. Change the registry and re-add the item (`shadcn add @ghostwire/<item> --overwrite`).
+- Every dashboard page starts with `PageHeader`; summary numbers are `StatCard`s; buttons are `Button` variants only;
+  no gradients, glows or hover lift (design guide, "Decoration: none"). A failed query shows `QueryError`
+  (`src/components/query-error.tsx`), not the empty state.
 - Follow the shadcn skill rules: semantic colours, `gap-*` not `space-*`, `size-*`, `FieldGroup`/`Field` for forms,
   `Empty`, `Skeleton`, `Alert`, `sonner` toasts, `data-icon` on button icons.
-- Add components with `pnpm dlx shadcn@latest add <name>`. Class merging uses the `cn` package via `@/lib/utils`.
+- Class merging is `cn` from `@/lib/utils` (clsx + tailwind-merge). After a `shadcn add`, repoint any
+  `from "cn"` import to `@/lib/utils` (see the registry README).
 - English only; strings are written inline (no i18n layer).
 
 ## Architecture decisions
@@ -83,10 +89,14 @@ are not listed); add a package there if an install warns about ignored build scr
   `{ type: 'ghostwire:heatmap-frame', width, height }` to the parent so the viewer can size the preview.
 - **Heatmap event types**: click 1, scroll 2, dead click 3 (recorded by the recorder alongside the click).
   Rage clicks aren't stored; they're computed from click timestamps in `getHeatmap`.
-- **Share links and identified users**: requests authenticated only by a share token (`auth.user` null) never
-  see distinct IDs or identify traits. `parseRequest` drops `distinctId` filters and refuses `type=distinctId`;
-  session detail, session properties and session search hide them. Keep this for any new endpoint that returns
-  user identities, and put users, replays, errors and heatmaps behind `canViewAuthenticatedWebsite`.
+- **Share links and identified users**: requests authenticated only by a share token (`auth.user` null), and
+  read-only (website-read) API keys, never see distinct IDs or identify traits. `parseRequest` drops `distinctId`
+  filters and refuses `type=distinctId` and a breakdown on `distinctId`; session detail, session properties and
+  session search hide them. Keep this for any new endpoint that returns user identities, and put users, replays,
+  errors, heatmaps and session data (`session-data/*`, the identify traits) behind `canViewAuthenticatedWebsite`.
+- **Values written into SQL text** (column names, LIMIT/OFFSET, date units, time zones) go through
+  `src/lib/sql-safe.ts` (`metricColumn`, `sqlInteger`, `sqlTimezone`) even when a route already validated them.
+  MCP tools declare a Zod shape that is enforced on every call (`finish()` in `src/lib/mcp/tools.ts`).
 - **Boards**: widget metadata in `src/lib/board-components.ts` (Umami's type names), renderers in
   `src/components/boards/widgets.tsx`. The personal dashboard is a board-shaped `parameters` object saved via
   `/api/dashboard`. Board share responses include `names` for the widgets' entities (viewers can't list them).
