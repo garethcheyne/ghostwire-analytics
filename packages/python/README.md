@@ -69,8 +69,9 @@ def on_error(error):
 try:
     charge(order)
 except PaymentError as error:
-    ghostwire.capture_exception(error, user={"id": order.username, "email": order.email},
-                                tags={"gateway": "stripe"}, extra={"order": order.id})
+    ghostwire.capture_exception(
+        error, user={"id": order.username, "email": order.email}, tags={"gateway": "stripe"}, extra={"order": order.id}
+    )
     show_payment_failed()
 ```
 
@@ -101,6 +102,7 @@ report or drop it by returning `None`:
 def scrub(report):
     report.get("extra", {}).pop("card_number", None)
     return report
+
 
 ghostwire.init(before_send=scrub)
 ```

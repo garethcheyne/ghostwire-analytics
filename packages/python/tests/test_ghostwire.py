@@ -9,11 +9,11 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-import ghostwire  # noqa: E402
-from ghostwire.asgi import GhostwireMiddleware  # noqa: E402
-from ghostwire.client import Client, ClientOptions, build_frames  # noqa: E402
-from ghostwire.log_handler import GhostwireHandler  # noqa: E402
-from ghostwire.wsgi import GhostwireWSGIMiddleware  # noqa: E402
+import ghostwire
+from ghostwire.asgi import GhostwireMiddleware
+from ghostwire.client import Client, ClientOptions, build_frames
+from ghostwire.log_handler import GhostwireHandler
+from ghostwire.wsgi import GhostwireWSGIMiddleware
 
 WEBSITE = "7d3ecc49-7e12-4672-b092-685c96d2a6d4"
 
@@ -51,9 +51,7 @@ class Server:
 
 
 def make_client(server, **options):
-    return Client(
-        ClientOptions(host=server.url, website_id=WEBSITE, key="gwe_test", **options)
-    )
+    return Client(ClientOptions(host=server.url, website_id=WEBSITE, key="gwe_test", **options))
 
 
 def raise_error():
@@ -72,78 +70,84 @@ class ClientTests(unittest.TestCase):
         try:
             raise_error()
         except KeyError as error:
-            self.assertTrue(client.capture_exception(error, user={"id": "jane", "email": "j@x.io"}))
-        self.assertTrue(client.flush(3))
+            queued = client.capture_exception(error, user={"id": "jane", "email": "j@x.io"})
+        assert queued
+        assert client.flush(3)
 
         [sent] = self.server.received
-        self.assertEqual(sent["path"], "/api/errors")
-        self.assertEqual(sent["auth"], "Bearer gwe_test")
+        assert sent["path"] == "/api/errors"
+        assert sent["auth"] == "Bearer gwe_test"
         body = sent["body"]
-        self.assertEqual(body["website"], WEBSITE)
-        self.assertEqual(body["platform"], "python")
-        self.assertEqual(body["error"]["type"], "KeyError")
-        self.assertEqual(body["error"]["message"], "'missing'")
-        self.assertEqual(body["error"]["frames"][0]["function"], "raise_error")
-        self.assertTrue(body["error"]["frames"][0]["inApp"])
-        self.assertIn("Traceback", body["error"]["stack"])
-        self.assertEqual(body["release"], "2.4.1")
-        self.assertEqual(body["user"], {"id": "jane", "email": "j@x.io"})
-        self.assertTrue(body["handled"])
+        assert body["website"] == WEBSITE
+        assert body["platform"] == "python"
+        assert body["error"]["type"] == "KeyError"
+        assert body["error"]["message"] == "'missing'"
+        assert body["error"]["frames"][0]["function"] == "raise_error"
+        assert body["error"]["frames"][0]["inApp"]
+        assert "Traceback" in body["error"]["stack"]
+        assert body["release"] == "2.4.1"
+        assert body["user"] == {"id": "jane", "email": "j@x.io"}
+        assert body["handled"]
 
     def test_uses_the_exception_being_handled(self):
         client = make_client(self.server)
         try:
             raise ValueError("bad input")
         except ValueError:
-            self.assertTrue(client.capture_exception())
+            assert client.capture_exception()
         client.flush(3)
-        self.assertEqual(self.server.received[0]["body"]["error"]["message"], "bad input")
+        assert self.server.received[0]["body"]["error"]["message"] == "bad input"
 
     def test_before_send_can_change_or_drop_reports(self):
         client = make_client(
             self.server,
-            before_send=lambda report: None
-            if "secret" in report["error"]["message"]
-            else {**report, "tags": {"scrubbed": "yes"}},
+            before_send=lambda report: (
+                None if "secret" in report["error"]["message"] else {**report, "tags": {"scrubbed": "yes"}}
+            ),
         )
         client.capture_exception(ValueError("secret token"))
         client.capture_exception(ValueError("fine"))
         client.flush(3)
 
-        self.assertEqual(len(self.server.received), 1)
-        self.assertEqual(self.server.received[0]["body"]["tags"], {"scrubbed": "yes"})
+        assert len(self.server.received) == 1
+        assert self.server.received[0]["body"]["tags"] == {"scrubbed": "yes"}
 
     def test_does_nothing_without_configuration_and_never_raises(self):
         client = Client(ClientOptions())
-        self.assertFalse(client.enabled)
-        self.assertFalse(client.capture_exception(ValueError("x")))
+        assert not client.enabled
+        assert not client.capture_exception(ValueError("x"))
 
         broken = make_client(self.server, before_send=lambda report: 1 / 0)
-        self.assertFalse(broken.capture_exception(ValueError("x")))
+        assert not broken.capture_exception(ValueError("x"))
+
+    def test_only_sends_to_http_and_https_hosts(self):
+        for host in ("file:///etc/passwd", "ftp://example.com", "analytics.example.com"):
+            client = Client(ClientOptions(host=host, website_id=WEBSITE, key="gwe_x"))
+            assert not client.enabled, host
+            assert not client.capture_exception(ValueError("x"))
+            assert not client.send({"error": {}})
+        assert make_client(self.server).enabled
+        assert Client(ClientOptions(host="HTTPS://a.example.com/", website_id=WEBSITE, key="k")).enabled
 
     def test_a_failing_server_does_not_raise(self):
-        client = Client(
-            ClientOptions(host="http://127.0.0.1:9", website_id=WEBSITE, key="gwe_x", timeout=0.5)
-        )
-        self.assertTrue(client.capture_exception(ValueError("x")))
-        self.assertTrue(client.flush(3))
+        client = Client(ClientOptions(host="http://127.0.0.1:9", website_id=WEBSITE, key="gwe_x", timeout=0.5))
+        assert client.capture_exception(ValueError("x"))
+        assert client.flush(3)
 
     def test_registers_a_release(self):
         client = make_client(self.server, release="2.4.1", environment="production")
-        self.assertTrue(client.register_release(commit="abc123"))
+        assert client.register_release(commit="abc123")
         sent = self.server.received[0]
-        self.assertEqual(sent["path"], f"/api/websites/{WEBSITE}/releases")
-        self.assertEqual(
-            sent["body"], {"version": "2.4.1", "environment": "production", "commit": "abc123"}
-        )
+        assert sent["path"] == f"/api/websites/{WEBSITE}/releases"
+        assert sent["body"] == {"version": "2.4.1", "environment": "production", "commit": "abc123"}
 
     def test_library_frames_are_not_in_app(self):
         try:
             json.loads("{bad")
         except ValueError as error:
             frames = build_frames(error.__traceback__)
-        self.assertFalse(frames[0]["inApp"])
-        self.assertTrue(frames[-1]["inApp"])
+        assert not frames[0]["inApp"]
+        assert frames[-1]["inApp"]
 
 
 class IntegrationTests(unittest.TestCase):
@@ -168,17 +172,14 @@ class IntegrationTests(unittest.TestCase):
             "headers": [(b"host", b"shop.example.com"), (b"user-agent", b"pytest")],
         }
 
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(RuntimeError):  # noqa: PT027  stdlib unittest suite, no pytest dependency
             asyncio.run(middleware(scope, None, None))
         ghostwire.flush(3)
 
         body = self.server.received[0]["body"]
-        self.assertFalse(body["handled"])
-        self.assertEqual(
-            body["request"],
-            {"method": "POST", "url": "https://shop.example.com/orders", "userAgent": "pytest"},
-        )
-        self.assertEqual(body["user"], {"id": "jane"})
+        assert not body["handled"]
+        assert body["request"] == {"method": "POST", "url": "https://shop.example.com/orders", "userAgent": "pytest"}
+        assert body["user"] == {"id": "jane"}
 
     def test_wsgi_middleware_reports_and_re_raises(self):
         def app(environ, start_response):
@@ -187,10 +188,10 @@ class IntegrationTests(unittest.TestCase):
         middleware = GhostwireWSGIMiddleware(app)
         environ = {"REQUEST_METHOD": "GET", "PATH_INFO": "/", "HTTP_HOST": "shop.example.com"}
 
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(RuntimeError):  # noqa: PT027  stdlib unittest suite, no pytest dependency
             middleware(environ, lambda *args: None)
         ghostwire.flush(3)
-        self.assertEqual(self.server.received[0]["body"]["request"]["url"], "http://shop.example.com/")
+        assert self.server.received[0]["body"]["request"]["url"] == "http://shop.example.com/"
 
     def test_logging_handler_reports_errors(self):
         logger = logging.getLogger("tests.checkout")
@@ -208,9 +209,9 @@ class IntegrationTests(unittest.TestCase):
         ghostwire.flush(3)
 
         bodies = [sent["body"] for sent in self.server.received]
-        self.assertEqual(len(bodies), 2)
-        self.assertEqual(bodies[0]["error"]["type"], "KeyError")
-        self.assertEqual(bodies[1]["error"], {"type": "Log.error", "message": "Queue is backing up"})
+        assert len(bodies) == 2
+        assert bodies[0]["error"]["type"] == "KeyError"
+        assert bodies[1]["error"] == {"type": "Log.error", "message": "Queue is backing up"}
 
     def test_excepthook_reports_then_calls_the_previous_hook(self):
         seen = []
@@ -227,8 +228,8 @@ class IntegrationTests(unittest.TestCase):
             sys.excepthook = original
             ghostwire._installed = False
 
-        self.assertEqual(seen, [KeyError])
-        self.assertFalse(self.server.received[0]["body"]["handled"])
+        assert seen == [KeyError]
+        assert not self.server.received[0]["body"]["handled"]
 
 
 if __name__ == "__main__":

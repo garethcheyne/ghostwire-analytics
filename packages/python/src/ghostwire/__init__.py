@@ -16,9 +16,10 @@ Reporting only observes: it never swallows or changes your exceptions, and never
 
 from __future__ import annotations
 
+import logging
 import sys
 import threading
-from typing import Any, Optional
+from typing import Any
 
 from .client import Client, ClientOptions
 
@@ -36,7 +37,9 @@ __all__ = [
 
 __version__ = "0.1.0"
 
-_client: Optional[Client] = None
+log = logging.getLogger("ghostwire")
+
+_client: Client | None = None
 
 
 def init(*, excepthook: bool = True, **options: Any) -> Client:
@@ -58,7 +61,7 @@ def get_client() -> Client:
     return _client
 
 
-def capture_exception(error: Optional[BaseException] = None, **context: Any) -> bool:
+def capture_exception(error: BaseException | None = None, **context: Any) -> bool:
     """Reports `error` (default: the exception being handled). Context: handled, user
     ({"id", "email", "name"}), request ({"method", "url", "userAgent"}), tags, extra."""
     return get_client().capture_exception(error, **context)
@@ -73,7 +76,7 @@ def flush(timeout: float = 2.0) -> bool:
     return get_client().flush(timeout)
 
 
-def register_release(version: Optional[str] = None, **details: Any) -> bool:
+def register_release(version: str | None = None, **details: Any) -> bool:
     """Marks a deploy: version (default: the configured release), environment, commit, url."""
     return get_client().register_release(version, **details)
 
@@ -97,8 +100,8 @@ def install_excepthook() -> None:
                 client = get_client()
                 if client.capture_exception(exc, handled=False):
                     client.flush(2.0)
-        except Exception:
-            pass
+        except Exception:  # reporting must never change how the program crashes
+            log.debug("Ghostwire: could not report a crash", exc_info=True)
         previous(exc_type, exc, tb)
 
     sys.excepthook = excepthook
@@ -113,8 +116,8 @@ def install_excepthook() -> None:
                     handled=False,
                     tags={"thread": getattr(args.thread, "name", "thread")},
                 )
-        except Exception:
-            pass
+        except Exception:  # reporting must never change how the thread dies
+            log.debug("Ghostwire: could not report a thread crash", exc_info=True)
         previous_thread_hook(args)
 
     threading.excepthook = thread_excepthook

@@ -11,13 +11,14 @@ middleware sees them; for those, also call ghostwire.capture_exception() from yo
 
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, Mapping, Optional
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any
 
 from . import get_client
 
 __all__ = ["GhostwireWSGIMiddleware", "request_from_environ"]
 
-GetUser = Callable[[Mapping[str, Any]], Optional[Mapping[str, Any]]]
+GetUser = Callable[[Mapping[str, Any]], Mapping[str, Any] | None]
 
 
 def request_from_environ(environ: Mapping[str, Any]) -> dict[str, str]:
@@ -32,7 +33,7 @@ def request_from_environ(environ: Mapping[str, Any]) -> dict[str, str]:
 
 
 class GhostwireWSGIMiddleware:
-    def __init__(self, app: Callable[..., Iterable[bytes]], get_user: Optional[GetUser] = None):
+    def __init__(self, app: Callable[..., Iterable[bytes]], get_user: GetUser | None = None):
         self.app = app
         self.get_user = get_user
 
@@ -41,9 +42,7 @@ class GhostwireWSGIMiddleware:
             user = self.get_user(environ) if self.get_user else None
         except Exception:
             user = None
-        get_client().capture_exception(
-            error, handled=False, request=request_from_environ(environ), user=user
-        )
+        get_client().capture_exception(error, handled=False, request=request_from_environ(environ), user=user)
 
     def __call__(self, environ: Mapping[str, Any], start_response: Callable[..., Any]):
         try:

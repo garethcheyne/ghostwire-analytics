@@ -144,7 +144,7 @@ try:
     place_order(cart)
 except OrderError as exc:
     ghostwire.capture_exception(exc, tags={"feature": "checkout"})
-    raise                      # the application's own handling, unchanged
+    raise  # the application's own handling, unchanged
 ```
 
 Django — report from middleware's `process_exception` and return `None` so

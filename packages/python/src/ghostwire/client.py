@@ -17,9 +17,10 @@ import time
 import traceback
 import urllib.error
 import urllib.request
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Any, Callable, Mapping, Optional
+from typing import Any
 
 __all__ = ["Client", "ClientOptions", "build_frames", "exception_type_name"]
 
@@ -36,8 +37,8 @@ MAX_PER_MINUTE = 100
 # Library, standard library and runtime code isn't "your" code.
 _LIBRARY_MARKERS = ("site-packages", "dist-packages", "<frozen ")
 
-ExcInfo = tuple[type[BaseException], BaseException, Optional[TracebackType]]
-BeforeSend = Callable[[dict[str, Any]], Optional[dict[str, Any]]]
+ExcInfo = tuple[type[BaseException], BaseException, TracebackType | None]
+BeforeSend = Callable[[dict[str, Any]], dict[str, Any] | None]
 
 
 def _stdlib_paths() -> tuple[str, ...]:
@@ -50,7 +51,7 @@ def _stdlib_paths() -> tuple[str, ...]:
             if path:
                 paths.add(os.path.normcase(os.path.abspath(path)))
         except Exception:  # pragma: no cover - defensive
-            pass
+            log.debug("Ghostwire: could not read the standard library path", exc_info=True)
     return tuple(paths)
 
 
@@ -70,7 +71,7 @@ def exception_type_name(exc: BaseException) -> str:
     return cls.__qualname__ if module in ("builtins", "__main__") else f"{module}.{cls.__qualname__}"
 
 
-def build_frames(tb: Optional[TracebackType]) -> list[dict[str, Any]]:
+def build_frames(tb: TracebackType | None) -> list[dict[str, Any]]:
     """Stack frames, innermost (where it was raised) first."""
     frames = [
         {
@@ -86,26 +87,26 @@ def build_frames(tb: Optional[TracebackType]) -> list[dict[str, Any]]:
     return frames[:MAX_FRAMES]
 
 
-def _env(name: str) -> Optional[str]:
+def _env(name: str) -> str | None:
     value = os.environ.get(name)
     return value or None
 
 
 @dataclass
 class ClientOptions:
-    host: Optional[str] = None
-    website_id: Optional[str] = None
-    key: Optional[str] = None
-    environment: Optional[str] = None
-    release: Optional[str] = None
+    host: str | None = None
+    website_id: str | None = None
+    key: str | None = None
+    environment: str | None = None
+    release: str | None = None
     #: Change or drop (return None) a report before it's sent, e.g. to remove personal data.
-    before_send: Optional[BeforeSend] = None
+    before_send: BeforeSend | None = None
     #: Seconds to wait for the server per report.
     timeout: float = 3.0
     tags: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_env(cls, **overrides: Any) -> "ClientOptions":
+    def from_env(cls, **overrides: Any) -> ClientOptions:
         values = {
             "host": _env("GHOSTWIRE_HOST"),
             "website_id": _env("GHOSTWIRE_WEBSITE_ID"),
@@ -118,10 +119,10 @@ class ClientOptions:
 
 
 class Client:
-    def __init__(self, options: Optional[ClientOptions] = None, **kwargs: Any) -> None:
+    def __init__(self, options: ClientOptions | None = None, **kwargs: Any) -> None:
         self.options = options or ClientOptions.from_env(**kwargs)
-        self._queue: "queue.Queue[Optional[dict[str, Any]]]" = queue.Queue(maxsize=MAX_QUEUE)
-        self._worker: Optional[threading.Thread] = None
+        self._queue: queue.Queue[dict[str, Any] | None] = queue.Queue(maxsize=MAX_QUEUE)
+        self._worker: threading.Thread | None = None
         self._lock = threading.Lock()
         self._window_start = time.monotonic()
         self._window_count = 0
@@ -131,13 +132,19 @@ class Client:
     # -- configuration -------------------------------------------------------
 
     @property
+    def base_url(self) -> str:
+        """The host without a trailing slash, or "" unless it's an http:// or https:// URL."""
+        host = (self.options.host or "").strip().rstrip("/")
+        return host if host.lower().startswith(("http://", "https://")) else ""
+
+    @property
     def enabled(self) -> bool:
         o = self.options
-        return bool(o.host and o.website_id and o.key)
+        return bool(self.base_url and o.website_id and o.key)
 
     @property
     def endpoint(self) -> str:
-        return f"{(self.options.host or '').rstrip('/')}/api/errors"
+        return f"{self.base_url}/api/errors"
 
     # -- building reports ----------------------------------------------------
 
@@ -146,10 +153,10 @@ class Client:
         exc_info: ExcInfo,
         *,
         handled: bool = True,
-        user: Optional[Mapping[str, Any]] = None,
-        request: Optional[Mapping[str, Any]] = None,
-        tags: Optional[Mapping[str, str]] = None,
-        extra: Optional[Mapping[str, Any]] = None,
+        user: Mapping[str, Any] | None = None,
+        request: Mapping[str, Any] | None = None,
+        tags: Mapping[str, str] | None = None,
+        extra: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         exc_type, exc, tb = exc_info
         stack = "".join(traceback.format_exception(exc_type, exc, tb))[-MAX_STACK:]
@@ -193,7 +200,7 @@ class Client:
 
     def capture_exception(
         self,
-        error: Optional[BaseException] = None,
+        error: BaseException | None = None,
         *,
         handled: bool = True,
         **context: Any,
@@ -288,26 +295,33 @@ class Client:
     def send(self, report: dict[str, Any]) -> bool:
         """Sends one report now (on the calling thread). Returns whether the server accepted it."""
         try:
-            request = urllib.request.Request(
-                self.endpoint,
-                data=json.dumps(report, default=str).encode("utf-8"),
-                method="POST",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {self.options.key}",
-                    "User-Agent": USER_AGENT,
-                },
-            )
-            with urllib.request.urlopen(request, timeout=self.options.timeout) as response:
-                ok = 200 <= response.status < 300
-                if ok:
-                    self._sent += 1
-                return ok
+            ok = self._post("/api/errors", report)
+            if ok:
+                self._sent += 1
+            return ok
         except urllib.error.HTTPError as error:
             log.debug("Ghostwire: report refused (%s)", error.code)
         except Exception:
             log.debug("Ghostwire: could not send a report", exc_info=True)
         return False
+
+    def _post(self, path: str, body: Mapping[str, Any]) -> bool:
+        """POSTs JSON to the server with the key. Raises on network and HTTP errors."""
+        base = self.base_url
+        if not base:
+            return False
+        request = urllib.request.Request(  # noqa: S310  base_url only allows http:// and https://
+            f"{base}{path}",
+            data=json.dumps(body, default=str).encode("utf-8"),
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.options.key}",
+                "User-Agent": USER_AGENT,
+            },
+        )
+        with urllib.request.urlopen(request, timeout=self.options.timeout) as response:  # noqa: S310  as above
+            return 200 <= response.status < 300
 
     def flush(self, timeout: float = 2.0) -> bool:
         """Waits up to `timeout` seconds for queued reports to be sent."""
@@ -320,11 +334,11 @@ class Client:
 
     def register_release(
         self,
-        version: Optional[str] = None,
+        version: str | None = None,
         *,
-        environment: Optional[str] = None,
-        commit: Optional[str] = None,
-        url: Optional[str] = None,
+        environment: str | None = None,
+        commit: str | None = None,
+        url: str | None = None,
     ) -> bool:
         """Marks a deploy in Ghostwire (shows on the Releases page and traffic chart)."""
         version = version or self.options.release
@@ -341,18 +355,7 @@ class Client:
             if value
         }
         try:
-            request = urllib.request.Request(
-                f"{(self.options.host or '').rstrip('/')}/api/websites/{self.options.website_id}/releases",
-                data=json.dumps(body).encode("utf-8"),
-                method="POST",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {self.options.key}",
-                    "User-Agent": USER_AGENT,
-                },
-            )
-            with urllib.request.urlopen(request, timeout=self.options.timeout) as response:
-                return 200 <= response.status < 300
+            return self._post(f"/api/websites/{self.options.website_id}/releases", body)
         except Exception:
             log.debug("Ghostwire: could not register the release", exc_info=True)
             return False

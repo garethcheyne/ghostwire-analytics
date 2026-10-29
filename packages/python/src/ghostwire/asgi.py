@@ -9,23 +9,21 @@ The exception is re-raised unchanged, so your framework's error handling runs as
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Mapping, MutableMapping, Optional
+from collections.abc import Awaitable, Callable, Mapping, MutableMapping
+from typing import Any
 
 from . import get_client
 
 Scope = MutableMapping[str, Any]
 ASGIApp = Callable[[Scope, Any, Any], Awaitable[None]]
-GetUser = Callable[[Scope], Optional[Mapping[str, Any]]]
+GetUser = Callable[[Scope], Mapping[str, Any] | None]
 
 __all__ = ["GhostwireMiddleware", "request_from_scope"]
 
 
 def request_from_scope(scope: Scope) -> dict[str, str]:
     """Method, URL (without the query string, which often carries tokens) and user agent."""
-    headers = {
-        key.decode("latin-1").lower(): value.decode("latin-1")
-        for key, value in scope.get("headers") or []
-    }
+    headers = {key.decode("latin-1").lower(): value.decode("latin-1") for key, value in scope.get("headers") or []}
     host = headers.get("host") or ""
     scheme = scope.get("scheme", "http")
     path = scope.get("root_path", "") + scope.get("path", "")
@@ -37,7 +35,7 @@ def request_from_scope(scope: Scope) -> dict[str, str]:
 
 
 class GhostwireMiddleware:
-    def __init__(self, app: ASGIApp, get_user: Optional[GetUser] = None) -> None:
+    def __init__(self, app: ASGIApp, get_user: GetUser | None = None) -> None:
         self.app = app
         self.get_user = get_user
 
@@ -53,7 +51,5 @@ class GhostwireMiddleware:
                 user = self.get_user(scope) if self.get_user else None
             except Exception:
                 user = None
-            get_client().capture_exception(
-                error, handled=False, request=request_from_scope(scope), user=user
-            )
+            get_client().capture_exception(error, handled=False, request=request_from_scope(scope), user=user)
             raise

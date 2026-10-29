@@ -7,6 +7,8 @@
 
     log.exception("Payment failed")   # reported with the stack trace
     log.error("Queue is backing up")  # reported as a message
+
+Records below the handler's level (ERROR by default) and the library's own logging are skipped.
 """
 
 from __future__ import annotations
