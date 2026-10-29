@@ -24,7 +24,11 @@ export function AuthHeading({ title, description }: { title: string; description
   );
 }
 
-/** Only follow same-origin relative redirects after login. */
+/**
+ * Only follow same-origin relative redirects after login. Browsers read "/\host" as "//host"
+ * (another site), so a backslash after the first slash is refused too, as are control characters.
+ */
 export function safeNext(next?: string) {
-  return next?.startsWith('/') && !next.startsWith('//') ? next : '/websites';
+  const safe = !!next && next.startsWith('/') && !/^\/[/\\]/.test(next) && !/[\u0000-\u001f]/.test(next);
+  return safe ? next : '/websites';
 }
