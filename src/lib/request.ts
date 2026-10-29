@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { checkAuth } from '@/lib/auth';
-import { DEFAULT_PAGE_SIZE, FILTER_COLUMNS, OPERATORS } from '@/lib/constants';
+import { DEFAULT_PAGE_SIZE, OPERATORS } from '@/lib/constants';
 import { getAllowedUnits, getMinimumUnit, maxDate, parseDateRange } from '@/lib/date';
 import { fetchWebsite } from '@/lib/load';
 import {
@@ -9,6 +9,7 @@ import {
   parseUniversalEventPropertyFilters,
 } from '@/lib/params';
 import { badRequest, forbidden, unauthorized } from '@/lib/response';
+import { isFilterColumn } from '@/lib/sql-safe';
 import type { QueryFilters } from '@/lib/types';
 import { getWebsiteSegment } from '@/queries/prisma';
 
@@ -96,7 +97,7 @@ export function getRequestFilters(query: Record<string, any>) {
 
   for (const key of Object.keys(query)) {
     const baseName = key.replace(/\d+$/, '');
-    if (baseName in FILTER_COLUMNS) {
+    if (isFilterColumn(baseName)) {
       result[key] = query[key];
     }
   }

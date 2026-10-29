@@ -1,4 +1,5 @@
-import { DATA_TYPE, FILTER_COLUMNS, OPERATORS } from '@/lib/constants';
+import { DATA_TYPE, OPERATORS } from '@/lib/constants';
+import { lookupFilterColumn } from '@/lib/sql-safe';
 import type {
   Filter,
   Operator,
@@ -82,7 +83,7 @@ export function filtersObjectToArray(filters: QueryFilters, options: QueryOption
     if (filter?.name && filter?.value !== undefined) {
       return arr.concat({
         ...filter,
-        column: options?.columns?.[baseName] ?? FILTER_COLUMNS[baseName],
+        column: options?.columns?.[baseName] ?? lookupFilterColumn(baseName),
         paramName: paramName ?? filter.paramName,
       });
     }
@@ -92,7 +93,7 @@ export function filtersObjectToArray(filters: QueryFilters, options: QueryOption
     return arr.concat({
       name: baseName,
       paramName,
-      column: options?.columns?.[baseName] ?? FILTER_COLUMNS[baseName],
+      column: options?.columns?.[baseName] ?? lookupFilterColumn(baseName),
       operator,
       value,
       prefix: options?.prefix,

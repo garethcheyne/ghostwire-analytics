@@ -9,6 +9,15 @@ const SESSION_DB_COLUMNS = new Set(
 
 const FUNCTION_NAME = 'getValues';
 
+/** The search text URL-decoded, or as given when it isn't valid encoding (a bare `%`). */
+function decodeSearch(search: string) {
+  try {
+    return decodeURIComponent(search);
+  } catch {
+    return search;
+  }
+}
+
 export async function getValues(
   ...args: [websiteId: string, column: string, filters: QueryFilters]
 ) {
@@ -29,8 +38,10 @@ async function relationalQuery(websiteId: string, column: string, filters: Query
   }
 
   if (search) {
-    if (decodeURIComponent(search).includes(',')) {
-      searchQuery = `AND (${decodeURIComponent(search)
+    const decoded = decodeSearch(search);
+
+    if (decoded.includes(',')) {
+      searchQuery = `AND (${decoded
         .split(',')
         .slice(0, 5)
         .map((value: string, index: number) => {

@@ -3,6 +3,7 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { EVENT_TYPE } from '@/lib/constants';
 import { PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
+import { sqlInteger, sqlTimezone } from '@/lib/sql-safe';
 
 const FUNCTION_NAME = 'getWebsiteListCharts';
 const DEFAULT_TIMEZONE = 'UTC';
@@ -56,10 +57,11 @@ async function relationalQuery(
   const { rawQuery } = prisma;
   const eventTypeQuery =
     eventType != null
-      ? `and website_event.event_type = ${eventType}`
+      ? `and website_event.event_type = ${sqlInteger(eventType, 0)}`
       : `and website_event.event_type NOT IN (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.performance})`;
+  const tz = sqlTimezone(timezone);
   const bucketSql =
-    timezone.toLowerCase() === 'utc'
+    tz === 'UTC'
       ? `
         to_char(
           date_trunc('day', website_event.created_at)
@@ -69,8 +71,8 @@ async function relationalQuery(
       `
       : `
         to_char(
-          date_trunc('day', website_event.created_at at time zone '${timezone}')
-          + floor(extract(hour from website_event.created_at at time zone '${timezone}') / ${BUCKET_HOURS}) * interval '${BUCKET_HOURS} hour',
+          date_trunc('day', website_event.created_at at time zone '${tz}')
+          + floor(extract(hour from website_event.created_at at time zone '${tz}') / ${BUCKET_HOURS}) * interval '${BUCKET_HOURS} hour',
           'YYYY-MM-DD HH24:00:00'
         )
       `;

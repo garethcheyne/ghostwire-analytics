@@ -1,8 +1,9 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import debug from 'debug';
 import { PrismaClient } from '@/generated/prisma/client';
-import { DATA_TYPE, DEFAULT_PAGE_SIZE, FILTER_COLUMNS, OPERATORS, SESSION_COLUMNS } from './constants';
+import { DATA_TYPE, DEFAULT_PAGE_SIZE, OPERATORS, SESSION_COLUMNS } from './constants';
 import { filtersObjectToArray } from './params';
+import { lookupFilterColumn, sqlTimezone } from './sql-safe';
 import type { Operator, PropertyFilter, QueryFilters, QueryOptions } from './types';
 
 const log = debug('ghostwire:prisma');
@@ -96,7 +97,11 @@ function getCastColumnQuery(field: string, type: string): string {
 function getDateSQL(field: string, unit: string, timezone?: string): string {
   // Explicit `at time zone` even for UTC — `date_trunc` without one falls back to the
   // DB session's ambient TimeZone setting, which this app never pins.
-  const tz = timezone && !isUtcTimezone(timezone) ? timezone : 'UTC';
+  const tz = sqlTimezone(timezone);
+
+  if (!Object.hasOwn(DATE_FORMATS, unit)) {
+    throw new Error(`Invalid date unit: ${String(unit).slice(0, 20)}`);
+  }
 
   return `to_char(date_trunc('${unit}', ${field} at time zone '${tz}'), '${DATE_FORMATS[unit]}')`;
 }
@@ -106,15 +111,15 @@ function getDateStringSQL(
   unit: keyof typeof DATE_STRING_FORMATS = 'utc',
   timezone?: string,
 ): string {
-  const isUtc = !timezone || isUtcTimezone(timezone);
-  const tz = isUtc ? 'UTC' : timezone;
+  const tz = sqlTimezone(timezone);
+  const isUtc = tz === 'UTC';
   const format = isUtc ? DATE_STRING_FORMATS.utc : DATE_STRING_FORMATS[unit];
 
   return `to_char(${field} at time zone '${tz}', '${format}')`;
 }
 
 function getDateWeeklySQL(field: string, timezone?: string) {
-  const tz = timezone && !isUtcTimezone(timezone) ? timezone : 'UTC';
+  const tz = sqlTimezone(timezone);
 
   return `concat(extract(dow from (${field} at time zone '${tz}')), ':', to_char((${field} at time zone '${tz}'), 'HH24'))`;
 }
@@ -174,7 +179,7 @@ function getFilterQuery(filters: Record<string, any>, options: QueryOptions = {}
   filtersObjectToArray(filters, options).forEach(
     ({ name, column, operator, prefix = '', paramName }) => {
       if (isCohort) {
-        column = FILTER_COLUMNS[name.slice('cohort_'.length)];
+        column = lookupFilterColumn(name.slice('cohort_'.length));
       }
 
       if (column) {
@@ -274,7 +279,7 @@ function getQueryParams(filters: Record<string, any>) {
     ...filters,
     ...filtersObjectToArray(filters).reduce((obj, { name, column, operator, value, paramName }) => {
       const resolvedColumn =
-        column || (name?.startsWith('cohort_') && FILTER_COLUMNS[name.slice('cohort_'.length)]);
+        column || (name?.startsWith('cohort_') && lookupFilterColumn(name.slice('cohort_'.length)));
 
       if (!resolvedColumn) return obj;
 

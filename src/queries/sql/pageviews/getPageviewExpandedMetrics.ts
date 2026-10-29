@@ -1,10 +1,10 @@
 
 import {
-  FILTER_COLUMNS,
   GROUPED_DOMAINS,
   SESSION_COLUMNS,
 } from '@/lib/constants';
 import prisma from '@/lib/prisma';
+import { metricColumn, sqlInteger } from '@/lib/sql-safe';
 import type { QueryFilters } from '@/lib/types';
 
 const FUNCTION_NAME = 'getPageviewExpandedMetrics';
@@ -35,7 +35,9 @@ async function relationalQuery(
   parameters: PageviewExpandedMetricsParameters,
   filters: QueryFilters,
 ): Promise<PageviewExpandedMetricsData[]> {
-  const { type, limit = 500, offset = 0 } = parameters;
+  const { type } = parameters;
+  const limit = sqlInteger(parameters.limit, 500);
+  const offset = sqlInteger(parameters.offset, 0);
   let column = getPageviewColumn(type);
   const { rawQuery, parseFilters } = prisma;
   const { filterQuery, joinSessionQuery, cohortQuery, excludeBounceQuery, queryParams } =
@@ -156,5 +158,5 @@ function getPageviewColumn(type: string) {
     return 'url_path';
   }
 
-  return FILTER_COLUMNS[type] || type;
+  return metricColumn(type);
 }

@@ -1,5 +1,6 @@
 
 import prisma from '@/lib/prisma';
+import { sqlInteger } from '@/lib/sql-safe';
 import type { QueryFilters } from '@/lib/types';
 
 const FUNCTION_NAME = 'getEventStats';
@@ -25,7 +26,7 @@ async function relationalQuery(
   parameters: EventStatsParameters,
   filters: QueryFilters,
 ) {
-  const { limit } = parameters;
+  const limit = sqlInteger(parameters.limit, 0);
   const { timezone = 'utc', unit = 'day' } = filters;
   const { rawQuery, getDateSQL, parseFilters } = prisma;
   const { filterQuery, cohortQuery, joinSessionQuery, queryParams } = parseFilters({

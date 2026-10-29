@@ -1,6 +1,7 @@
 
-import { EVENT_TYPE, FILTER_COLUMNS, SESSION_COLUMNS } from '@/lib/constants';
+import { EVENT_TYPE, SESSION_COLUMNS } from '@/lib/constants';
 import prisma from '@/lib/prisma';
+import { metricColumn, sqlInteger } from '@/lib/sql-safe';
 import type { QueryFilters } from '@/lib/types';
 
 const FUNCTION_NAME = 'getEventExpandedMetrics';
@@ -31,8 +32,10 @@ async function relationalQuery(
   parameters: EventExpandedMetricParameters,
   filters: QueryFilters,
 ) {
-  const { type, limit = 500, offset = 0 } = parameters;
-  const column = FILTER_COLUMNS[type] || type;
+  const { type } = parameters;
+  const limit = sqlInteger(parameters.limit, 500);
+  const offset = sqlInteger(parameters.offset, 0);
+  const column = metricColumn(type);
   const { rawQuery, parseFilters, getTimestampDiffSQL } = prisma;
   const { filterQuery, cohortQuery, joinSessionQuery, queryParams } = parseFilters(
     {

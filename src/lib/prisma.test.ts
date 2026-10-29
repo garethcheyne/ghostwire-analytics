@@ -99,6 +99,12 @@ describe('getDateSQL timezone formatting', () => {
       `to_char(date_trunc('hour', website_event.created_at at time zone 'Asia/Tehran'), 'YYYY-MM-DD"T"HH24:00:00"Z"')`,
     );
   });
+
+  test('refuses a unit or time zone that is not one it knows', () => {
+    expect(() => prisma.getDateSQL('website_event.created_at', "day', now()) --")).toThrow(/date unit/);
+    expect(() => prisma.getDateSQL('website_event.created_at', 'constructor')).toThrow(/date unit/);
+    expect(() => prisma.getDateSQL('website_event.created_at', 'day', "UTC') --")).toThrow(/time zone/);
+  });
 });
 
 describe('getDateStringSQL timezone formatting', () => {
