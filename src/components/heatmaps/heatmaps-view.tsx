@@ -12,6 +12,7 @@ import {
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { WebsiteHeader } from '@/components/analytics/website-header';
+import { QueryError } from '@/components/query-error';
 import { RecordingNotice } from '@/components/replays/recording-notice';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -131,7 +132,7 @@ function PageHeatmap({
   onWidthChange: (width: number) => void;
 }) {
   // Keyed by mode and page in the parent, so this never shows another page's data.
-  const { data: current, isPending } = useHeatmap(websiteId, mode, urlPath);
+  const { data: current, error, isPending } = useHeatmap(websiteId, mode, urlPath);
 
   const buckets = useMemo(() => {
     if (!current) return [];
@@ -175,6 +176,10 @@ function PageHeatmap({
 
   if (isPending) {
     return <Skeleton className="h-[36rem] w-full" />;
+  }
+
+  if (error) {
+    return <QueryError error={error} />;
   }
 
   if (!bucket) {
@@ -259,7 +264,7 @@ export function HeatmapsView() {
   const selectedUrl = searchParams.get('url');
   const width = Number(searchParams.get('width')) || null;
   const [search, setSearch] = useState('');
-  const { data, isPending } = useHeatmap(id, mode);
+  const { data, error, isPending } = useHeatmap(id, mode);
 
   const setParams = (changes: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -302,6 +307,8 @@ export function HeatmapsView() {
 
           {isPending ? (
             <Skeleton className="h-[36rem] w-full" />
+          ) : error ? (
+            <QueryError error={error} />
           ) : !data?.pages.length ? (
             <NoData
               title="No heatmap data"

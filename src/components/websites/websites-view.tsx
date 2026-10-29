@@ -4,6 +4,7 @@ import { BarChart3, Globe, MoreHorizontal, Search, Settings } from 'lucide-react
 import Link from 'next/link';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/page-header';
+import { QueryError } from '@/components/query-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -62,7 +63,7 @@ export function WebsitesView() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const deferredSearch = useDeferredValue(search);
-  const { data, isPending } = useWebsites({ search: deferredSearch, page, pageSize: PAGE_SIZE });
+  const { data, error, isPending } = useWebsites({ search: deferredSearch, page, pageSize: PAGE_SIZE });
   const websites = data?.data ?? [];
   const { data: charts } = useWebsiteCharts(websites);
   const pageCount = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 1;
@@ -99,6 +100,8 @@ export function WebsitesView() {
             ))}
           </CardContent>
         </Card>
+      ) : error ? (
+        <QueryError error={error} />
       ) : websites.length === 0 ? (
         <Empty className="border">
           <EmptyHeader>

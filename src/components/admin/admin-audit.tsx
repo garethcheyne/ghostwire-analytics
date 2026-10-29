@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { ScrollText, Search } from 'lucide-react';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/page-header';
+import { QueryError } from '@/components/query-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -77,7 +78,7 @@ export function AdminAudit() {
   const [page, setPage] = useState(1);
   const deferredSearch = useDeferredValue(search.trim());
 
-  const { data, isPending } = useQuery({
+  const { data, error, isPending } = useQuery({
     queryKey: ['admin', 'audit', deferredSearch, category, page],
     queryFn: () =>
       api.get<{ data: AuditRow[]; count: number }>('/admin/audit', {
@@ -137,6 +138,8 @@ export function AdminAudit() {
         <CardContent>
           {isPending ? (
             <Skeleton className="h-64 w-full" />
+          ) : error ? (
+            <QueryError error={error} />
           ) : !data?.data.length ? (
             <Empty>
               <EmptyHeader>

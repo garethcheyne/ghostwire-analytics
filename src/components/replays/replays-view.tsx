@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { formatMetricLabel } from '@/components/analytics/metric-labels';
 import { DeviceIcon } from '@/components/analytics/sessions-view';
 import { WebsiteHeader } from '@/components/analytics/website-header';
+import { QueryError } from '@/components/query-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
 import {
@@ -102,9 +103,10 @@ function NoReplays({ title, description }: { title: string; description: string 
 
 function RecentReplays({ websiteId, minDuration }: { websiteId: string; minDuration: number }) {
   const [page, setPage] = useState(1);
-  const { data, isPending } = useReplays(websiteId, { page, pageSize: PAGE_SIZE, minDuration });
+  const { data, error, isPending } = useReplays(websiteId, { page, pageSize: PAGE_SIZE, minDuration });
 
   if (isPending) return <Skeleton className="h-64 w-full" />;
+  if (error) return <QueryError error={error} />;
 
   if (!data?.data.length) {
     return (
@@ -186,9 +188,10 @@ function RecentReplays({ websiteId, minDuration }: { websiteId: string; minDurat
 
 function SavedReplays({ websiteId }: { websiteId: string }) {
   const [page, setPage] = useState(1);
-  const { data, isPending } = useSavedReplays(websiteId, page, PAGE_SIZE);
+  const { data, error, isPending } = useSavedReplays(websiteId, page, PAGE_SIZE);
 
   if (isPending) return <Skeleton className="h-40 w-full" />;
+  if (error) return <QueryError error={error} />;
 
   if (!data?.data.length) {
     return (

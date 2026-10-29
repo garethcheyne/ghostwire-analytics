@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/page-header';
+import { QueryError } from '@/components/query-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -37,10 +38,11 @@ export function userHref(websiteId: string, userId: string) {
 function UsersTable({ search }: { search: string }) {
   const website = useCurrentWebsite();
   const [page, setPage] = useState(1);
-  const { data, isPending } = useWebsiteUsers(website.id, search, page, PAGE_SIZE);
+  const { data, error, isPending } = useWebsiteUsers(website.id, search, page, PAGE_SIZE);
   const pageCount = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 1;
 
   if (isPending) return <Skeleton className="h-64 w-full" />;
+  if (error) return <QueryError error={error} />;
 
   if (!data?.data.length) {
     return search ? (

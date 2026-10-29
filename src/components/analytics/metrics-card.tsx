@@ -1,6 +1,7 @@
 'use client';
 import { ChartNoAxesColumn, Search } from 'lucide-react';
 import { useDeferredValue, useState } from 'react';
+import { QueryError } from '@/components/query-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -98,7 +99,7 @@ function AllRowsDialog({
 }) {
   const [search, setSearch] = useState('');
   const deferred = useDeferredValue(search);
-  const { data, isPending } = useWebsiteMetrics(websiteId, tab.type, 500);
+  const { data, error, isPending } = useWebsiteMetrics(websiteId, tab.type, 500);
   const rows = (data ?? []).filter(
     row =>
       !deferred ||
@@ -125,6 +126,8 @@ function AllRowsDialog({
         <ScrollArea className="h-[60vh] pr-3">
           {isPending ? (
             <Skeleton className="h-40 w-full" />
+          ) : error ? (
+            <QueryError error={error} />
           ) : (
             <MetricRows
               type={tab.type}
@@ -159,7 +162,7 @@ export function MetricsCard({
   const [active, setActive] = useState(tabs[0].type);
   const [showAll, setShowAll] = useState(false);
   const tab = tabs.find(t => t.type === active) ?? tabs[0];
-  const { data, isPending } = useWebsiteMetrics(websiteId, tab.type, limit);
+  const { data, error, isPending } = useWebsiteMetrics(websiteId, tab.type, limit);
   const { addFilter } = useFilters();
   const filterName = filterNameFor(tab.type);
   const onSelect = filterName
@@ -195,6 +198,8 @@ export function MetricsCard({
               <Skeleton key={i} className="h-7 w-full" />
             ))}
           </div>
+        ) : error ? (
+          <QueryError error={error} />
         ) : !data?.length ? (
           <Empty className="py-8">
             <EmptyHeader>

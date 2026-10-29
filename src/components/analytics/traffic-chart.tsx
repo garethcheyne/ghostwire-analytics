@@ -4,6 +4,7 @@ import { toZonedTime } from 'date-fns-tz';
 import { StickyNote } from 'lucide-react';
 import { useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from 'recharts';
+import { QueryError } from '@/components/query-error';
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -48,7 +49,7 @@ const TICK_FORMAT: Record<string, Intl.DateTimeFormatOptions> = {
 
 export function TrafficChart({ websiteId }: { websiteId: string }) {
   const { startDate, endDate, unit, timezone, params } = useDateRange();
-  const { data, isPending } = useWebsitePageviews(websiteId);
+  const { data, error, isPending } = useWebsitePageviews(websiteId);
   const { data: annotationData } = useAnnotations(websiteId, {
     startAt: params.startAt,
     endAt: params.endAt,
@@ -118,6 +119,8 @@ export function TrafficChart({ websiteId }: { websiteId: string }) {
       <CardContent className="flex flex-col gap-4">
         {isPending ? (
           <Skeleton className="h-72 w-full" />
+        ) : error ? (
+          <QueryError error={error} />
         ) : (
           <ChartContainer config={config} className="aspect-auto h-72 w-full">
             <BarChart data={series} margin={{ top: 16, left: 0, right: 8 }}>

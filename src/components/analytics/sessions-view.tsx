@@ -2,6 +2,7 @@
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Monitor, Smartphone, Tablet, User } from 'lucide-react';
 import { useState } from 'react';
+import { QueryError } from '@/components/query-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -51,11 +52,15 @@ function SessionStatsBar({ websiteId }: { websiteId: string }) {
 
 function SessionsTable({ websiteId }: { websiteId: string }) {
   const [page, setPage] = useState(1);
-  const { data, isPending } = useWebsiteSessions(websiteId, page, PAGE_SIZE);
+  const { data, error, isPending } = useWebsiteSessions(websiteId, page, PAGE_SIZE);
   const pageCount = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 1;
 
   if (isPending) {
     return <Skeleton className="h-64 w-full" />;
+  }
+
+  if (error) {
+    return <QueryError error={error} />;
   }
 
   if (!data?.data.length) {
