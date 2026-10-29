@@ -53,10 +53,18 @@ export async function parseRequest(
 
     if (!auth) {
       error = () => unauthorized();
-    } else if (!auth.user && query) {
-      // Share links never reveal identified users (their IDs are usernames/emails).
-      if (query.type === 'distinctId') {
-        error = () => forbidden({ message: 'Not available on shared links.' });
+    } else if ((!auth.user || ('apiKey' in auth && auth.apiKey.scope)) && query) {
+      const readKey = !!auth.user;
+      // Share links and read-only keys never reveal identified users (their IDs are
+      // usernames/emails): no distinctId metric, breakdown field or filter.
+      if (
+        query.type === 'distinctId' ||
+        (Array.isArray(query.fields) && query.fields.includes('distinctId'))
+      ) {
+        error = () =>
+          forbidden({
+            message: readKey ? 'Not available with a read-only key.' : 'Not available on shared links.',
+          });
       }
 
       for (const key of Object.keys(query)) {

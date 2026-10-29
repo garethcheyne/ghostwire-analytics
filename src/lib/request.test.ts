@@ -77,3 +77,32 @@ test('signed-in users keep identified-user filters', async () => {
   expect(error).toBeUndefined();
   expect(query).toEqual({ distinctId: 'eq.alice', type: 'distinctId' });
 });
+
+test('share links cannot break down by identified user', async () => {
+  vi.mocked(checkAuth).mockResolvedValue({ user: null, shareToken: { websiteId: 'w' } } as any);
+  const { breakdownQuerySchema } = await import('@/lib/analytics-schema');
+
+  const url = `https://gw.test/api/x?startAt=0&endAt=1000&fields=${encodeURIComponent('["browser","distinctId"]')}`;
+  const { error } = await parseRequest(new Request(url), breakdownQuerySchema);
+  expect(error().status).toBe(403);
+
+  const allowed = await parseRequest(
+    new Request(`https://gw.test/api/x?startAt=0&endAt=1000&fields=${encodeURIComponent('["browser"]')}`),
+    breakdownQuerySchema,
+  );
+  expect(allowed.error).toBeUndefined();
+});
+
+test('read-only keys are treated like share links for identified users', async () => {
+  vi.mocked(checkAuth).mockResolvedValue({
+    user: { id: 'u1' },
+    apiKey: { id: 'k1', name: 'read', scope: { kind: 'website-read', websiteId: 'w' } },
+  } as any);
+
+  const listed = await parseRequest(new Request('https://gw.test/api/x?type=distinctId'));
+  expect(listed.error().status).toBe(403);
+
+  const filtered = await parseRequest(new Request('https://gw.test/api/x?distinctId=eq.alice&browser=eq.Chrome'));
+  expect(filtered.error).toBeUndefined();
+  expect(filtered.query).toEqual({ browser: 'eq.Chrome' });
+});

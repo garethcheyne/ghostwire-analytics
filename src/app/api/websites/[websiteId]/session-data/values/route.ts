@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { getQueryFilters, parseRequest } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
 import { filterParams } from '@/lib/schema';
-import { canViewWebsiteSection } from '@/permissions';
+import { canViewAuthenticatedWebsite } from '@/permissions';
 import { getSessionDataValues } from '@/queries/sql';
 
 export async function GET(
@@ -25,7 +25,8 @@ export async function GET(
 
   const { websiteId } = await params;
 
-  if (!(await canViewWebsiteSection(auth, websiteId, 'sessions'))) {
+  // Session data is what sites send with identify(): never on share links (AGENTS.md).
+  if (!(await canViewAuthenticatedWebsite(auth, websiteId))) {
     return unauthorized();
   }
 

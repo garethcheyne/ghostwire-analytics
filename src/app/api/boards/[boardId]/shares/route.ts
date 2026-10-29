@@ -24,7 +24,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ boar
   const { boardId } = await params;
   const { page, pageSize, search } = query;
 
-  if (!(await canViewBoard(auth, boardId))) {
+  // Signed-in only: someone holding one share link must not list (and open) the others.
+  if (!auth.user || !(await canViewBoard(auth, boardId))) {
     return unauthorized();
   }
 
