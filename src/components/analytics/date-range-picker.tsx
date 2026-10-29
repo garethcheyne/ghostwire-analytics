@@ -41,7 +41,20 @@ function rangeLabel(start: Date, end: Date) {
 }
 
 /** Date range for reports. Without a websiteId (e.g. boards) there's no "All time" option. */
-export function DateRangePicker({ websiteId }: { websiteId?: string }) {
+/** Shorter ranges for the System (monitoring) pages, on top of the usual presets. */
+export const SYSTEM_PRESETS = [
+  { value: '1hour', label: 'Last hour' },
+  { value: '6hour', label: 'Last 6 hours' },
+  ...PRESETS,
+];
+
+export function DateRangePicker({
+  websiteId,
+  presets = PRESETS,
+}: {
+  websiteId?: string;
+  presets?: { value: string; label: string }[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -87,7 +100,7 @@ export function DateRangePicker({ websiteId }: { websiteId?: string }) {
     ? 'all'
     : isCustomRange || offset
       ? 'custom'
-      : PRESETS.some(preset => preset.value === date)
+      : presets.some(preset => preset.value === date)
         ? date
         : 'custom';
   const canStep = !isAllTime && !isCustomRange;
@@ -132,7 +145,7 @@ export function DateRangePicker({ websiteId }: { websiteId?: string }) {
           </PopoverTrigger>
           <SelectContent align="end">
             <SelectGroup>
-              {PRESETS.map(preset => (
+              {presets.map(preset => (
                 <SelectItem key={preset.value} value={preset.value}>
                   {preset.label}
                 </SelectItem>

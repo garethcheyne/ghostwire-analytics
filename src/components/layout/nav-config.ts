@@ -1,4 +1,5 @@
 import {
+  Activity,
   Bell,
   Bot,
   ScrollText,
@@ -70,6 +71,13 @@ export function websiteNav(websiteId: string): NavGroup[] {
         { title: 'Performance', href: path('/performance'), icon: Gauge },
         { title: 'Compare', href: path('/compare'), icon: AlignEndHorizontal },
         { title: 'Breakdown', href: path('/breakdown'), icon: Table2 },
+      ],
+    },
+    {
+      // System monitoring: OpenTelemetry data from the apps (POST /v1/metrics, /v1/traces).
+      title: 'System',
+      items: [
+        { title: 'Overview', href: path('/system'), icon: Activity, exact: true },
       ],
     },
     {
