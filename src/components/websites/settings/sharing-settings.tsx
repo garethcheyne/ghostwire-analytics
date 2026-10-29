@@ -209,6 +209,7 @@ function DeleteShareButton({ share }: { share: Share }) {
             onClick={() =>
               deleteShare.mutate(share.id, {
                 onSuccess: () => toast.success('Share link deleted'),
+                onError: e => toast.error(e.message || 'Could not delete the share link.'),
               })
             }
           >

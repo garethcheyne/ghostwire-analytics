@@ -44,7 +44,10 @@ function SaveReplayButton({ replayId }: { replayId: string }) {
         onClick={() =>
           setSaved.mutate(
             { isSaved: false },
-            { onSuccess: () => toast.success('Removed from saved replays') },
+            {
+              onSuccess: () => toast.success('Removed from saved replays'),
+              onError: e => toast.error(e.message || 'Could not update the replay.'),
+            },
           )
         }
       >

@@ -176,7 +176,10 @@ function SupportLinkDialog({ user }: { user: WebsiteUserDetail }) {
                       size="sm"
                       disabled={revoke.isPending}
                       onClick={() =>
-                        revoke.mutateAsync(link.id).then(() => toast.success('Link revoked'))
+                        revoke
+                          .mutateAsync(link.id)
+                          .then(() => toast.success('Link revoked'))
+                          .catch(e => toast.error(e.message || 'Could not revoke the link.'))
                       }
                     >
                       <Trash2 data-icon="inline-start" />

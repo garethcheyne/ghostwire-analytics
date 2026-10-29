@@ -378,7 +378,10 @@ function ChannelRow({ channel, canManage }: { channel: Channel; canManage: boole
                 <AlertDialogAction
                   variant="destructive"
                   onClick={() =>
-                    remove.mutateAsync(channel.id).then(() => toast.success('Channel deleted'))
+                    remove
+                      .mutateAsync(channel.id)
+                      .then(() => toast.success('Channel deleted'))
+                      .catch(e => toast.error(e.message || 'Could not delete the channel.'))
                   }
                 >
                   Delete channel

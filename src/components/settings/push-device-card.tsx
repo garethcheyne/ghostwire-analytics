@@ -256,7 +256,10 @@ export function PushDeviceCard() {
                     onClick={() =>
                       device.endpoint === endpoint
                         ? handleDisable()
-                        : remove.mutateAsync(device.id).then(() => toast.success('Device removed'))
+                        : remove
+                            .mutateAsync(device.id)
+                            .then(() => toast.success('Device removed'))
+                            .catch(e => toast.error(e.message || 'Could not remove the device.'))
                     }
                   >
                     <Trash2 />

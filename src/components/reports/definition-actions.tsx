@@ -76,7 +76,12 @@ export function DefinitionActions({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={() => remove.mutate(id, { onSuccess: () => toast.success(`${name} deleted`) })}
+              onClick={() =>
+                remove.mutate(id, {
+                  onSuccess: () => toast.success(`${name} deleted`),
+                  onError: e => toast.error(e.message || `Could not delete ${name}.`),
+                })
+              }
             >
               Delete
             </AlertDialogAction>

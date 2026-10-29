@@ -104,6 +104,7 @@ function SourceMaps() {
                     remove
                       .mutateAsync(item.release)
                       .then(() => toast.success(`Source maps for ${item.release} deleted`))
+                      .catch(e => toast.error(e.message || 'Could not delete the source maps.'))
                   }
                 >
                   <Trash2 />

@@ -386,7 +386,10 @@ export function SegmentsView({ type }: { type: SegmentType }) {
               variant="destructive"
               onClick={() =>
                 deleting &&
-                remove.mutate(deleting.id, { onSuccess: () => toast.success(`${deleting.name} deleted`) })
+                remove.mutate(deleting.id, {
+                  onSuccess: () => toast.success(`${deleting.name} deleted`),
+                  onError: e => toast.error(e.message || `Could not delete ${deleting.name}.`),
+                })
               }
             >
               Delete

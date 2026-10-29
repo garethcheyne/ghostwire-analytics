@@ -242,9 +242,13 @@ export function BoardDetail({
             <AlertDialogAction
               variant="destructive"
               onClick={async () => {
-                await remove.mutateAsync(board.id);
-                toast.success('Board deleted');
-                router.push('/boards');
+                try {
+                  await remove.mutateAsync(board.id);
+                  toast.success('Board deleted');
+                  router.push('/boards');
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : 'Could not delete the board.');
+                }
               }}
             >
               Delete board
