@@ -130,15 +130,20 @@ say "✅" "Docker, Compose, git and curl are ready."
 # ── 2. Code ──────────────────────────────────────────────────────
 header "Download"
 
-if [ -d "$INSTALL_DIR/.git" ]; then
+UPGRADE_ARGS="--yes"
+if [ -d "$INSTALL_DIR/.git" ] && [ -f "$INSTALL_DIR/scripts/upgrade.sh" ]; then
+  say "📥" "Already installed; scripts/upgrade.sh updates the code after backing up (step 4)."
+elif [ -d "$INSTALL_DIR/.git" ]; then
+  # An install from before scripts/upgrade.sh: bring the code up to date so it has one, then rebuild.
   say "📥" "Updating the code in $INSTALL_DIR..."
   git -C "$INSTALL_DIR" fetch --quiet origin "$BRANCH"
   git -C "$INSTALL_DIR" reset --quiet --hard "origin/$BRANCH"
+  UPGRADE_ARGS="--yes --force"
 else
   say "📥" "Downloading into $INSTALL_DIR..."
   git clone --quiet --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
 fi
-chmod +x "$INSTALL_DIR"/scripts/*.sh "$INSTALL_DIR"/scripts/deployment/*.sh 2>/dev/null || true
+chmod +x "$INSTALL_DIR"/scripts/*.sh 2>/dev/null || true
 say "✅" "Code is at $(git -C "$INSTALL_DIR" rev-parse --short HEAD)."
 
 # ── 3. Settings ──────────────────────────────────────────────────
@@ -279,8 +284,8 @@ fi
 # ── 4. Build and start ───────────────────────────────────────────
 header "Build and start (a few minutes the first time)"
 
-export BACKUPS=$(grep -E '^BACKUPS=' "$ENV_FILE" | cut -d= -f2-)
-REPO_DIR="$INSTALL_DIR" bash "$INSTALL_DIR/scripts/deployment/updateGhostwireAnalytics.sh" --deploy
+# shellcheck disable=SC2086
+bash "$INSTALL_DIR/scripts/upgrade.sh" $UPGRADE_ARGS
 
 # ── 5. Report ────────────────────────────────────────────────────
 # Reads a value from .env, dropping the single quotes env_value writes around it.
@@ -373,8 +378,8 @@ report() {
   echo "  Database          PostgreSQL 17 on 127.0.0.1:$DB_PORT only (user ghostwire, database ghostwire_analytics)"
   echo ""
   echo "EVERYDAY COMMANDS (run from $INSTALL_DIR)"
-  echo "  Update            sudo bash scripts/install.sh   (keeps .env, backs up first)"
-  echo "  Roll back         sudo bash scripts/deployment/updateGhostwireAnalytics.sh --rollback"
+  echo "  Update            sudo scripts/upgrade.sh   (backs up first)"
+  echo "  Roll back         sudo scripts/upgrade.sh --rollback"
   echo "  Live logs         docker compose logs -f app"
   echo "  Errors only       docker compose exec app sh -c 'grep -h level.:.error /app/logs/*.log | tail'"
   echo "  Traffic stats     docker compose exec app sh -c 'grep -h event.:.stats /app/logs/*.log | tail -3'"

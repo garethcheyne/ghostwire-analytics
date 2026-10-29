@@ -21,7 +21,7 @@ starts everything, and prints a report (URL, ports, sign-in, files, commands). T
 also saved to `install-report.txt`, without the password. Then put your domain behind HTTPS
 (ghostwire-proxy or any reverse proxy) pointing at the port it chose.
 
-Run the same command again to update: it keeps your `.env` and backs up the database first.
+To update, run `scripts/upgrade.sh` from `/opt/ghostwire-analytics` (see [Upgrading](#upgrading)).
 For automated installs, give the answers as `GW_*` variables and add `--yes` (see the top of
 [`scripts/install.sh`](scripts/install.sh)).
 
@@ -56,24 +56,26 @@ Change the password straight away.
    when the database isn't).
 5. Sign in, change the admin password, turn on two-factor, then add your sites.
 
-### Installing and updating on a server
+### Upgrading
 
-`scripts/deployment/updateGhostwireAnalytics.sh` does both: it clones or pulls `main` into
-`/opt/ghostwire-analytics` (`REPO_DIR`), checks the `.env`, backs up the database to `backups/`,
-keeps the running image as `ghostwire-analytics:previous`, rebuilds, restarts the app (migrations
-run as it starts) and waits until `/api/health` is OK.
+Every Ghostwire app has the same `scripts/upgrade.sh`, with the same options and steps. Run it on the
+server, from the install folder:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/garethcheyne/ghostwire-analytics/main/scripts/deployment/updateGhostwireAnalytics.sh -o /opt/updateGhostwireAnalytics.sh
-bash /opt/updateGhostwireAnalytics.sh             # first run clones, then asks you to create .env
-cp /opt/ghostwire-analytics/.env.example /opt/ghostwire-analytics/.env   # fill it in
-bash /opt/updateGhostwireAnalytics.sh --deploy    # install; run the same command for every update
-bash /opt/updateGhostwireAnalytics.sh --rollback  # back to the image before the last deploy
+scripts/upgrade.sh             # upgrade to the latest version (asks first)
+scripts/upgrade.sh --check     # say what an upgrade would do; changes nothing
+scripts/upgrade.sh --rollback  # go back to what ran before the last upgrade
+scripts/upgrade.sh --yes       # don't ask (cron); add a tag or commit to go to that version
 ```
 
-`BACKUPS=true` also keeps the daily backup service running. With `TELEGRAM_BOT_TOKEN` and
-`TELEGRAM_CHAT_ID` in `.env` (and `TELEGRAM_NOTIFICATIONS_ENABLED=true`) it reports each deploy to
-Telegram. Rolling back doesn't undo database migrations; restore the pre-deploy backup for that.
+It checks the server and `.env`, shows what changes, backs up the database and `.env`, keeps the running
+image for `--rollback`, updates the code, rebuilds and restarts the app (it applies migrations as it starts), then checks that the containers are healthy, `/api/health` answers and every migration is applied.
+Backups, a log of each run and what `--rollback` needs are kept in `backups/`. A rollback doesn't undo
+database migrations (they only add); the backup is there if you need it.
+
+`BACKUPS=true` in `.env` also keeps the daily backup service running. With `TELEGRAM_BOT_TOKEN`,
+`TELEGRAM_CHAT_ID` and `TELEGRAM_NOTIFICATIONS_ENABLED=true` in `.env`, each upgrade is reported to
+Telegram.
 
 ### Logs
 
