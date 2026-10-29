@@ -2,8 +2,8 @@
  * Container and host figures from the Collector's docker_stats and host_metrics receivers, worked
  * out from rollup rows aggregated over a period (the whole date range, or one chart bucket):
  *
- *   container CPU %      container.cpu.utilization, else container.cpu.usage.total (ns of CPU per
- *                        second of wall time; 100 % = one core)
+ *   container CPU %      container.cpu.usage.total (ns of CPU per second of wall time; 100 % = one
+ *                        core), else container.cpu.utilization
  *   container memory     container.memory.usage.total / .usage.limit (or container.memory.percent)
  *   container network    container.network.io.usage.rx_bytes / tx_bytes
  *   restarts, uptime     container.restarts, container.uptime
@@ -101,8 +101,9 @@ function container(name: string, rows: InfraRow[]): ContainerStats {
 
   return {
     name,
-    cpuPercent:
-      utilization ?? (usage.length && minutes ? (total(usage) / (minutes * 60 * 1e9)) * 100 : null),
+    // CPU time is unambiguous (100 % = one core); the utilization gauge's scale differs between
+    // Collector versions (a percentage, or a 0-1 share of the whole host), so it's the fallback.
+    cpuPercent: usage.length && minutes ? (total(usage) / (minutes * 60 * 1e9)) * 100 : percent(utilization),
     memoryBytes: memory,
     memoryLimitBytes: limit,
     memoryPercent: memPercent ?? (memory !== null && limit ? (memory / limit) * 100 : null),

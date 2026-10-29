@@ -116,9 +116,9 @@ describe('infrastructure', () => {
     expect(containers[0].cpuPercent).toBeCloseTo(5);
   });
 
-  it('prefers the utilization gauges when sent', () => {
+  it('uses the utilization gauges for hosts, and for containers without CPU time', () => {
     const { containers, hosts } = summarizeInfrastructure([
-      row('container.cpu.utilization', { 'container.name': 'db' }, { sum: 30, count: 2 }),
+      row('container.cpu.utilization', { 'container.name': 'db' }, { sum: 0.3, count: 2 }),
       row('system.cpu.utilization', { 'host.name': 'box', state: 'idle' }, { sum: 1.5, count: 2 }),
       row('system.cpu.utilization', { 'host.name': 'box', state: 'user' }, { sum: 0.5, count: 2 }),
       row('system.memory.utilization', { 'host.name': 'box', state: 'used' }, { last: 0.42 }),

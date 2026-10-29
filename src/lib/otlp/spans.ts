@@ -184,7 +184,13 @@ export function flattenSpans(request: any, options: { maxSpans?: number } = {}):
         const kind = enumValue(span.kind, KIND_NAMES, 5);
         const parentSpanId = toHexId(span.parentSpanId, 8);
         const status = enumValue(span.status?.code, STATUS_NAMES, 2);
-        const isEntry = !parentSpanId || kind === SPAN_KIND.server || kind === SPAN_KIND.consumer;
+                // Entry spans make the trace list: requests served, messages consumed, and roots that
+        // aren't themselves outgoing calls (job runs). A root client span is a script calling
+        // out; its server side shows up instead.
+        const isEntry =
+          kind === SPAN_KIND.server ||
+          kind === SPAN_KIND.consumer ||
+          (!parentSpanId && kind !== SPAN_KIND.client && kind !== SPAN_KIND.producer);
         const dbSystem =
           attrString(attrs, 'db.system', 'db.system.name', 'messaging.system', 'rpc.system') ??
           (kind === SPAN_KIND.client && attrString(attrs, 'http.request.method', 'http.method') ? 'http' : undefined);

@@ -522,6 +522,34 @@ describe('spans', () => {
     expect(result.rejected).toBe(3);
   });
 
+  it('lists served requests and root job runs as entries, not root outgoing calls', () => {
+    const span = (spanId: string, kind: number, parentSpanId?: string) => ({
+      traceId: '5b8efff798038103d269b633813fc60c',
+      spanId,
+      parentSpanId,
+      kind,
+      name: `k${kind}`,
+      startTimeUnixNano: '1761700000000000000',
+    });
+    const { spans } = flattenSpans({
+      resourceSpans: [
+        {
+          scopeSpans: [
+            {
+              spans: [
+                span('a000000000000001', 3),
+                span('a000000000000002', 2, 'a000000000000001'),
+                span('a000000000000003', 1, 'a000000000000002'),
+                span('a000000000000004', 1),
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(spans.map(s => s.isEntry)).toEqual([false, true, false, true]);
+  });
+
   it('replaces statement literals with ?', () => {
     expect(sanitizeStatement("SELECT * FROM t WHERE a = 'x''y' AND b = 12.5 AND c = $1 AND t2.col1 = -3")).toBe(
       'SELECT * FROM t WHERE a = ? AND b = ? AND c = $1 AND t2.col1 = ?',
