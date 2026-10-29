@@ -140,7 +140,10 @@ export function hashKey(value: unknown, length = 16): string {
 // ---------------------------------------------------------------------------------------------
 
 export const MAX_SERIES_PER_METRIC = 500;
-export const MAX_METRICS_PER_WEBSITE = 400;
+// Counted per service and metric name: a stack's Collector alone reports about 15 metrics for each
+// container (Ghostwire Secure runs about 30), so a few hundred would refuse the app's own request
+// metrics once the containers have taken the room.
+export const MAX_METRICS_PER_WEBSITE = 2000;
 const FORGET_AFTER_MS = 2 * 60 * 60 * 1000;
 export const OVERFLOW_ATTRIBUTES: SeriesAttributes = { 'otel.metric.overflow': true };
 

@@ -182,7 +182,7 @@ are not listed); add a package there if an install warns about ignored build scr
     direction, operation; system.*: host.name, state, direction, mountpoint, type). Others keep up
     to 6 attributes not matching the deny list (URLs, paths, queries, IPs, user agents, ids,
     users, sessions, tokens). Past 500 attribute sets per service and metric, new ones fold into
-    `{otel.metric.overflow: true}`; past 400 metric names per site, new names are refused (both per
+    `{otel.metric.overflow: true}`; past 2000 service and metric name pairs per site, new ones are refused (both per
     process, on `globalThis`). Spans keep 64 attributes (8 KB JSON), 16 events (exceptions first),
     drop credentials and the raw statement, and strip query strings from URLs.
   - *Status* (`src/lib/monitoring/status.ts`): down after 3 learned intervals (min 2 min) without
