@@ -1,5 +1,6 @@
 import {
   Activity,
+  Waypoints,
   Bell,
   Bot,
   ScrollText,
@@ -78,6 +79,7 @@ export function websiteNav(websiteId: string): NavGroup[] {
       title: 'System',
       items: [
         { title: 'Overview', href: path('/system'), icon: Activity, exact: true },
+        { title: 'Endpoints', href: path('/system/endpoints'), icon: Waypoints },
       ],
     },
     {
