@@ -116,6 +116,22 @@ export async function ingestMetrics(websiteId: string, request: any, now = Date.
     }
 
     const { points, changed } = applyDeltas(flat.points, states, now);
+
+    // Heartbeats sent as running totals: alive when the total went up since the last export.
+    const beats = [
+      ...new Set(
+        points
+          .filter(p => p.metric === 'ghostwire.heartbeat' && p.value > 0 && !flat.heartbeats.has(p.service.key))
+          .map(p => serviceIds.get(p.service.key))
+          .filter(Boolean),
+      ),
+    ];
+    if (beats.length) {
+      await tx.$executeRawUnsafe(
+        `update monitor_service set last_heartbeat_at = now() where service_id = any($1::uuid[])`,
+        beats,
+      );
+    }
     const rows = rollup(points).flatMap(row => {
       const serviceId = serviceIds.get(row.serviceKey);
       return serviceId

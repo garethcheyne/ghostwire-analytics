@@ -47,7 +47,7 @@ export interface FlattenResult {
   rejected: number;
   /** Services seen in the request, by key. */
   services: Map<string, ServiceInfo>;
-  /** Services that sent a ghostwire.heartbeat point. */
+  /** Services whose ghostwire.heartbeat counter went up (delta points). */
   heartbeats: Set<string>;
   overflowed: number;
 }
@@ -265,7 +265,10 @@ export function flattenMetrics(
 
           result.points.push(parsed);
           serviceUsed = true;
-          if (name === 'ghostwire.heartbeat') result.heartbeats.add(service.key);
+          // A beat counts when the counter moved (running totals are checked after the delta).
+          if (name === 'ghostwire.heartbeat' && !parsed.cumulative && parsed.value > 0) {
+            result.heartbeats.add(service.key);
+          }
         }
       }
     }
