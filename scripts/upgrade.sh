@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Ghostwire Analytics: upgrade this install to a new version (and the last step of a first install).
 #
-#   scripts/upgrade.sh               upgrade to the latest version on main (asks first)
+#   scripts/upgrade.sh               upgrade to the latest release (asks first)
 #   scripts/upgrade.sh <version>     go to that tag, branch or commit instead
 #   scripts/upgrade.sh --check       say what an upgrade would do; change nothing
 #   scripts/upgrade.sh --yes         don't ask (for cron and installers)
@@ -21,6 +21,7 @@ set -Eeuo pipefail
 
 app_settings() {
   APP_NAME="Ghostwire Analytics"
+  TRACK=release # move only when VERSION on main changes (CI cuts a release then)
   DB_SERVICE=db
   DB_USER=ghostwire
   DB_NAME=ghostwire_analytics
@@ -200,7 +201,7 @@ built_services() {
       }
       service = ""
     }
-    END                     { flush() }'
+    END                     { flush() }' || true
 }
 
 docker_requirements() {
@@ -210,6 +211,7 @@ docker_requirements() {
   docker compose version > /dev/null 2>&1 || fail "Docker Compose v2 isn't available (docker compose)."
   docker info > /dev/null 2>&1 || fail "Can't talk to Docker (is it running? does this user need sudo?)."
   git rev-parse --git-dir > /dev/null 2>&1 || fail "$PROJECT_DIR isn't a git checkout."
+  docker compose config -q > /dev/null 2>&1 || fail "docker-compose.yml doesn't parse: run docker compose config to see why."
 }
 
 check_env() {
@@ -496,6 +498,8 @@ main() {
   APP_NAME=$(basename "$PROJECT_DIR")
   CURRENT_COMMIT="" CURRENT_LABEL="" TARGET_LABEL="" CHANGED=false UP_TO_DATE=false
   app_settings
+  # A URL built from other .env values (https://${APP_DOMAIN}) can't be shown as it is.
+  case "$APP_URL" in *'$'*) APP_URL="" ;; esac
 
   case "$BACKUP_DIR" in /*) ;; *) BACKUP_DIR="$PROJECT_DIR/$BACKUP_DIR" ;; esac
   mkdir -p "$BACKUP_DIR"

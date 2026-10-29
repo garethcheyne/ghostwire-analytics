@@ -1,5 +1,17 @@
 import type { NextConfig } from 'next';
-import pkg from './package.json' with { type: 'json' };
+import { readFileSync } from 'node:fs';
+
+// The release: VERSION at the repository root, dated like 2026.10.29.1945. The sidebar and
+// /api/health show it; scripts/upgrade.sh moves a server to a new one.
+function readVersion(): string {
+  for (const path of ['VERSION', '../VERSION', '/app/VERSION']) {
+    try {
+      const version = readFileSync(path, 'utf8').trim();
+      if (version && version !== 'unknown') return version;
+    } catch {}
+  }
+  return 'dev';
+}
 
 // Static headers. Anything that depends on runtime env (tracker names, collect endpoint, CSP)
 // is handled in src/proxy.ts so Docker env changes apply without a rebuild.
@@ -24,7 +36,7 @@ const nextConfig: NextConfig = {
   // Dev server only: let other machines on the local network open it (e.g. http://192.168.0.x:3000).
   allowedDevOrigins: ['192.168.*.*', '10.*.*.*', '*.local'],
   env: {
-    currentVersion: pkg.version,
+    APP_VERSION: readVersion(),
     basePath: process.env.BASE_PATH || '',
   },
   async headers() {

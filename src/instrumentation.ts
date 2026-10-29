@@ -2,7 +2,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { log } = await import('@/lib/logger');
     log.info('app.start', {
-      version: process.env.currentVersion,
+      version: process.env.APP_VERSION,
       node: process.version,
       logDir: process.env.LOG_DIR ?? null,
       email: !!process.env.SMTP_URL,

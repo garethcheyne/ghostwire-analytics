@@ -16,6 +16,7 @@ export async function GET() {
     return Response.json(
       {
         ok: true,
+        version: process.env.APP_VERSION,
         database: { ok: true, ms: Date.now() - began },
         uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
       },
@@ -25,7 +26,7 @@ export async function GET() {
     log.error('health.database_unavailable', { error });
 
     return Response.json(
-      { ok: false, database: { ok: false } },
+      { ok: false, version: process.env.APP_VERSION, database: { ok: false } },
       { status: 503, headers: { 'Cache-Control': 'no-store' } },
     );
   }

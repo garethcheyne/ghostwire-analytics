@@ -1,7 +1,7 @@
 # ghostwire-analytics (Python)
 
 Error reporting for [Ghostwire Analytics](https://github.com/garethcheyne/ghostwire-analytics):
-exceptions, crashes, FastAPI/Starlette, Flask/Django and logging. No dependencies; Python 3.9+.
+exceptions, crashes, FastAPI/Starlette, Flask/Django and logging. No dependencies; Python 3.10+.
 
 ```bash
 pip install ghostwire-analytics

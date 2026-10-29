@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = process.env.currentVersion;
+export const CURRENT_VERSION = process.env.APP_VERSION;
 export const AUTH_TOKEN = 'ghostwire.auth';
 export const LOCALE_CONFIG = 'ghostwire.locale';
 export const TIMEZONE_CONFIG = 'ghostwire.timezone';

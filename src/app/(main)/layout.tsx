@@ -5,7 +5,6 @@ import { Shell } from '@/components/layout/shell';
 import { auth } from '@/lib/better-auth';
 import { ROLES } from '@/lib/auth-roles';
 import { isTwoFactorRequired } from '@/lib/two-factor-policy';
-import pkg from '../../../package.json';
 import { SIDEBAR_COOKIE } from '@/components/app-shell/types';
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
@@ -29,7 +28,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         image: user.image,
         isAdmin: user.role === ROLES.admin,
       }}
-      version={pkg.version}
+      version={process.env.APP_VERSION ?? 'dev'}
       defaultOpen={sidebarOpen}
     >
       {children}
