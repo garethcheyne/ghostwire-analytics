@@ -158,6 +158,14 @@ export function UsersView() {
   const searchParams = useSearchParams();
   const search = searchParams.get('q') ?? '';
   const [value, setValue] = useState(search);
+  const [syncedSearch, setSyncedSearch] = useState(search);
+
+  // The URL changed from outside (Back/Forward, a link to /users): show its search instead of
+  // writing the old one back. Our own debounced update leaves the box alone (it only trims).
+  if (search !== syncedSearch) {
+    setSyncedSearch(search);
+    if (value.trim() !== search) setValue(search);
+  }
 
   // Keep the search in the URL (debounced), so a lookup can be bookmarked or pasted into a ticket.
   useEffect(() => {
