@@ -1,6 +1,7 @@
 import {
   Activity,
   ChartGantt,
+  Database,
   Waypoints,
   Bell,
   Bot,
@@ -82,6 +83,7 @@ export function websiteNav(websiteId: string): NavGroup[] {
         { title: 'Overview', href: path('/system'), icon: Activity, exact: true },
         { title: 'Endpoints', href: path('/system/endpoints'), icon: Waypoints },
         { title: 'Traces', href: path('/system/traces'), icon: ChartGantt },
+        { title: 'Dependencies', href: path('/system/dependencies'), icon: Database },
       ],
     },
     {
