@@ -2,6 +2,7 @@ import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { parseRequest } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
+import { describeSelfMonitoring, setSelfMonitoring } from '@/lib/monitoring/self';
 import { getRequireTwoFactorForAll, setRequireTwoFactorForAll } from '@/lib/two-factor-policy';
 
 /** App-wide settings for administrators. */
@@ -16,13 +17,22 @@ export async function GET(request: Request) {
     return unauthorized();
   }
 
-  return json({ requireTwoFactor: await getRequireTwoFactorForAll() });
+  const [requireTwoFactor, selfMonitoring] = await Promise.all([
+    getRequireTwoFactorForAll(),
+    describeSelfMonitoring(),
+  ]);
+
+  return json({ requireTwoFactor, selfMonitoring });
 }
 
 export async function POST(request: Request) {
   const { auth, body, error } = await parseRequest(
     request,
-    z.object({ requireTwoFactor: z.boolean() }),
+    z
+      .object({ requireTwoFactor: z.boolean().optional(), selfMonitoring: z.boolean().optional() })
+      .refine(value => value.requireTwoFactor !== undefined || value.selfMonitoring !== undefined, {
+        message: 'Nothing to change.',
+      }),
   );
 
   if (error) {
@@ -33,11 +43,21 @@ export async function POST(request: Request) {
     return unauthorized();
   }
 
-  await setRequireTwoFactorForAll(body.requireTwoFactor);
+  const result: Record<string, unknown> = {};
+
+  if (body.requireTwoFactor !== undefined) {
+    await setRequireTwoFactorForAll(body.requireTwoFactor);
+    result.requireTwoFactor = body.requireTwoFactor;
+  }
+
+  if (body.selfMonitoring !== undefined) {
+    const { websiteId } = await setSelfMonitoring(body.selfMonitoring, auth.user.id);
+    result.selfMonitoring = { enabled: body.selfMonitoring, websiteId };
+  }
 
   await audit(request, auth, {
     action: 'admin.settings.update',
-    details: { requireTwoFactor: body.requireTwoFactor },
+    details: result,
   });
-  return json({ requireTwoFactor: body.requireTwoFactor });
+  return json(result);
 }

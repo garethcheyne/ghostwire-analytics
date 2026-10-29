@@ -1,5 +1,16 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    // Self monitoring's OpenTelemetry first, before anything loads http or pg. It records and
+    // sends nothing until the admin switch is on (Administration → Settings).
+    // A failure here must never stop the app from starting.
+    try {
+      const { registerSelfTelemetry } = await import('@/lib/monitoring/self-telemetry');
+      registerSelfTelemetry();
+    } catch (error) {
+      const { log } = await import('@/lib/logger');
+      log.error('self_monitoring.start_failed', { error });
+    }
+
     const { log } = await import('@/lib/logger');
     log.info('app.start', {
       version: process.env.APP_VERSION,

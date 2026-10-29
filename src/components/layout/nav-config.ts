@@ -149,6 +149,7 @@ export const adminNav: NavGroup[] = [
       { title: 'Websites', href: '/admin/websites', icon: Globe },
       { title: 'Teams', href: '/admin/teams', icon: Users },
       { title: 'Security', href: '/admin/security', icon: ShieldCheck },
+      { title: 'Settings', href: '/admin/settings', icon: Settings },
       { title: 'Audit log', href: '/admin/audit', icon: ScrollText },
     ],
   },
