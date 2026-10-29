@@ -9,7 +9,7 @@ vi.mock('@/permissions', () => ({
   canCreateWebsite: vi.fn(),
   canUpdateWebsite,
   canViewAuthenticatedWebsite: vi.fn(),
-  canViewWebsite: vi.fn(),
+  canViewWebsite: (...args: unknown[]) => canViewWebsite(...args),
 }));
 vi.mock('@/queries/prisma', () => ({
   createWebsite: vi.fn(),
@@ -17,7 +17,14 @@ vi.mock('@/queries/prisma', () => ({
   getWebsite,
   updateWebsite: vi.fn(),
 }));
-vi.mock('@/queries/sql', () => ({}));
+const getSessionMetrics = vi.fn();
+const getPageviewStats = vi.fn();
+const getSessionStats = vi.fn();
+const canViewWebsite = vi.fn();
+const logError = vi.fn();
+
+vi.mock('@/lib/logger', () => ({ log: { error: logError, warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
+vi.mock('@/queries/sql', () => ({ getSessionMetrics, getPageviewStats, getSessionStats }));
 
 const { buildTools } = await import('./tools');
 
@@ -54,9 +61,20 @@ describe('ghostwire_create_read_key', () => {
     });
   });
 
-  test('can expire, and keeps names within the key limit', async () => {
-    await tool(owner).handler({ websiteId: site, name: 'x'.repeat(40), expiresInDays: 30 });
-    expect(createApiKey.mock.calls[0]![0].body).toMatchObject({ expiresIn: 30 * 86400, name: 'x'.repeat(32) });
+  test('can expire, and keeps the default name within the key limit', async () => {
+    getWebsite.mockResolvedValue({ id: site, name: 'y'.repeat(40) });
+    await tool(owner).handler({ websiteId: site, expiresInDays: 30 });
+    expect(createApiKey.mock.calls[0]![0].body).toMatchObject({ expiresIn: 30 * 86400, name: `Read: ${'y'.repeat(26)}` });
+  });
+
+  test('refuses arguments outside its schema before doing anything', async () => {
+    for (const args of [{ websiteId: site, name: 'x'.repeat(40) }, { websiteId: 'not-a-uuid' }, { websiteId: site, expiresInDays: 0.5 }]) {
+      const result = await tool(owner).handler(args);
+      expect(result.isError).toBe(true);
+      expect(result.content[0]!.text).toMatch(/^Invalid arguments/);
+    }
+    expect(canUpdateWebsite).not.toHaveBeenCalled();
+    expect(createApiKey).not.toHaveBeenCalled();
   });
 
   test('refuses someone who may not manage the site', async () => {
@@ -80,5 +98,58 @@ describe('ghostwire_create_read_key', () => {
 
   test('is described as not read-only and not destructive', () => {
     expect(tool(owner).annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false });
+  });
+});
+
+describe('argument validation on the reading tools', () => {
+  const named = (name: string) => buildTools(owner, 'https://analytics.example.com').find(t => t.name === name)!;
+
+  beforeEach(() => {
+    canViewWebsite.mockReset().mockResolvedValue(true);
+    getSessionMetrics.mockReset().mockResolvedValue([{ x: 'Firefox', y: 3 }]);
+    getPageviewStats.mockReset().mockResolvedValue([]);
+    getSessionStats.mockReset().mockResolvedValue([]);
+    logError.mockReset();
+  });
+
+  test('a metrics type outside the list never reaches the query', async () => {
+    const result = await named('ghostwire_get_metrics').handler({
+      websiteId: site,
+      type: '(select password from "user" limit 1)',
+    });
+    expect(result.isError).toBe(true);
+    expect(getSessionMetrics).not.toHaveBeenCalled();
+  });
+
+  test('a limit that is not a small integer never reaches the query', async () => {
+    const result = await named('ghostwire_get_metrics').handler({ websiteId: site, type: 'browser', limit: '1 union select 1' });
+    expect(result.isError).toBe(true);
+    expect(getSessionMetrics).not.toHaveBeenCalled();
+  });
+
+  test('a time series unit outside the list never reaches the query', async () => {
+    const result = await named('ghostwire_get_timeseries').handler({ websiteId: site, unit: "day', now()) --" });
+    expect(result.isError).toBe(true);
+    expect(getPageviewStats).not.toHaveBeenCalled();
+  });
+
+  test('valid arguments run the query', async () => {
+    const result = await named('ghostwire_get_metrics').handler({ websiteId: site, type: 'browser', limit: 5 });
+    expect(result.isError).toBeUndefined();
+    expect(getSessionMetrics).toHaveBeenCalledWith(site, { type: 'browser', limit: 5 }, expect.anything());
+  });
+
+  test('an unexpected failure is logged, not shown to the caller', async () => {
+    getSessionMetrics.mockRejectedValue(new Error('relation "secret_table" does not exist'));
+    const result = await named('ghostwire_get_metrics').handler({ websiteId: site, type: 'browser' });
+    expect(result.isError).toBe(true);
+    expect(result.content[0]!.text).not.toContain('secret_table');
+    expect(logError).toHaveBeenCalledWith('mcp.tool_failed', expect.objectContaining({ tool: 'ghostwire_get_metrics' }));
+  });
+
+  test('its own refusals still reach the caller', async () => {
+    canViewWebsite.mockResolvedValue(false);
+    const result = await named('ghostwire_get_metrics').handler({ websiteId: site, type: 'browser' });
+    expect(result.content[0]!.text).toContain('do not have access');
   });
 });

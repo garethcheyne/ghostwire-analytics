@@ -32,6 +32,7 @@ import {
   getSessionStats,
   getWebsiteStats,
 } from '@/queries/sql';
+import { log } from '@/lib/logger';
 import type { McpTool, ToolResult } from './protocol';
 
 
@@ -39,6 +40,9 @@ const text = (value: unknown): ToolResult => ({
   content: [{ type: 'text', text: JSON.stringify(value, null, 2) }],
   structuredContent: value as Record<string, unknown>,
 });
+
+/** A failure whose message is meant for the caller (anything else is logged and kept private). */
+class ToolError extends Error {}
 
 const refuse = (message: string): ToolResult => ({
   content: [{ type: 'text', text: message }],
@@ -100,11 +104,11 @@ function resolveRange({ startDate, endDate }: { startDate?: string; endDate?: st
     : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    throw new Error('startDate and endDate must be ISO 8601 dates, e.g. "2026-09-01".');
+    throw new ToolError('startDate and endDate must be ISO 8601 dates, e.g. "2026-09-01".');
   }
 
   if (start > end) {
-    throw new Error('startDate is after endDate.');
+    throw new ToolError('startDate is after endDate.');
   }
 
   return { startDate: start, endDate: end };
@@ -113,25 +117,56 @@ function resolveRange({ startDate, endDate }: { startDate?: string; endDate?: st
 /** Every tool that names a website checks the caller may see it before anything else. */
 async function readable(auth: Auth, websiteId: string) {
   if (!(await canViewWebsite(auth, websiteId))) {
-    throw new Error(`No website ${websiteId}, or you do not have access to it.`);
+    throw new ToolError(`No website ${websiteId}, or you do not have access to it.`);
   }
 
   const website = await getWebsite(websiteId);
-  if (!website) throw new Error(`No website ${websiteId}.`);
+  if (!website) throw new ToolError(`No website ${websiteId}.`);
 
   return website;
 }
 
-const schema = (shape: z.ZodRawShape) => z.toJSONSchema(z.object(shape)) as Record<string, unknown>;
+type ToolDefinition = Omit<McpTool, 'inputSchema'> & { input: z.ZodRawShape };
+
+/**
+ * Publishes a tool's arguments as JSON Schema and enforces the same Zod schema on every call:
+ * the handlers rely on it (several values end up in SQL text), and the schema a client is shown
+ * is no guarantee of what it sends.
+ */
+function finish({ input, handler, ...tool }: ToolDefinition): McpTool {
+  const args = z.object(input);
+
+  return {
+    ...tool,
+    inputSchema: z.toJSONSchema(args) as Record<string, unknown>,
+    handler: async raw => {
+      const parsed = args.safeParse(raw ?? {});
+
+      if (!parsed.success) {
+        return refuse(`Invalid arguments for ${tool.name}:
+${z.prettifyError(parsed.error)}`);
+      }
+
+      try {
+        return await handler(parsed.data);
+      } catch (error) {
+        if (error instanceof ToolError) return refuse(error.message);
+
+        log.error('mcp.tool_failed', { tool: tool.name, error });
+        return refuse(`${tool.name} failed. The details are in the server log.`);
+      }
+    },
+  };
+}
 
 export function buildTools(auth: Auth, origin: string): McpTool[] {
-  return [
+  const tools: ToolDefinition[] = [
     {
       name: 'ghostwire_list_websites',
       title: 'List websites',
       description:
         'List the websites this API key can see, with their IDs and whether error reporting and session replay are switched on.',
-      inputSchema: schema({}),
+      input: {},
       annotations: { readOnlyHint: true, openWorldHint: false },
       handler: async () => {
         if (!auth.user) return refuse('This tool needs an API key belonging to a user.');
@@ -148,7 +183,7 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       title: 'Create a website',
       description:
         'Create a website to track and return its ID along with the tracker snippet to paste into the site. Use this once per site; call ghostwire_list_websites first to check it does not already exist.',
-      inputSchema: schema({
+      input: {
         name: z.string().trim().min(1).max(100).describe('What to call it in Ghostwire.'),
         domain: z
           .string()
@@ -163,7 +198,7 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
           .boolean()
           .describe('Record session replays and heatmaps. Default false.')
           .optional(),
-      }),
+      },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
       handler: async ({ name, domain, enableErrors = false, enableReplays = false }) => {
         if (!auth.user) return refuse('This tool needs an API key belonging to a user.');
@@ -214,7 +249,7 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       title: 'Get a website',
       description:
         'Fetch one website by ID, with its settings and the tracker snippet for pasting into the site.',
-      inputSchema: schema({ websiteId: z.uuid().describe('The website ID.') }),
+      input: { websiteId: z.uuid().describe('The website ID.') },
       annotations: { readOnlyHint: true, openWorldHint: false },
       handler: async ({ websiteId }) => {
         const website = await readable(auth, websiteId);
@@ -234,13 +269,13 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       title: 'Update a website',
       description:
         'Rename a website, change its domain, or switch error reporting and session replay on or off.',
-      inputSchema: schema({
+      input: {
         websiteId: z.uuid().describe('The website ID.'),
         name: z.string().trim().min(1).max(100).optional(),
         domain: z.string().trim().max(500).optional(),
         enableErrors: z.boolean().optional(),
         enableReplays: z.boolean().optional(),
-      }),
+      },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
       handler: async ({ websiteId, name, domain, enableErrors, enableReplays }) => {
         if (!(await canUpdateWebsite(auth, websiteId))) {
@@ -267,7 +302,7 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       title: 'Issue a server error key',
       description:
         'Issue the ingest key a server uses to report errors from the back end (the gwe_ key). The key is shown once and cannot be retrieved later; issuing a new one replaces any existing key, so anything still using the old one stops reporting.',
-      inputSchema: schema({ websiteId: z.uuid().describe('The website ID.') }),
+      input: { websiteId: z.uuid().describe('The website ID.') },
       // Replacing a key silently stops whatever was using the old one.
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
       handler: async ({ websiteId }) => {
@@ -298,7 +333,7 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       title: 'Issue a read-only key for one site',
       description:
         "Issue a gwa_ API key that can only read one website's aggregate analytics over the REST API: stats, page views, breakdowns (metrics), active visitors, date range and performance. It cannot see other sites, raw sessions, replays or exports, cannot change anything, and cannot use this MCP endpoint. For showing a site's numbers in another app's dashboard. Shown once; revoke it under Settings → API keys.",
-      inputSchema: schema({
+      input: {
         websiteId: z.uuid().describe('The website ID.'),
         name: z
           .string()
@@ -313,7 +348,7 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
           .max(365)
           .describe('Expire the key after this many days. Default: never.')
           .optional(),
-      }),
+      },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
       handler: async ({ websiteId, name, expiresInDays }) => {
         if (!auth.user) return refuse('Sign in with an API key to issue keys.');
@@ -353,7 +388,7 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       title: 'Get headline stats',
       description:
         'Visitors, page views, visits, bounce rate and average visit time for a period, with the same figures for the preceding period of equal length so changes can be reported.',
-      inputSchema: schema({ websiteId: z.uuid().describe('The website ID.'), ...dateRange.shape }),
+      input: { websiteId: z.uuid().describe('The website ID.'), ...dateRange.shape },
       annotations: { readOnlyHint: true, openWorldHint: false },
       handler: async ({ websiteId, startDate, endDate }) => {
         await readable(auth, websiteId);
@@ -394,14 +429,14 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       title: 'Get a breakdown',
       description:
         'The top values for one dimension over a period: pages, referrers, countries, browsers, operating systems, devices, or the channels visits arrived through.',
-      inputSchema: schema({
+      input: {
         websiteId: z.uuid().describe('The website ID.'),
         type: z
           .enum(['path', 'referrer', 'country', 'browser', 'os', 'device', 'channel'])
           .describe('Which dimension to break down by.'),
         limit: z.number().int().min(1).max(100).describe('How many rows. Default 10.').optional(),
         ...dateRange.shape,
-      }),
+      },
       annotations: { readOnlyHint: true, openWorldHint: false },
       handler: async ({ websiteId, type, limit = 10, startDate, endDate }) => {
         await readable(auth, websiteId);
@@ -428,11 +463,11 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       title: 'Get traffic over time',
       description:
         'Page views and visitors per day (or per hour) across a period, for spotting trends and spikes.',
-      inputSchema: schema({
+      input: {
         websiteId: z.uuid().describe('The website ID.'),
         unit: z.enum(['hour', 'day', 'month']).describe('Bucket size. Default day.').optional(),
         ...dateRange.shape,
-      }),
+      },
       annotations: { readOnlyHint: true, openWorldHint: false },
       handler: async ({ websiteId, unit = 'day', startDate, endDate }) => {
         await readable(auth, websiteId);
@@ -457,7 +492,7 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       name: 'ghostwire_get_active_visitors',
       title: 'Get visitors right now',
       description: 'How many people are on the site at this moment.',
-      inputSchema: schema({ websiteId: z.uuid().describe('The website ID.') }),
+      input: { websiteId: z.uuid().describe('The website ID.') },
       annotations: { readOnlyHint: true, openWorldHint: false },
       handler: async ({ websiteId }) => {
         // Live numbers are a visitor count, not identities, but they are still
@@ -472,4 +507,6 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       },
     },
   ];
+
+  return tools.map(finish);
 }
