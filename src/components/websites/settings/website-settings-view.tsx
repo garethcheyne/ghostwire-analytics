@@ -16,7 +16,7 @@ const TABS = [
   { id: 'general', label: 'General', content: GeneralSettings },
   { id: 'tracking', label: 'Tracking code', content: TrackingCode },
   { id: 'recording', label: 'Replays & heatmaps', content: RecordingSettings },
-  { id: 'errors', label: 'Errors', content: ErrorSettings },
+  { id: 'errors', label: 'Errors / Ingest', content: ErrorSettings },
   { id: 'alerts', label: 'Alerts', content: AlertSettings },
   { id: 'sharing', label: 'Sharing', content: SharingSettings },
   { id: 'data', label: 'Data', content: DataSettings },

@@ -35,7 +35,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useDeleteWebsite, useResetWebsite, websiteKeys } from '@/hooks/queries/websites';
+import {
+  useDeleteWebsite,
+  useResetWebsite,
+  useUpdateWebsite,
+  useWebsite,
+  websiteKeys,
+} from '@/hooks/queries/websites';
 import { api, type PageResult } from '@/lib/api-client';
 import { useSession } from '@/lib/auth-client';
 import { TEAM_ROLES } from '@/lib/auth-roles';
@@ -228,7 +234,93 @@ function DeleteAction() {
   );
 }
 
+const RETENTION_FIELDS = [
+  { key: 'monitorSpanDays', label: 'Traces', hint: 'Default 7' },
+  { key: 'monitorMinuteDays', label: 'Per-minute metrics', hint: 'Default 30' },
+  { key: 'monitorHourDays', label: 'Hourly metrics', hint: 'Default 396 (13 months)' },
+] as const;
+
+type RetentionKey = (typeof RETENTION_FIELDS)[number]['key'];
+
+/** How long system monitoring data is kept for this site (enforced hourly). */
+function MonitoringRetention() {
+  const website = useCurrentWebsite();
+  const { data } = useWebsite(website.id);
+  const update = useUpdateWebsite(website.id);
+  const [draft, setDraft] = useState<Partial<Record<RetentionKey, string>>>({});
+
+  if (!data) return null;
+
+  const value = (key: RetentionKey) => draft[key] ?? String(data[key] ?? '');
+  const valid = RETENTION_FIELDS.every(({ key }) => {
+    const n = Number(value(key));
+    return Number.isInteger(n) && n >= 1 && n <= 3650;
+  });
+  const dirty = RETENTION_FIELDS.some(({ key }) => draft[key] !== undefined && draft[key] !== String(data[key]));
+
+  async function save() {
+    try {
+      await update.mutateAsync(
+        Object.fromEntries(RETENTION_FIELDS.map(({ key }) => [key, Number(value(key))])) as Record<RetentionKey, number>,
+      );
+      setDraft({});
+      toast.success('Retention saved');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not save retention.');
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>System monitoring data</CardTitle>
+        <CardDescription>
+          Days to keep the OpenTelemetry data apps send to this site. Older data is deleted every hour.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid max-w-2xl gap-4 sm:grid-cols-3">
+          {RETENTION_FIELDS.map(({ key, label, hint }) => (
+            <Field key={key}>
+              <FieldLabel htmlFor={`retention-${key}`}>{label}</FieldLabel>
+              <Input
+                id={`retention-${key}`}
+                type="number"
+                min={1}
+                max={3650}
+                disabled={!website.canUpdate}
+                value={value(key)}
+                onChange={event => setDraft(current => ({ ...current, [key]: event.target.value }))}
+              />
+              <span className="text-xs text-muted-foreground">{hint}</span>
+            </Field>
+          ))}
+        </div>
+        {website.canUpdate && dirty && (
+          <div className="flex gap-2">
+            <Button onClick={save} disabled={!valid || update.isPending}>
+              Save
+            </Button>
+            <Button variant="ghost" onClick={() => setDraft({})}>
+              Cancel
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DataSettings() {
+  return (
+    <div className="flex flex-col gap-6">
+      <MonitoringRetention />
+      <DataActions />
+    </div>
+  );
+}
+
+function DataActions() {
   const website = useCurrentWebsite();
 
   return (

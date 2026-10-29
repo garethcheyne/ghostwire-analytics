@@ -98,7 +98,7 @@ function IngestKey({ hint }: { hint: string | null }) {
               Current key ends in <code className="font-mono text-foreground">…{hint}</code>.
             </>
           ) : (
-            'No key yet. Server clients need one to send errors.'
+            'No key yet. Servers need one to send errors and monitoring data.'
           )}
         </p>
         {website.canUpdate && (
@@ -115,8 +115,8 @@ function IngestKey({ hint }: { hint: string | null }) {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Replace the ingest key?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Servers using the current key stop being able to send errors until you give
-                        them the new one.
+                        Servers using the current key stop being able to send errors and monitoring
+                        data until you give them the new one.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -135,8 +135,8 @@ function IngestKey({ hint }: { hint: string | null }) {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Revoke the ingest key?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Server errors are rejected until you create a new key. Browser errors
-                        aren&apos;t affected.
+                        Server errors and monitoring data are rejected until you create a new key.
+                        Browser errors aren&apos;t affected.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -301,10 +301,14 @@ captureException(error, { user: { id: user.username }, request: req });`;
 
       <Card>
         <CardHeader>
-          <CardTitle>Server errors</CardTitle>
+          <CardTitle>Server errors and monitoring</CardTitle>
           <CardDescription>
-            Servers send errors to <code className="font-mono">/api/errors</code> with this
-            website&apos;s ingest key.
+            Servers send errors to <code className="font-mono">/api/errors</code>, and system
+            monitoring (OpenTelemetry metrics and traces) to{' '}
+            <code className="font-mono">/v1/metrics</code> and{' '}
+            <code className="font-mono">/v1/traces</code>, with this website&apos;s ingest key. It is
+            the key a Ghostwire app&apos;s &quot;Ghostwire Analytics&quot; setting asks for; monitoring
+            is accepted whether or not error reports are on, and shows under System.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">

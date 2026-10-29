@@ -17,6 +17,10 @@ export interface Website {
   errorsEnabled: boolean;
   /** Last characters of the error ingest key, if one exists (the key itself is shown once). */
   errorKeyHint: string | null;
+  /** System monitoring retention in days: spans, per-minute and hourly metrics. */
+  monitorSpanDays: number;
+  monitorMinuteDays: number;
+  monitorHourDays: number;
   user?: { id: string; username: string | null } | null;
   createUser?: { id: string; username: string | null } | null;
 }
@@ -84,7 +88,18 @@ export function useUpdateWebsite(websiteId: string) {
 
   return useMutation({
     mutationFn: (
-      data: Partial<Pick<Website, 'name' | 'domain' | 'replayConfig' | 'errorsEnabled'>>,
+      data: Partial<
+        Pick<
+          Website,
+          | 'name'
+          | 'domain'
+          | 'replayConfig'
+          | 'errorsEnabled'
+          | 'monitorSpanDays'
+          | 'monitorMinuteDays'
+          | 'monitorHourDays'
+        >
+      >,
     ) => api.post<Website>(`/websites/${websiteId}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: websiteKeys.all }),
   });

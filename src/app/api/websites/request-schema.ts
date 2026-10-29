@@ -45,5 +45,9 @@ export const updateWebsiteRequestSchema = z
     shareId: z.string().max(50).nullable().optional(),
     replayConfig: replayConfigInputSchema.nullable().optional(),
     errorsEnabled: z.boolean().optional(),
+    /** System monitoring retention, in days. */
+    monitorSpanDays: z.number().int().min(1).max(3650).optional(),
+    monitorMinuteDays: z.number().int().min(1).max(3650).optional(),
+    monitorHourDays: z.number().int().min(1).max(3650).optional(),
   })
   .meta({ id: 'UpdateWebsiteRequest' });
