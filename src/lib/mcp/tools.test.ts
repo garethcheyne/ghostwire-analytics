@@ -25,6 +25,10 @@ const logError = vi.fn();
 
 vi.mock('@/lib/logger', () => ({ log: { error: logError, warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
 vi.mock('@/queries/sql', () => ({ getSessionMetrics, getPageviewStats, getSessionStats }));
+const getSystemServices = vi.fn();
+const getEndpoints = vi.fn();
+const getTraces = vi.fn();
+vi.mock('@/queries/sql/system', () => ({ getSystemServices, getEndpoints, getTraces }));
 
 const { buildTools } = await import('./tools');
 
@@ -151,5 +155,81 @@ describe('argument validation on the reading tools', () => {
     canViewWebsite.mockResolvedValue(false);
     const result = await named('ghostwire_get_metrics').handler({ websiteId: site, type: 'browser' });
     expect(result.content[0]!.text).toContain('do not have access');
+  });
+});
+
+describe('system monitoring tools', () => {
+  const find = (name: string) => buildTools(owner, 'https://analytics.example.com').find(t => t.name === name)!;
+  let canViewAuthenticated: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    canViewAuthenticated = vi.mocked((await import('@/permissions')).canViewAuthenticatedWebsite) as any;
+    canViewAuthenticated.mockResolvedValue(true);
+    getSystemServices.mockResolvedValue([
+      {
+        id: 's1',
+        namespace: 'ghostwire-load',
+        name: 'web',
+        kind: 'app',
+        status: 'down',
+        statusReason: 'Stopped reporting',
+        version: '1',
+        environment: 'prod',
+        lastSeen: '2026-10-29T10:00:00Z',
+      },
+    ]);
+    getEndpoints.mockResolvedValue([
+      { serviceId: 's1', method: 'GET', route: '/api/x', count: 10, errors: 1, rate: 0.5, errorRate: 0.1, p50: 5, p95: 40.123, p99: 50 },
+    ]);
+    getTraces.mockResolvedValue({
+      count: 1,
+      data: [
+        {
+          traceId: 'a'.repeat(32),
+          service: 'web',
+          name: 'GET /api/x',
+          route: '/api/x',
+          durationMs: 812.5,
+          status: 2,
+          httpStatus: 500,
+          statusMessage: 'boom',
+          spanCount: 4,
+          startTime: '2026-10-29T10:00:00Z',
+        },
+      ],
+    });
+  });
+
+  test('reports status with request figures, for the last hour by default', async () => {
+    const result = await find('ghostwire_get_services_status').handler({ websiteId: site });
+    expect(result.structuredContent).toMatchObject({
+      services: [{ name: 'web', status: 'down', reason: 'Stopped reporting', requests: 10, errorRate: 0.1, worstEndpointP95Ms: 40.12 }],
+    });
+    const [, range] = getEndpoints.mock.calls[0];
+    expect(range.endDate.getTime() - range.startDate.getTime()).toBe(60 * 60 * 1000);
+  });
+
+  test('lists endpoints and slow traces with links', async () => {
+    const endpoints = await find('ghostwire_get_endpoint_stats').handler({ websiteId: site, limit: 5 });
+    expect(endpoints.structuredContent).toMatchObject({ endpoints: [{ service: 'web', route: '/api/x', p95Ms: 40.12 }] });
+
+    const traces = await find('ghostwire_get_slow_traces').handler({ websiteId: site, errorsOnly: true });
+    expect(getTraces.mock.calls[0][1]).toMatchObject({ status: 'error', sort: 'slowest', pageSize: 20 });
+    expect(traces.structuredContent).toMatchObject({
+      traces: [{ failed: true, url: `https://analytics.example.com/websites/${site}/system/traces/${'a'.repeat(32)}` }],
+    });
+  });
+
+  test('refuses sites the caller can only see through a share or read key', async () => {
+    canViewAuthenticated.mockResolvedValue(false);
+    const result = await find('ghostwire_get_slow_traces').handler({ websiteId: site });
+    expect(result.isError).toBe(true);
+    expect(getTraces).not.toHaveBeenCalled();
+  });
+
+  test('enforces the schema', async () => {
+    const result = await find('ghostwire_get_endpoint_stats').handler({ websiteId: site, limit: 10_000 });
+    expect(result.isError).toBe(true);
+    expect(getEndpoints).not.toHaveBeenCalled();
   });
 });

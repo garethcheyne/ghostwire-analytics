@@ -49,6 +49,9 @@ can only read one site's aggregate analytics, for another app's dashboard).
 Reading: `ghostwire_get_stats`, `ghostwire_get_metrics`,
 `ghostwire_get_timeseries`, `ghostwire_get_active_visitors`.
 
+System monitoring (read-only): `ghostwire_get_services_status`,
+`ghostwire_get_endpoint_stats`, `ghostwire_get_slow_traces`.
+
 Teams, users, alerts and deletion are deliberately absent, so a bad prompt
 cannot do lasting damage through this door.
 

@@ -3,7 +3,8 @@
  *
  * Two jobs, matching what an agent is actually asked to do: set a site up so
  * it starts reporting (including the keys another app needs to report errors
- * or read its numbers), and answer "how is it doing?". Everything else —
+ * or read its numbers), and answer "how is it doing?" — for visitors, and for
+ * the systems reporting to it (system monitoring, read-only). Everything else —
  * teams, users, alerts, deletion — is deliberately absent, so a bad prompt
  * cannot do lasting damage through this door.
  *
@@ -32,6 +33,7 @@ import {
   getSessionStats,
   getWebsiteStats,
 } from '@/queries/sql';
+import { getEndpoints, getSystemServices, getTraces } from '@/queries/sql/system';
 import { log } from '@/lib/logger';
 import type { McpTool, ToolResult } from './protocol';
 
@@ -113,6 +115,32 @@ function resolveRange({ startDate, endDate }: { startDate?: string; endDate?: st
 
   return { startDate: start, endDate: end };
 }
+
+/** Monitoring tools look at the recent past by default: the last hour. */
+function resolveRecentRange(range: { startDate?: string; endDate?: string }) {
+  const end = range.endDate ? new Date(range.endDate) : new Date();
+  return resolveRange({
+    startDate: range.startDate ?? new Date(end.getTime() - 60 * 60 * 1000).toISOString(),
+    endDate: range.endDate,
+  });
+}
+
+const recentRange = z.object({
+  startDate: z.string().describe('Start of the period, ISO 8601. Defaults to an hour ago.').optional(),
+  endDate: z.string().describe('End of the period, ISO 8601. Defaults to now.').optional(),
+});
+
+/**
+ * Monitoring data (span attributes, statements, routes) is for signed-in users and full API keys,
+ * like the REST routes: the same gate as canViewAuthenticatedWebsite.
+ */
+async function monitorable(auth: Auth, websiteId: string) {
+  if (!(await canViewAuthenticatedWebsite(auth, websiteId))) {
+    throw new ToolError(`No website ${websiteId}, or you do not have access to it.`);
+  }
+}
+
+const round = (value: number | null) => (value === null ? null : Math.round(value * 100) / 100);
 
 /** Every tool that names a website checks the caller may see it before anything else. */
 async function readable(auth: Auth, websiteId: string) {
@@ -300,7 +328,7 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
       name: 'ghostwire_create_error_key',
       title: 'Issue a server error key',
       description:
-        'Issue the ingest key a server uses to report errors from the back end (the gwe_ key). The key is shown once and cannot be retrieved later; issuing a new one replaces any existing key, so anything still using the old one stops reporting.',
+        'Issue the ingest key a server uses to report errors from the back end and to send system monitoring (OpenTelemetry to /v1/metrics and /v1/traces): the gwe_ key. The key is shown once and cannot be retrieved later; issuing a new one replaces any existing key, so anything still using the old one stops reporting.',
       input: { websiteId: z.uuid().describe('The website ID.') },
       // Replacing a key silently stops whatever was using the old one.
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
@@ -503,6 +531,133 @@ export function buildTools(auth: Auth, origin: string): McpTool[] {
         const active = await getActiveVisitors(websiteId);
 
         return text({ websiteId, activeVisitors: Number((active as any)?.visitors ?? active ?? 0) });
+      },
+    },
+
+    {
+      name: 'ghostwire_get_services_status',
+      title: 'Get system status',
+      description:
+        'System monitoring: every service reporting to a site (OpenTelemetry), whether it is up or down and why, its version, and its requests, server error rate and p95 latency over a period (default the last hour).',
+      input: { websiteId: z.uuid().describe('The website the services report to.'), ...recentRange.shape },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      handler: async ({ websiteId, startDate, endDate }) => {
+        await monitorable(auth, websiteId);
+        const range = resolveRecentRange({ startDate, endDate });
+        const [services, endpoints] = await Promise.all([
+          getSystemServices(websiteId),
+          getEndpoints(websiteId, range),
+        ]);
+
+        return text({
+          period: { startDate: range.startDate.toISOString(), endDate: range.endDate.toISOString() },
+          services: services.map(s => {
+            const own = endpoints.filter(e => e.serviceId === s.id);
+            const requests = own.reduce((n, e) => n + e.count, 0);
+            const errors = own.reduce((n, e) => n + e.errors, 0);
+            return {
+              id: s.id,
+              namespace: s.namespace,
+              name: s.name,
+              kind: s.kind,
+              status: s.status,
+              reason: s.statusReason ?? null,
+              version: s.version,
+              environment: s.environment,
+              lastSeen: s.lastSeen,
+              requests,
+              errorRate: requests ? round(errors / requests) : null,
+              // The slowest endpoint's p95: a service-wide percentile would need the buckets.
+              worstEndpointP95Ms: round(Math.max(...own.map(e => e.p95 ?? 0), 0) || null),
+            };
+          }),
+        });
+      },
+    },
+
+    {
+      name: 'ghostwire_get_endpoint_stats',
+      title: 'Get endpoint performance',
+      description:
+        'System monitoring: requests, server error rate and p50/p95/p99 latency (ms) per service, HTTP method and route over a period (default the last hour), busiest first.',
+      input: {
+        websiteId: z.uuid().describe('The website the services report to.'),
+        serviceId: z.uuid().describe('Only this service (an id from ghostwire_get_services_status).').optional(),
+        limit: z.number().int().min(1).max(200).describe('How many endpoints. Default 25.').optional(),
+        ...recentRange.shape,
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      handler: async ({ websiteId, serviceId, limit = 25, startDate, endDate }) => {
+        await monitorable(auth, websiteId);
+        const range = resolveRecentRange({ startDate, endDate });
+        const [rows, services] = await Promise.all([
+          getEndpoints(websiteId, { ...range, serviceId }),
+          getSystemServices(websiteId),
+        ]);
+        const name = (id: string) => services.find(s => s.id === id)?.name ?? null;
+
+        return text({
+          period: { startDate: range.startDate.toISOString(), endDate: range.endDate.toISOString() },
+          endpoints: rows.slice(0, limit).map(e => ({
+            service: name(e.serviceId),
+            method: e.method,
+            route: e.route,
+            requests: e.count,
+            perMinute: round(e.rate),
+            errorRate: round(e.errorRate),
+            p50Ms: round(e.p50),
+            p95Ms: round(e.p95),
+            p99Ms: round(e.p99),
+          })),
+        });
+      },
+    },
+
+    {
+      name: 'ghostwire_get_slow_traces',
+      title: 'Get slow or failing requests',
+      description:
+        'System monitoring: the slowest (or only the failing) requests and job runs over a period (default the last hour), with their trace IDs and a link to each trace in Analytics.',
+      input: {
+        websiteId: z.uuid().describe('The website the services report to.'),
+        serviceId: z.uuid().describe('Only this service.').optional(),
+        route: z.string().max(200).describe('Only this route, e.g. "/api/items/{id}".').optional(),
+        errorsOnly: z.boolean().describe('Only requests that failed. Default false.').optional(),
+        minDurationMs: z.number().min(0).max(86_400_000).describe('Only requests at least this slow.').optional(),
+        limit: z.number().int().min(1).max(100).describe('How many. Default 20.').optional(),
+        ...recentRange.shape,
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      handler: async ({ websiteId, serviceId, route, errorsOnly, minDurationMs, limit = 20, startDate, endDate }) => {
+        await monitorable(auth, websiteId);
+        const range = resolveRecentRange({ startDate, endDate });
+        const { data, count } = await getTraces(websiteId, {
+          ...range,
+          serviceId,
+          route,
+          status: errorsOnly ? 'error' : undefined,
+          minDurationMs,
+          sort: 'slowest',
+          pageSize: limit,
+        });
+
+        return text({
+          period: { startDate: range.startDate.toISOString(), endDate: range.endDate.toISOString() },
+          matching: count,
+          traces: data.map(t => ({
+            traceId: t.traceId,
+            service: t.service,
+            name: t.name,
+            route: t.route,
+            durationMs: round(t.durationMs),
+            failed: t.status === 2,
+            httpStatus: t.httpStatus,
+            error: t.statusMessage,
+            spans: t.spanCount,
+            at: new Date(t.startTime).toISOString(),
+            url: `${origin}/websites/${websiteId}/system/traces/${t.traceId}`,
+          })),
+        });
       },
     },
   ];

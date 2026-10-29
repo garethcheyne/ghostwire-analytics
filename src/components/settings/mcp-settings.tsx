@@ -48,12 +48,15 @@ const TOOLS = [
   ['ghostwire_create_website', 'Add a site and get its tracking snippet'],
   ['ghostwire_get_website', 'One site, with its snippet and settings'],
   ['ghostwire_update_website', 'Rename, change domain, toggle errors and replay'],
-  ['ghostwire_create_error_key', 'Issue the gwe_ key for server-side errors'],
+  ['ghostwire_create_error_key', 'Issue the gwe_ ingest key for server errors and monitoring'],
   ['ghostwire_create_read_key', 'Issue a read-only gwa_ key for one site’s numbers'],
   ['ghostwire_get_stats', 'Visitors, views, bounce rate, with the period before'],
   ['ghostwire_get_metrics', 'Top pages, referrers, countries, browsers, channels'],
   ['ghostwire_get_timeseries', 'Traffic per hour, day or month'],
   ['ghostwire_get_active_visitors', 'People on the site right now'],
+  ['ghostwire_get_services_status', 'System monitoring: which services are up or down'],
+  ['ghostwire_get_endpoint_stats', 'Requests, errors and latency per endpoint'],
+  ['ghostwire_get_slow_traces', 'The slowest or failing requests, with trace links'],
 ];
 
 export function McpSettings() {
