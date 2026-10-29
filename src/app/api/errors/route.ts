@@ -5,6 +5,7 @@ import { verifyErrorKey } from '@/lib/error-key';
 import { ERROR_PLATFORMS, parseStack } from '@/lib/errors';
 import { getDevice } from '@/lib/detect';
 import { prisma } from '@/lib/prisma';
+import { isBodyTooLarge } from '@/lib/body-limit';
 import { createLimiter } from '@/lib/rate-limit';
 import { parseRequest } from '@/lib/request';
 import { forbidden, tooManyRequests, unauthorized } from '@/lib/response';
@@ -93,7 +94,7 @@ function splitUrl(url: string | undefined) {
 const MAX_BODY_BYTES = 256 * 1024;
 
 export async function POST(request: Request) {
-  if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) {
+  if (await isBodyTooLarge(request, MAX_BODY_BYTES)) {
     return Response.json({ error: { message: 'Report too large.' } }, { status: 413 });
   }
 

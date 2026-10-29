@@ -10,9 +10,17 @@ import { truncateString } from '@/lib/format';
 import { createToken, parseToken } from '@/lib/jwt';
 import { isNoise, parseStack } from '@/lib/errors';
 import { fetchWebsite } from '@/lib/load';
+import { isBodyTooLarge } from '@/lib/body-limit';
 import { createIpRateLimiter, createLimiter } from '@/lib/rate-limit';
 import { parseRequest } from '@/lib/request';
-import { badRequest, forbidden, json, serverError, tooManyRequests } from '@/lib/response';
+import {
+  badRequest,
+  forbidden,
+  json,
+  payloadTooLarge,
+  serverError,
+  tooManyRequests,
+} from '@/lib/response';
 import { anyObjectParam, urlOrPathParam } from '@/lib/schema';
 import { safeDecodeURI, safeDecodeURIComponent } from '@/lib/url';
 import {
@@ -106,6 +114,10 @@ const schema = z.object({
     ),
 });
 
+// One call is small (an error with its stack and breadcrumbs is about 35 KB at the schema's
+// limits); anything bigger is a misbehaving or hostile client.
+const MAX_SEND_BYTES = 128 * 1024;
+
 // Per-IP cap on all tracking calls; generous, so offices behind one IP aren't affected.
 const allowForIp = createIpRateLimiter({ name: 'send', limit: 600, windowMs: 60_000 });
 
@@ -190,6 +202,11 @@ export async function POST(request: Request) {
     if (!(await allowForIp(request))) {
       metric('send.dropped.rate_limited');
       return tooManyRequests();
+    }
+
+    if (await isBodyTooLarge(request, MAX_SEND_BYTES)) {
+      metric('send.dropped.too_large');
+      return payloadTooLarge({ maxBytes: MAX_SEND_BYTES });
     }
 
     const { body, error } = await parseRequest(request, schema, { skipAuth: true });

@@ -10,6 +10,7 @@ import { parseToken } from '@/lib/jwt';
 import { getRecorderConfig } from '@/lib/recorder';
 import { getReplayEventCount } from '@/lib/replay';
 import { parseRequest } from '@/lib/request';
+import { measureBody } from '@/lib/body-limit';
 import { createIpRateLimiter } from '@/lib/rate-limit';
 import {
   badRequest,
@@ -85,26 +86,6 @@ function getUrlPath(url: string) {
   }
 }
 
-async function getRequestBodySize(request: Request): Promise<number | null> {
-  const contentLength = request.headers.get('content-length');
-
-  if (contentLength) {
-    const size = Number(contentLength);
-
-    if (Number.isFinite(size)) {
-      return size;
-    }
-  }
-
-  try {
-    const text = await request.clone().text();
-
-    return new TextEncoder().encode(text).length;
-  } catch {
-    return null;
-  }
-}
-
 export function OPTIONS() {
   return corsPreflight();
 }
@@ -119,7 +100,7 @@ export async function POST(request: Request) {
       return withCorsHeaders(tooManyRequests());
     }
 
-    const requestBodySize = await getRequestBodySize(request);
+    const requestBodySize = await measureBody(request, MAX_RECORD_REQUEST_BYTES);
 
     if (requestBodySize && requestBodySize > MAX_RECORD_REQUEST_BYTES) {
       return withCorsHeaders(

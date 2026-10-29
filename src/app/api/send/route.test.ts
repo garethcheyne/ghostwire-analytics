@@ -160,6 +160,24 @@ describe('parseRequest error handling', () => {
   });
 });
 
+describe('body size', () => {
+  test('refuses a body over 128 KB before parsing it', async () => {
+    const response = await POST(
+      new Request('http://localhost/api/send', { method: 'POST', body: 'x'.repeat(128 * 1024 + 1) }),
+    );
+
+    expect(response.status).toBe(413);
+    expect(parseRequestMock).not.toHaveBeenCalled();
+    expect(saveEventMock).not.toHaveBeenCalled();
+  });
+
+  test('accepts an ordinary event', async () => {
+    const response = await callPOST({ type: 'event', payload: { website: WEBSITE_ID, url: '/' } });
+
+    expect(response.status).toBe(200);
+  });
+});
+
 describe('schema validation', () => {
   // The schema is passed to parseRequest; grab it and exercise safeParse directly.
   async function getSchema() {

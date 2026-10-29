@@ -1,13 +1,21 @@
 import { z } from 'zod';
 import * as send from '@/app/api/send/route';
+import { isBodyTooLarge } from '@/lib/body-limit';
 import { parseRequest } from '@/lib/request';
-import { json, serverError } from '@/lib/response';
+import { json, payloadTooLarge, serverError } from '@/lib/response';
 import { anyObjectParam } from '@/lib/schema';
 
 const schema = z.array(anyObjectParam).max(500);
 
+// Up to 500 events; each one is still checked against /api/send's own limit.
+const MAX_BATCH_BYTES = 5 * 1024 * 1024;
+
 export async function POST(request: Request) {
   try {
+    if (await isBodyTooLarge(request, MAX_BATCH_BYTES)) {
+      return payloadTooLarge({ maxBytes: MAX_BATCH_BYTES });
+    }
+
     const { body, error } = await parseRequest(request, schema, { skipAuth: true });
 
     if (error) {

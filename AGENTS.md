@@ -93,6 +93,8 @@ are not listed); add a package there if an install warns about ignored build scr
 - **Ingest limits** (`src/lib/rate-limit.ts`): `/api/send` 600/min and `/api/record` 240/min per IP (no IP, no
   limit); errors 600/min per website and 20/min per session. In memory, or shared through the `rate_limit` table
   with `RATE_LIMIT_STORE=postgres` (fails open). Use `createLimiter`/`createIpRateLimiter` (async) in routes.
+  Body sizes (`src/lib/body-limit.ts`, checked before parsing, chunked uploads read only up to the limit):
+  `/api/send` 128 KB, `/api/batch` 5 MB, `/api/errors` 256 KB, `/api/record` 1 MB.
 - **Alerts** (`src/lib/alerts.ts`, delivery in `src/lib/notify.ts`): channels (`notification_channel`, per user or
   team: email via SMTP_URL, Slack, Discord, Telegram, signed webhooks; secrets and bot tokens in config.secret) and one `alert_rule` per type per website.
   `error.new`/`error.regression` fire from the ingest routes via `afterResponse()` (Next `after`), using the
