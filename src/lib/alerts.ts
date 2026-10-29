@@ -5,6 +5,8 @@
  *   error.spike       at least `count` errors within `minutes`
  *   traffic.drop      page views in the last hour at least `percent` below the same hour on the
  *                     previous four weeks (only when that baseline is at least `minimum`)
+ *   system.*          system monitoring conditions (latency, error rate, a service down, failing
+ *                     jobs, CPU and memory): see src/lib/monitoring/alerts.ts
  * The error alerts are sent right after the error is saved; the others run every 5 minutes.
  */
 import { count as metric } from '@/lib/metrics';
@@ -13,12 +15,20 @@ import { after } from 'next/server';
 import { uuid } from '@/lib/crypto';
 import { appUrl, type Channel, type Notification, sendNotification } from '@/lib/notify';
 import prisma from '@/lib/prisma';
+import {
+  evaluateSystemAlert,
+  SYSTEM_ALERT_COOLDOWN_MS,
+  SYSTEM_ALERT_DEFAULTS,
+  SYSTEM_ALERT_TYPES,
+  type SystemAlertType,
+} from '@/lib/monitoring/alerts';
 
 export const ALERT_TYPES = [
   'error.new',
   'error.regression',
   'error.spike',
   'traffic.drop',
+  ...SYSTEM_ALERT_TYPES,
 ] as const;
 export type AlertType = (typeof ALERT_TYPES)[number];
 
@@ -27,7 +37,10 @@ export const ALERT_DEFAULTS: Record<AlertType, Record<string, number>> = {
   'error.regression': {},
   'error.spike': { count: 50, minutes: 60 },
   'traffic.drop': { percent: 50, minimum: 20 },
+  ...SYSTEM_ALERT_DEFAULTS,
 };
+
+const isSystemAlert = (type: string): type is SystemAlertType => type.startsWith('system.');
 
 /** Error alerts per rule per hour, so a bad deploy doesn't send hundreds of messages. */
 const HOURLY_CAP = 20;
@@ -260,10 +273,23 @@ async function checkTrafficDrop(rule: Rule, now: Date) {
   });
 }
 
-/** Runs the scheduled checks (spikes and traffic drops) for every enabled rule. */
+/** A system monitoring rule: evaluates it, and sends one alert per cooldown while it holds. */
+async function checkSystem(rule: Rule, now: Date) {
+  const type = rule.type as SystemAlertType;
+  const problem = await evaluateSystemAlert(rule.websiteId, type, params(rule), now.getTime());
+
+  if (!problem || !(await claim(rule.id, new Date(now.getTime() - SYSTEM_ALERT_COOLDOWN_MS[type]), now))) {
+    return;
+  }
+
+  const { subject, ...notification } = problem;
+  await dispatch(rule, { ...notification, title: `${subject} on ${await websiteName(rule.websiteId)}` });
+}
+
+/** Runs the scheduled checks (spikes, traffic drops, system monitoring) for every enabled rule. */
 export async function runScheduledAlerts(now = new Date()) {
   const rules = await prisma.client.alertRule.findMany({
-    where: { enabled: true, type: { in: ['error.spike', 'traffic.drop'] } },
+    where: { enabled: true, type: { in: ['error.spike', 'traffic.drop', ...SYSTEM_ALERT_TYPES] } },
   });
 
   for (const rule of rules) {
@@ -271,6 +297,7 @@ export async function runScheduledAlerts(now = new Date()) {
 
     try {
       if (rule.type === 'error.spike') await checkSpike(rule, now);
+      else if (isSystemAlert(rule.type)) await checkSystem(rule, now);
       else await checkTrafficDrop(rule, now);
     } catch (e) {
       log.error('alert.check_failed', { type: rule.type, websiteId: rule.websiteId, error: e });

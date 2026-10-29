@@ -3,7 +3,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 
 export type ChannelType = 'email' | 'slack' | 'discord' | 'telegram' | 'webhook' | 'push';
-export type AlertType = 'error.new' | 'error.regression' | 'error.spike' | 'traffic.drop';
+export type AlertType =
+  | 'error.new'
+  | 'error.regression'
+  | 'error.spike'
+  | 'traffic.drop'
+  | 'system.latency'
+  | 'system.error_rate'
+  | 'system.down'
+  | 'system.job_failure'
+  | 'system.cpu'
+  | 'system.memory';
 
 export interface Channel {
   id: string;

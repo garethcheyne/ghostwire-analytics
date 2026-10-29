@@ -66,6 +66,53 @@ const RULES: Record<
       { key: 'minimum', label: 'When usually at least', suffix: 'views an hour' },
     ],
   },
+  'system.down': {
+    title: 'Service down',
+    description:
+      'A service stops reporting monitoring data, or a worker stops sending its heartbeat. Repeats every six hours while it lasts.',
+    params: [{ key: 'minutes', label: 'Down for', suffix: 'minutes', max: 1440 }],
+  },
+  'system.latency': {
+    title: 'Slow responses',
+    description: "A service's 95th percentile request time goes above the limit.",
+    params: [
+      { key: 'ms', label: 'p95 above', suffix: 'ms' },
+      { key: 'minutes', label: 'Over the last', suffix: 'minutes', max: 1440 },
+    ],
+  },
+  'system.error_rate': {
+    title: 'Server errors',
+    description: "Too many of a service's requests fail with a server error.",
+    params: [
+      { key: 'percent', label: 'Errors above', suffix: '% of requests', max: 100 },
+      { key: 'minutes', label: 'Over the last', suffix: 'minutes', max: 1440 },
+      { key: 'minimum', label: 'With at least', suffix: 'requests' },
+    ],
+  },
+  'system.job_failure': {
+    title: 'Failing jobs',
+    description: 'Background job runs fail (ghostwire.job.runs with outcome error).',
+    params: [
+      { key: 'count', label: 'At least', suffix: 'failed runs' },
+      { key: 'minutes', label: 'Within', suffix: 'minutes', max: 1440 },
+    ],
+  },
+  'system.cpu': {
+    title: 'High CPU',
+    description: 'A container or host uses more CPU than this on average (100% is one core for a container).',
+    params: [
+      { key: 'percent', label: 'Above', suffix: '%', max: 100 },
+      { key: 'minutes', label: 'Over the last', suffix: 'minutes', max: 1440 },
+    ],
+  },
+  'system.memory': {
+    title: 'High memory',
+    description: "A container's memory against its limit, or a host's memory, goes above this.",
+    params: [
+      { key: 'percent', label: 'Above', suffix: '%', max: 100 },
+      { key: 'minutes', label: 'Over the last', suffix: 'minutes', max: 1440 },
+    ],
+  },
 };
 
 function RuleCard({ rule, channels }: { rule: AlertRule; channels: Channel[] }) {
@@ -228,14 +275,27 @@ export function AlertSettings() {
           </AlertDescription>
         </Alert>
       )}
-      {data.rules.map(rule => (
-        <RuleCard
-          // Remount when the saved rule changes so the draft starts from it.
-          key={`${rule.type}:${JSON.stringify(rule)}`}
-          rule={rule}
-          channels={data.channels}
-        />
-      ))}
+      {data.rules
+        .filter(rule => !rule.type.startsWith('system.'))
+        .map(rule => (
+          <RuleCard
+            // Remount when the saved rule changes so the draft starts from it.
+            key={`${rule.type}:${JSON.stringify(rule)}`}
+            rule={rule}
+            channels={data.channels}
+          />
+        ))}
+      <div className="flex flex-col gap-1 pt-2">
+        <h3 className="font-medium">System monitoring</h3>
+        <p className="text-sm text-muted-foreground">
+          Checked every 5 minutes against the OpenTelemetry data the apps send (see System in the menu).
+        </p>
+      </div>
+      {data.rules
+        .filter(rule => rule.type.startsWith('system.'))
+        .map(rule => (
+          <RuleCard key={`${rule.type}:${JSON.stringify(rule)}`} rule={rule} channels={data.channels} />
+        ))}
       <Card>
         <CardHeader>
           <CardTitle>Recent alerts</CardTitle>

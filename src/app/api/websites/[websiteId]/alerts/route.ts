@@ -98,6 +98,14 @@ export async function POST(request: Request, { params }: Params) {
     return badRequest({ message: 'The drop must be less than 100%.' });
   }
 
+  if (body.type.startsWith('system.') && (body.parameters?.percent ?? 0) > 100) {
+    return badRequest({ message: 'A percentage can be at most 100.' });
+  }
+
+  if (body.type.startsWith('system.') && (body.parameters?.minutes ?? 0) > 1440) {
+    return badRequest({ message: 'Choose a period of at most 1440 minutes (a day).' });
+  }
+
   // Only the parameters this alert type uses.
   const parameters = Object.fromEntries(
     Object.keys(ALERT_DEFAULTS[body.type]).flatMap(key =>
