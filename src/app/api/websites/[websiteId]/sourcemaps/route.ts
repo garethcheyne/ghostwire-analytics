@@ -3,7 +3,8 @@ import { normalizeRelease } from '@/lib/releases';
 import prisma from '@/lib/prisma';
 import { parseRequest } from '@/lib/request';
 import { badRequest, json, ok, payloadTooLarge, unauthorized } from '@/lib/response';
-import { MAX_SOURCE_MAP_BYTES, saveSourceMap, toFilePath } from '@/lib/source-maps';
+import { log } from '@/lib/logger';
+import { InvalidSourceMapError, MAX_SOURCE_MAP_BYTES, saveSourceMap, toFilePath } from '@/lib/source-maps';
 import { authorizeWebsiteWrite } from '@/lib/website-key';
 import { canViewAuthenticatedWebsite } from '@/permissions';
 
@@ -91,7 +92,13 @@ export async function POST(request: Request, { params }: Params) {
       await saveSourceMap(websiteId, release, fileName, Buffer.from(await file.arrayBuffer()));
       saved.push(fileName);
     } catch (e) {
-      failed.push({ file: file.name, error: e instanceof Error ? e.message : String(e) });
+      if (e instanceof InvalidSourceMapError) {
+        failed.push({ file: file.name, error: e.message });
+      } else {
+        // Database and other internal errors stay in the log.
+        log.error('sourcemaps.save_failed', { websiteId, release, fileName, error: e });
+        failed.push({ file: file.name, error: 'Could not be saved.' });
+      }
     }
   }
 

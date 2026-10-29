@@ -8,7 +8,7 @@ vi.mock('@/lib/prisma', () => ({
   default: { client: { sourceMap: { findUnique, upsert: vi.fn() } } },
 }));
 
-const { clearSourceMapCache, prepareSourceMap, resolveFrames, toFilePath } =
+const { clearSourceMapCache, InvalidSourceMapError, prepareSourceMap, resolveFrames, toFilePath } =
   await import('./source-maps');
 
 const SOURCE = [
@@ -63,6 +63,8 @@ describe('source maps', () => {
   it('rejects files that are not source maps', () => {
     expect(() => prepareSourceMap('not json')).toThrow('Not valid JSON.');
     expect(() => prepareSourceMap('{"version":2}')).toThrow('version 3');
+    // The upload route shows these messages to the uploader (and only these).
+    expect(() => prepareSourceMap('not json')).toThrow(InvalidSourceMapError);
     expect(prepareSourceMap(makeMap())).toBeInstanceOf(Buffer);
   });
 

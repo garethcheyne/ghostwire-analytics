@@ -26,6 +26,9 @@ export function toFilePath(file: string | null | undefined) {
   }
 }
 
+/** A file that isn't a usable source map; its message is meant for whoever uploaded it. */
+export class InvalidSourceMapError extends Error {}
+
 /** Checks that `content` is a source map and returns it compressed for storage. */
 export function prepareSourceMap(content: Buffer | string) {
   const text = typeof content === 'string' ? content : content.toString('utf8');
@@ -34,11 +37,11 @@ export function prepareSourceMap(content: Buffer | string) {
   try {
     map = JSON.parse(text);
   } catch {
-    throw new Error('Not valid JSON.');
+    throw new InvalidSourceMapError('Not valid JSON.');
   }
 
   if (map?.version !== 3 || (typeof map.mappings !== 'string' && !Array.isArray(map.sections))) {
-    throw new Error('Not a version 3 source map.');
+    throw new InvalidSourceMapError('Not a version 3 source map.');
   }
 
   return gzipSync(text);
