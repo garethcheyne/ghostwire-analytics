@@ -246,7 +246,7 @@ export function ReleasesView() {
                               <Badge variant="secondary">{release.environment}</Badge>
                             )}
                             {release.commit &&
-                              (release.url ? (
+                              (release.url && /^https?:\/\//i.test(release.url) ? (
                                 <a
                                   href={release.url}
                                   target="_blank"

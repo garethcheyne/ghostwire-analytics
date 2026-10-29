@@ -26,7 +26,14 @@ const deploySchema = z.object({
   version: z.string().trim().min(1).max(100),
   environment: z.string().trim().max(50).optional(),
   commit: z.string().trim().max(100).optional(),
-  url: z.string().trim().url().max(500).optional(),
+  // http(s) only: z.url() also accepts javascript: URLs, and this one is rendered as a link.
+  url: z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .refine(value => /^https?:\/\//i.test(value), 'Must be an http(s) URL.')
+    .optional(),
   /** Epoch milliseconds or ISO date; defaults to now. */
   deployedAt: z.union([z.number().int().positive(), z.iso.datetime()]).optional(),
 });
