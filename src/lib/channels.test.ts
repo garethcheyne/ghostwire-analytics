@@ -43,3 +43,27 @@ describe('push channels', () => {
     expect(parsed.success && parsed.data.config).toEqual({});
   });
 });
+
+describe('webhook URLs', () => {
+  const slack = {
+    id: 'c2',
+    name: 'Team Slack',
+    type: 'slack',
+    userId: null,
+    teamId: 't1',
+    config: { url: 'https://hooks.slack.com/services/T000/B000/XXXXSECRET' },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any;
+
+  it('are shown in full to people who manage the channel', () => {
+    expect(serializeChannel(slack, true).config.url).toBe(slack.config.url);
+    expect(serializeChannel(slack).config.url).toBe(slack.config.url);
+  });
+
+  it('are cut to their origin for everyone else, since the URL is the credential', () => {
+    const channel = serializeChannel(slack, false);
+    expect(channel.config.url).toBe('https://hooks.slack.com/…');
+    expect(JSON.stringify(channel)).not.toContain('XXXXSECRET');
+  });
+});

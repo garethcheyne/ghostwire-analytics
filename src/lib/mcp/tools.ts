@@ -143,8 +143,7 @@ function finish({ input, handler, ...tool }: ToolDefinition): McpTool {
       const parsed = args.safeParse(raw ?? {});
 
       if (!parsed.success) {
-        return refuse(`Invalid arguments for ${tool.name}:
-${z.prettifyError(parsed.error)}`);
+        return refuse(`Invalid arguments for ${tool.name}: ${z.prettifyError(parsed.error)}`);
       }
 
       try {

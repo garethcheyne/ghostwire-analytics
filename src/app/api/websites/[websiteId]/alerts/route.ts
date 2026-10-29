@@ -1,7 +1,7 @@
 import { audit } from '@/lib/audit';
 import { z } from 'zod';
 import { ALERT_DEFAULTS, ALERT_TYPES } from '@/lib/alerts';
-import { canUseChannel, serializeChannel } from '@/lib/channels';
+import { canManageChannel, canUseChannel, serializeChannel } from '@/lib/channels';
 import { uuid } from '@/lib/crypto';
 import prisma from '@/lib/prisma';
 import { parseRequest } from '@/lib/request';
@@ -53,7 +53,9 @@ export async function GET(request: Request, { params }: Params) {
         lastTriggeredAt: rule?.lastTriggeredAt ?? null,
       };
     }),
-    channels: channels.map(serializeChannel),
+    channels: await Promise.all(
+      channels.map(async channel => serializeChannel(channel, await canManageChannel(auth, channel))),
+    ),
     log,
   });
 }

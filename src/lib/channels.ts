@@ -1,7 +1,8 @@
 /*
  * Notification channels: validation, access and the shape returned by the API. Secrets (webhook
  * signing secrets, Telegram bot tokens, both kept in config.secret) are never sent back, only
- * whether one is set.
+ * whether one is set. A Slack or Discord webhook URL is itself the credential, so people who can
+ * see a channel but not manage it (team viewers and members) only get its origin.
  */
 import { z } from 'zod';
 import type { NotificationChannel } from '@/generated/prisma/client';
@@ -60,8 +61,23 @@ export const SECRET_CHANNEL_TYPES = ['webhook', 'telegram'];
 
 export type ChannelInput = z.infer<typeof channelSchema>;
 
-export function serializeChannel(channel: NotificationChannel) {
+/** The URL cut to its origin (`https://hooks.slack.com/…`), enough to say where it goes. */
+export function maskUrl(url: unknown) {
+  if (typeof url !== 'string') return url;
+
+  try {
+    return `${new URL(url).origin}/…`;
+  } catch {
+    return '…';
+  }
+}
+
+export function serializeChannel(channel: NotificationChannel, canManage = true) {
   const { secret, ...config } = (channel.config ?? {}) as Record<string, unknown>;
+
+  if (!canManage && 'url' in config) {
+    config.url = maskUrl(config.url);
+  }
 
   return {
     id: channel.id,
@@ -69,7 +85,7 @@ export function serializeChannel(channel: NotificationChannel) {
     type: channel.type,
     userId: channel.userId,
     teamId: channel.teamId,
-    config: { ...config, hasSecret: !!secret },
+    config: { ...config, hasSecret: !!secret } as Record<string, unknown> & { hasSecret: boolean },
     createdAt: channel.createdAt,
   };
 }

@@ -1,6 +1,6 @@
 import { audit } from '@/lib/audit';
 import { z } from 'zod';
-import { channelSchema, serializeChannel } from '@/lib/channels';
+import { canManageChannel, channelSchema, serializeChannel } from '@/lib/channels';
 import { uuid } from '@/lib/crypto';
 import { isEmailConfigured } from '@/lib/notify';
 import prisma from '@/lib/prisma';
@@ -27,7 +27,11 @@ export async function GET(request: Request) {
     orderBy: { createdAt: 'asc' },
   });
 
-  return json({ data: channels.map(serializeChannel), emailConfigured: isEmailConfigured() });
+  const data = await Promise.all(
+    channels.map(async channel => serializeChannel(channel, await canManageChannel(auth, channel))),
+  );
+
+  return json({ data, emailConfigured: isEmailConfigured() });
 }
 
 export async function POST(request: Request) {
