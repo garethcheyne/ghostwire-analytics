@@ -29,7 +29,16 @@ const trackerHeaders = {
 };
 
 // Paths reachable without a dashboard session.
-const PUBLIC_PATHS = [/^\/login(\/|$)/, /^\/share\//, /^\/support\//, /^\/api\//, /^\/[qp]\//, /^\/_next\//];
+// /v1/metrics and /v1/traces are the OTLP receivers (system monitoring), authenticated by ingest key.
+const PUBLIC_PATHS = [
+  /^\/login(\/|$)/,
+  /^\/share\//,
+  /^\/support\//,
+  /^\/api\//,
+  /^\/[qp]\//,
+  /^\/_next\//,
+  /^\/v1\/(metrics|traces)$/,
+];
 const PUBLIC_FILES = /\.(js|css|png|ico|svg|jpg|jpeg|gif|webp|txt|xml|json|map|webmanifest|woff2?)$/;
 
 const contentSecurityPolicy = getContentSecurityPolicy();

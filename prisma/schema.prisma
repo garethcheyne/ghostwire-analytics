@@ -265,6 +265,12 @@ model Website {
   errorKeyHash  String? @map("error_key_hash") @db.VarChar(64)
   errorKeyHint  String? @map("error_key_hint") @db.VarChar(12)
 
+  // System monitoring (OpenTelemetry, /v1/metrics and /v1/traces with the same ingest key): days
+  // to keep spans, per-minute metric rollups and hourly rollups. Enforced by src/lib/monitoring/schedule.ts.
+  monitorSpanDays   Int @default(7) @map("monitor_span_days")
+  monitorMinuteDays Int @default(30) @map("monitor_minute_days")
+  monitorHourDays   Int @default(396) @map("monitor_hour_days")
+
   user                User?                @relation("user", fields: [userId], references: [id])
   createUser          User?                @relation("createUser", fields: [createdBy], references: [id])
   team                Organization?        @relation(fields: [teamId], references: [id])
@@ -284,6 +290,8 @@ model Website {
   @@index([teamId])
   @@index([createdAt])
   @@index([createdBy])
+  // OTLP requests carry only the key, so the website is found by its hash.
+  @@index([errorKeyHash])
   @@map("website")
 }
 
@@ -848,4 +856,134 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscription")
+}
+
+// ---------------------------------------------------------------------------
+// System monitoring: OpenTelemetry metrics and traces from the Ghostwire apps (POST /v1/metrics,
+// /v1/traces). See src/lib/otlp/ and AGENTS.md, "System monitoring".
+// ---------------------------------------------------------------------------
+
+/// A service reporting to a website: OTel resource service.namespace (the app) + service.name.
+model MonitorService {
+  id              String    @id() @map("service_id") @db.Uuid
+  websiteId       String    @map("website_id") @db.Uuid
+  namespace       String    @default("") @db.VarChar(100)
+  name            String    @db.VarChar(100)
+  version         String?   @db.VarChar(100)
+  environment     String?   @db.VarChar(50)
+  /// telemetry.sdk.language: nodejs, python, go (the Collector)...
+  language        String?   @db.VarChar(30)
+  firstSeen       DateTime  @map("first_seen") @db.Timestamptz(6)
+  lastSeen        DateTime  @map("last_seen") @db.Timestamptz(6)
+  lastMetricsAt   DateTime? @map("last_metrics_at") @db.Timestamptz(6)
+  lastHeartbeatAt DateTime? @map("last_heartbeat_at") @db.Timestamptz(6)
+  /// How often metrics usually arrive (moving average, seconds): a service is down after a few missed.
+  intervalSeconds Int?      @map("interval_seconds")
+
+  @@unique([websiteId, namespace, name])
+  @@index([websiteId, lastSeen])
+  @@map("monitor_service")
+}
+
+/// Metric points rolled up per minute, per service, metric and (bounded) attribute set.
+/// kind 1 counter (sum = total in the minute), 2 gauge (sum/count = average, last), 3 histogram.
+/// Durations are stored in milliseconds whatever unit they arrived in.
+model MonitorMetricMinute {
+  websiteId String   @map("website_id") @db.Uuid
+  serviceId String   @map("service_id") @db.Uuid
+  metric    String   @db.VarChar(150)
+  attrsHash String   @map("attrs_hash") @db.VarChar(16)
+  bucket    DateTime @db.Timestamptz(6)
+  kind      Int      @db.SmallInt
+  unit      String?  @db.VarChar(30)
+  attrs     Json
+  count     BigInt   @default(0)
+  sum       Float    @default(0)
+  min       Float?
+  max       Float?
+  last      Float?
+  /// Explicit histogram bucket upper bounds; buckets has one more entry (the overflow bucket).
+  bounds    Float[]
+  buckets   BigInt[]
+
+  @@id([websiteId, serviceId, metric, attrsHash, bucket])
+  @@index([websiteId, metric, bucket])
+  @@index([websiteId, bucket])
+  @@map("monitor_metric_minute")
+}
+
+/// The same rollups per hour, for long date ranges (kept longer than the minutes).
+model MonitorMetricHour {
+  websiteId String   @map("website_id") @db.Uuid
+  serviceId String   @map("service_id") @db.Uuid
+  metric    String   @db.VarChar(150)
+  attrsHash String   @map("attrs_hash") @db.VarChar(16)
+  bucket    DateTime @db.Timestamptz(6)
+  kind      Int      @db.SmallInt
+  unit      String?  @db.VarChar(30)
+  attrs     Json
+  count     BigInt   @default(0)
+  sum       Float    @default(0)
+  min       Float?
+  max       Float?
+  last      Float?
+  bounds    Float[]
+  buckets   BigInt[]
+
+  @@id([websiteId, serviceId, metric, attrsHash, bucket])
+  @@index([websiteId, metric, bucket])
+  @@index([websiteId, bucket])
+  @@map("monitor_metric_hour")
+}
+
+/// The last value of each cumulative stream (counter or histogram), to turn the next one into a delta.
+model MonitorCumulative {
+  websiteId String   @map("website_id") @db.Uuid
+  stream    String   @db.VarChar(32)
+  /// The stream's start time (ms); a different one means the process restarted.
+  startMs   Float    @map("start_ms")
+  value     Float    @default(0)
+  count     BigInt   @default(0)
+  buckets   BigInt[]
+  seenAt    DateTime @map("seen_at") @db.Timestamptz(6)
+
+  @@id([websiteId, stream])
+  @@index([seenAt])
+  @@map("monitor_cumulative")
+}
+
+/// One row per span. kind: 0 unspecified, 1 internal, 2 server, 3 client, 4 producer, 5 consumer.
+/// status: 0 unset, 1 ok, 2 error. Entry spans (no parent, or server/consumer) are the trace list.
+model MonitorSpan {
+  websiteId     String   @map("website_id") @db.Uuid
+  traceId       String   @map("trace_id") @db.VarChar(32)
+  spanId        String   @map("span_id") @db.VarChar(16)
+  parentSpanId  String?  @map("parent_span_id") @db.VarChar(16)
+  serviceId     String   @map("service_id") @db.Uuid
+  name          String   @db.VarChar(200)
+  kind          Int      @db.SmallInt
+  startTime     DateTime @map("start_time") @db.Timestamptz(6)
+  durationMs    Float    @map("duration_ms")
+  status        Int      @db.SmallInt
+  statusMessage String?  @map("status_message") @db.VarChar(500)
+  isEntry       Boolean  @map("is_entry")
+  /// http.route (or the job name) for entry spans.
+  route         String?  @db.VarChar(200)
+  httpMethod    String?  @map("http_method") @db.VarChar(16)
+  httpStatus    Int?     @map("http_status")
+  /// Client spans: db.system and server.address (or peer.service).
+  dbSystem      String?  @map("db_system") @db.VarChar(50)
+  peer          String?  @db.VarChar(200)
+  /// The query with literals replaced by ?, capped.
+  dbStatement   String?  @map("db_statement") @db.VarChar(1000)
+  /// Bounded copy of the span's attributes (count, key and value lengths capped).
+  attributes    Json?
+  /// Span events (exceptions first), capped.
+  events        Json?
+  errorGroupId  String?  @map("error_group_id") @db.Uuid
+
+  @@id([websiteId, traceId, spanId])
+  @@index([websiteId, startTime])
+  @@index([websiteId, serviceId, startTime])
+  @@map("monitor_span")
 }
