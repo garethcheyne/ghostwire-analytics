@@ -102,7 +102,9 @@ start (`config.auth_secret`, `config.auth_url`). `LOG_LEVEL=debug` adds more det
 
 - **HTTPS**: put it behind [ghostwire-proxy](../ghostwire-proxy) (or any reverse proxy) with a
   proxy host pointing at port 8770, and set `BETTER_AUTH_URL` to the public `https://` address.
-  The proxy's `X-Real-IP` / `X-Forwarded-For` headers are what give visitors their location.
+  The proxy's `X-Real-IP` / `X-Forwarded-For` headers are what give visitors their location; set
+  `CLIENT_IP_HEADER=x-real-ip` so only the proxy's header counts (otherwise a visitor can send
+  their own `True-Client-IP` and change their location and per-IP rate limit).
 - **Track your sites** with the snippet from each website's settings, or with the client
   libraries in [`packages/`](packages) (`@ghostwire/react`, `@ghostwire/node`, Python
   `ghostwire-analytics`). Next.js sites can serve the tracker from their own domain with

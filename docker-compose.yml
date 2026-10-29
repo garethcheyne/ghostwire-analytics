@@ -37,6 +37,17 @@ services:
       OIDC_AUTO_CREATE: ${OIDC_AUTO_CREATE:-}
       # Set to postgres when running more than one app container.
       RATE_LIMIT_STORE: ${RATE_LIMIT_STORE:-}
+      # Behind a reverse proxy: the one header it sets with the visitor's IP (x-real-ip).
+      CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-}
+      # Optional: bring push notification keys from another install.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      STATS_INTERVAL_MINUTES: ${STATS_INTERVAL_MINUTES:-}
+      # Optional: tracker name, collect path and sites allowed to frame the app (read at runtime).
+      TRACKER_SCRIPT_NAME: ${TRACKER_SCRIPT_NAME:-}
+      COLLECT_API_ENDPOINT: ${COLLECT_API_ENDPOINT:-}
+      ALLOWED_FRAME_URLS: ${ALLOWED_FRAME_URLS:-}
     volumes:
       - app-logs:/app/logs
     logging:
