@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { WebsiteOverview } from '@/components/analytics/website-overview';
 import { CopyButton } from '@/components/copy-button';
+import { QueryError } from '@/components/query-error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WebsiteProvider } from '@/components/websites/website-context';
-import { api } from '@/lib/api-client';
+import { ApiError, api } from '@/lib/api-client';
 import { PixelEmbed } from './pixel-embed';
 import { KIND, type TrackedEntity, type TrackedKind, useTrackedUrl } from './tracked-entities';
 
@@ -55,7 +56,11 @@ export function TrackedDetail({ kind, id }: { kind: TrackedKind; id: string }) {
 
   if (isPending) return <Skeleton className="h-96 w-full" />;
 
-  if (error || !entity) {
+  if (error && !(error instanceof ApiError && error.status === 404)) {
+    return <QueryError error={error} />;
+  }
+
+  if (!entity) {
     return <p className="text-sm text-muted-foreground">Not found.</p>;
   }
 

@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { DateRangePicker } from '@/components/analytics/date-range-picker';
 import { PageHeader } from '@/components/page-header';
+import { QueryError } from '@/components/query-error';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +50,7 @@ import {
   useDeleteBoard,
   useSaveBoard,
 } from '@/hooks/queries/boards';
+import { ApiError } from '@/lib/api-client';
 import type { BoardParameters } from '@/lib/types';
 import { BoardCanvas } from './board-canvas';
 import { BoardShareButton } from './board-share-button';
@@ -201,7 +203,10 @@ export function BoardDetail({
   const [wantsEdit, setWantsEdit] = useState(!!startEditing);
 
   if (isPending) return <Skeleton className="h-96 w-full" />;
-  if (error || !board) return <p className="text-sm text-muted-foreground">Board not found.</p>;
+  if (error && !(error instanceof ApiError && error.status === 404)) {
+    return <QueryError error={error} />;
+  }
+  if (!board) return <p className="text-sm text-muted-foreground">Board not found.</p>;
 
   const editing = wantsEdit;
   const current = draft ?? {

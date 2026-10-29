@@ -136,6 +136,7 @@ type Setup = { totpURI: string; backupCodes: string[] };
 
 function TwoFactorSetup({ setup, onDone }: { setup: Setup; onDone: () => void }) {
   const [qr, setQr] = useState('');
+  const [qrFailed, setQrFailed] = useState(false);
   const [code, setCode] = useState('');
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +146,7 @@ function TwoFactorSetup({ setup, onDone }: { setup: Setup; onDone: () => void })
   useEffect(() => {
     QRCode.toString(setup.totpURI, { type: 'svg', margin: 1, width: 192 })
       .then(setQr)
-      .catch(() => setQr(''));
+      .catch(() => setQrFailed(true));
   }, [setup.totpURI]);
 
   async function verify() {
@@ -201,6 +202,10 @@ function TwoFactorSetup({ setup, onDone }: { setup: Setup; onDone: () => void })
             // The SVG is generated locally from the TOTP URI.
             dangerouslySetInnerHTML={{ __html: qr }}
           />
+        ) : qrFailed ? (
+          <p className="text-center text-sm text-muted-foreground">
+            Couldn&apos;t draw the QR code. Enter the key below in your authenticator app instead.
+          </p>
         ) : (
           <Skeleton className="size-48" />
         )}
