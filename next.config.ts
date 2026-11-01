@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 import { readFileSync } from 'node:fs';
 
 // The release: VERSION at the repository root, dated like 2026.10.29.1945. The sidebar and
-// /api/health show it; scripts/upgrade.sh moves a server to a new one.
+// /api/health show it; upgradeGhostwireAnalytics.sh moves a server to a new one.
 function readVersion(): string {
   for (const path of ['VERSION', '../VERSION', '/app/VERSION']) {
     try {
