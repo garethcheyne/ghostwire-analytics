@@ -121,7 +121,8 @@ function resolveRecentRange(range: { startDate?: string; endDate?: string }) {
   const end = range.endDate ? new Date(range.endDate) : new Date();
   return resolveRange({
     startDate: range.startDate ?? new Date(end.getTime() - 60 * 60 * 1000).toISOString(),
-    endDate: range.endDate,
+    // The same instant the start was counted back from, so the default is exactly an hour.
+    endDate: range.endDate ?? end.toISOString(),
   });
 }
 
