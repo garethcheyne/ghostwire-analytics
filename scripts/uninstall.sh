@@ -9,12 +9,13 @@
 #
 #    curl -fsSL https://raw.githubusercontent.com/garethcheyne/ghostwire-analytics/main/scripts/uninstall.sh | sudo bash
 #
-#  or, from the install:  sudo bash /opt/ghostwire-analytics/scripts/uninstall.sh
+#  or, from the install:  sudo scripts/uninstall.sh
 #
 #  This can't be undone. It offers to save a last database backup outside the install first.
 #
 #  For automation (with --yes):
-#    GW_DIR=/opt/ghostwire-analytics   where it's installed
+#    GW_DIR=/opt/ghostwire-analytics   where it's installed (default: the clone this script is in,
+#                                      else /opt/ghostwire-analytics)
 #    GW_FINAL_BACKUP=yes|no            save a last backup first (default yes)
 #    GW_BACKUP_TO=/root                where that backup goes (default: the folder above GW_DIR)
 #    GW_DELETE_CODE=yes|no             delete the git clone as well (default no)
@@ -22,6 +23,12 @@
 
 set -e
 
+# Run from a clone, it removes that install; piped from curl, GW_DIR or /opt/ghostwire-analytics.
+HERE=""
+if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+  HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+fi
+if [ -z "$GW_DIR" ] && [ -n "$HERE" ] && [ -f "$HERE/docker-compose.yml" ]; then GW_DIR=$HERE; fi
 INSTALL_DIR="${GW_DIR:-/opt/ghostwire-analytics}"
 INSTALL_DIR="${INSTALL_DIR%/}"
 IMAGE="ghostwire-analytics"
@@ -64,7 +71,7 @@ yes_no() {
   case "$answer" in [yY]*) return 0 ;; *) return 1 ;; esac
 }
 
-# Values may be quoted (install.sh single-quotes anything that could contain $ or #).
+# Values may be quoted (the installer single-quotes anything that could contain $ or #).
 env_value() {
   grep -E "^$1=" "$INSTALL_DIR/.env" 2>/dev/null | tail -n1 | cut -d= -f2- \
     | sed -e "s/^'\(.*\)'$/\1/" -e 's/^"\(.*\)"$/\1/'
@@ -177,7 +184,7 @@ CODE_REMOVED=false
 if [ -d "$INSTALL_DIR" ]; then
   header "The code"
   echo "  $INSTALL_DIR still holds the code (the git clone). Keeping it lets you reinstall with"
-  echo "  scripts/install.sh; it holds no data or secrets any more."
+  echo "  ./installGhostwireAnalytics.sh; it holds no data or secrets any more."
   echo ""
   if yes_no "Delete $INSTALL_DIR as well?" n "$GW_DELETE_CODE"; then
     case "$INSTALL_DIR" in

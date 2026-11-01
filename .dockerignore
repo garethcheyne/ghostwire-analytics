@@ -19,3 +19,6 @@ backups
 logs
 deploy-reports
 install-report.txt
+# The install and upgrade scripts run on the server, not in the image.
+installGhostwireAnalytics.sh
+upgradeGhostwireAnalytics.sh

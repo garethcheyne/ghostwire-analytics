@@ -10,32 +10,50 @@ Built with Next.js 16, shadcn/ui, Prisma 7 and Better Auth. Based on
 
 ## Install on your server
 
-On a Linux server with Docker (Compose v2), git and curl:
+On a Linux server with Docker (Compose v2), git, curl and openssl, clone the repository and run its
+installer from the clone:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/garethcheyne/ghostwire-analytics/main/scripts/install.sh | sudo bash
+git clone https://github.com/garethcheyne/ghostwire-analytics.git /opt/ghostwire-analytics
+cd /opt/ghostwire-analytics
+sudo ./installGhostwireAnalytics.sh
 ```
 
-It asks for your domain and the first admin, suggests a port that's free on the server, creates
-random secrets for the database and sign-in, writes `/opt/ghostwire-analytics/.env`, builds and
-starts everything, and prints a report (URL, ports, sign-in, files, commands). The report is
-also saved to `install-report.txt`, without the password. Then put your domain behind HTTPS
+Or in one go (it clones into `/opt/ghostwire-analytics`, or `GW_DIR`, then runs the same installer):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/garethcheyne/ghostwire-analytics/main/installGhostwireAnalytics.sh | sudo bash
+```
+
+It checks the server, asks for the address people will open, the first admin, and whether to keep
+daily backups, suggests ports that are free, makes `.env` from `.env.example` with random secrets
+(readable only by its owner), builds and starts everything, waits until it is healthy, checks the
+app made the admin account, and prints where to sign in. A random admin password is shown once, at
+the end, and nowhere else. The log of the run goes in `backups/`. `--check` says what it would do
+without changing anything; `--settings-only` writes `.env` and stops so you can edit it first; a run
+that stops part way carries on when you run it again. For automated installs give the answers as
+`GW_*` variables and add `--yes` (they're listed at the top of
+[`installGhostwireAnalytics.sh`](installGhostwireAnalytics.sh)). Then put your domain behind HTTPS
 (ghostwire-proxy or any reverse proxy) pointing at the port it chose.
 
-To update, run `scripts/upgrade.sh` from `/opt/ghostwire-analytics` (see [Upgrading](#upgrading)).
-For automated installs, give the answers as `GW_*` variables and add `--yes` (see the top of
-[`scripts/install.sh`](scripts/install.sh)).
+It installs once: on a server that already runs it, it stops and points you at the upgrade
+([Upgrading](#upgrading)). `scripts/install.sh` still works (it forwards to the installer), for the
+one-liner published before.
 
 ### Uninstall
 
+From the install folder:
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/garethcheyne/ghostwire-analytics/main/scripts/uninstall.sh | sudo bash
+sudo scripts/uninstall.sh
 ```
 
 It removes everything the install created: the containers, the database and log volumes (all
 analytics data), the images, backups, logs, reports and the `.env`. It offers to save a last
 database backup outside the install first, asks you to type DELETE, and at the end asks whether
-to delete the code in `/opt/ghostwire-analytics` too. `GW_DIR` points it at another folder.
+to delete the code too. Piped from curl
+(`curl -fsSL https://raw.githubusercontent.com/garethcheyne/ghostwire-analytics/main/scripts/uninstall.sh | sudo bash`)
+it removes `/opt/ghostwire-analytics`, or the folder in `GW_DIR`.
 
 ### Run with Docker by hand
 
@@ -59,15 +77,18 @@ Change the password straight away.
 
 ### Upgrading
 
-Every Ghostwire app has the same `scripts/upgrade.sh`, with the same options and steps. Run it on the
+Every Ghostwire app has an upgrade script at its root with the same options and steps. Run it on the
 server, from the install folder:
 
 ```bash
-scripts/upgrade.sh             # upgrade to the latest version (asks first)
-scripts/upgrade.sh --check     # say what an upgrade would do; changes nothing
-scripts/upgrade.sh --rollback  # go back to what ran before the last upgrade
-scripts/upgrade.sh --yes       # don't ask (cron); add a tag or commit to go to that version
+./upgradeGhostwireAnalytics.sh             # upgrade to the latest version (asks first)
+./upgradeGhostwireAnalytics.sh --check     # say what an upgrade would do; changes nothing
+./upgradeGhostwireAnalytics.sh --rollback  # go back to what ran before the last upgrade
+./upgradeGhostwireAnalytics.sh --yes       # don't ask (cron); add a tag or commit to go to that version
 ```
+
+`scripts/upgrade.sh` still works: it forwards to `upgradeGhostwireAnalytics.sh`, for servers and cron
+jobs that call the old path.
 
 It checks the server and `.env`, shows what changes, backs up the database and `.env`, keeps the running
 image for `--rollback`, updates the code, rebuilds and restarts the app (it applies migrations as it starts), then checks that the containers are healthy, `/api/health` answers and every migration is applied.
